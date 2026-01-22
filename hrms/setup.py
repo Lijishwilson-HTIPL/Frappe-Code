@@ -550,6 +550,7 @@ def get_post_install_patches():
 		"create_country_fixtures",
 		"update_allocate_on_in_leave_type",
 		"update_performance_module_changes",
+		"add_leave_type_permission_for_ess",
 	)
 
 
@@ -639,6 +640,7 @@ def get_user_types_data():
 				"Expense Claim Type": ["read"],
 				"Employee Advance": ["read", "write", "create", "delete"],
 				# leave and attendance
+				"Leave Type": ["read"],
 				"Leave Application": ["read", "write", "create", "delete"],
 				"Attendance Request": ["read", "write", "create", "delete"],
 				"Compensatory Leave Request": ["read", "write", "create", "delete"],
