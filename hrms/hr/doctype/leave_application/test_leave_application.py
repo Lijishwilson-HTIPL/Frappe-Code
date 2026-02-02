@@ -588,7 +588,6 @@ class TestLeaveApplication(FrappeTestCase):
 
 		# can only apply on optional holidays
 		self.assertRaises(NotAnOptionalHoliday, leave_application.insert)
-
 		leave_application.from_date = optional_leave_date
 		leave_application.to_date = optional_leave_date
 		leave_application.status = "Approved"
@@ -1443,6 +1442,51 @@ class TestLeaveApplication(FrappeTestCase):
 		self.assertEqual(leave_ledger_entry[0].leaves, doc.total_leave_days * -1)
 		self.assertEqual(leave_ledger_entry[1].leaves, doc.total_leave_days * 1)
 
+<<<<<<< HEAD
+=======
+	def test_leave_days_across_two_holiday_lists(self):
+		make_holiday_list(
+			"_Test Application",
+			from_date=add_days(getdate(), -10),
+			to_date=add_days(getdate(), -1),
+			add_weekly_offs=False,
+		)
+		add_date_to_holiday_list(add_days(getdate(), -1), "_Test Application")
+		make_holiday_list(
+			"_Test Application 2", from_date=getdate(), to_date=add_days(getdate(), 10), add_weekly_offs=False
+		)
+		add_date_to_holiday_list(getdate(), "_Test Application 2")
+		employee = make_employee("test_leave_days@example.com", company="_Test Company")
+		create_holiday_list_assignment("Employee", employee, "_Test Application")
+		create_holiday_list_assignment("Employee", employee, "_Test Application 2")
+		leave_type = frappe.get_doc(
+			{
+				"leave_type_name": "_Test Application",
+				"doctype": "Leave Type",
+				"include_holiday": False,
+			}
+		).insert()
+		make_allocation_record(
+			employee,
+			leave_type=leave_type.name,
+			from_date=add_days(getdate(), -10),
+			to_date=add_days(getdate(), 10),
+			leaves=10,
+		)
+		application = make_leave_application(
+			employee, add_days(getdate(), -2), add_days(getdate(), 2), leave_type.name, submit=False
+		)
+		self.assertEqual(application.total_leave_days, 3)
+
+	def test_status_on_discard(self):
+		make_allocation_record()
+		application = self.get_application(self.leave_applications[0])
+		application.save()
+		application.discard()
+		application.reload()
+		self.assertEqual(application.status, "Cancelled")
+
+>>>>>>> 1d370ad42 (test: use new employee for test setup)
 
 def create_carry_forwarded_allocation(employee, leave_type, date=None):
 	date = date or nowdate()
