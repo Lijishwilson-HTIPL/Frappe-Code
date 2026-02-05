@@ -174,11 +174,7 @@
  ],
  "is_submittable": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2024-02-12 19:33:57.120384",
-=======
  "modified": "2026-02-05 13:46:25.874832",
->>>>>>> b5c760cab (fix(employee-onboaring): use boarding_status instead of status)
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Onboarding",
@@ -213,12 +209,8 @@
     "write": 1
    }
  ],
-<<<<<<< HEAD
- "sort_field": "modified",
-=======
  "row_format": "Dynamic",
  "sort_field": "creation",
->>>>>>> b5c760cab (fix(employee-onboaring): use boarding_status instead of status)
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",
