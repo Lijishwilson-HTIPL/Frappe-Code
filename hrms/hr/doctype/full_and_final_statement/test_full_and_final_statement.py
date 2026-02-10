@@ -2,13 +2,8 @@
 # See license.txt
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_days, today
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, today
->>>>>>> a0a96e66e (chore: correct datetime in fnf test setup)
 
 from erpnext.assets.doctype.asset.test_asset import create_asset_data
 from erpnext.setup.doctype.employee.test_employee import make_employee
