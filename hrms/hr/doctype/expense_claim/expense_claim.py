@@ -574,7 +574,7 @@ def get_advances(employee, advance_id=None):
 			& (advance.status.notin(["Claimed", "Returned", "Partly Claimed and Returned"]))
 		)
 	else:
-		query = query.where(advance.name == advance_id)
+		query = query.where((advance.name == advance_id) & (advance.employee == employee))
 
 	return query.run(as_dict=True)
 
