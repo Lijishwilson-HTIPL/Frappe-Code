@@ -432,6 +432,9 @@ frappe.ui.form.on("Expense Claim Advance", {
 						frm.trigger("calculate_grand_total");
 						refresh_field("advances");
 					} else {
+						frm.doc.advances = [];
+						frappe.validated = false;
+						refresh_field("advances");
 						frappe.throw(
 							__("Selected employee advance is not of employee {0}", [
 								frm.doc.employee,
