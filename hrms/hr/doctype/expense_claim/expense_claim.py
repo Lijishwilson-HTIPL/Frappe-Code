@@ -553,7 +553,7 @@ def get_expense_claim_account(expense_claim_type, company):
 
 
 @frappe.whitelist()
-def get_advances(employee, advance_id=None):
+def get_advances(employee: str, advance_id: str | None = None):
 	advance = frappe.qb.DocType("Employee Advance")
 
 	query = frappe.qb.from_(advance).select(
