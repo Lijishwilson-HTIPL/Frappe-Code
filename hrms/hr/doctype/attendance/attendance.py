@@ -362,7 +362,7 @@ def mark_bulk_attendance(data: str | dict):
 			message = _(
 				"Bulk attendance marking is already in progress for employee {0}. You can monitor the job status {1}"
 			).format(frappe.bold(data.employee), get_link_to_form("RQ Job", get_job(job_id).id, label="here"))
-		frappe.msgprint(message, allow_dangerous_html=True)
+		frappe.msgprint(message)
 	else:
 		process_bulk_attendance_in_batches(data)
 		frappe.msgprint(_("Attendance marked successfully."), alert=True)
