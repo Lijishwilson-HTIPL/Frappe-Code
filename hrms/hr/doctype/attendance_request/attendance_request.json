@@ -137,15 +137,7 @@
  ],
  "is_submittable": 1,
  "links": [],
-<<<<<<< HEAD
-<<<<<<< HEAD
- "modified": "2023-12-20 16:18:31.864719",
-=======
- "modified": "2026-04-06 15:27:42.043838",
->>>>>>> 03e50bf32 (fix: better description and validation message for when attendance request day is holiday)
-=======
  "modified": "2026-04-07 11:05:03.480492",
->>>>>>> dd9a4f0e8 (fix: simpler message)
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Attendance Request",
@@ -210,12 +202,8 @@
    "write": 1
   }
  ],
-<<<<<<< HEAD
- "sort_field": "modified",
-=======
  "row_format": "Dynamic",
  "sort_field": "creation",
->>>>>>> 03e50bf32 (fix: better description and validation message for when attendance request day is holiday)
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",
