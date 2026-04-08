@@ -16,7 +16,12 @@ from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 	make_holiday_list,
 	make_leave_application,
 )
+<<<<<<< HEAD
 from hrms.tests.test_utils import create_company, get_first_day_for_prev_month
+=======
+from hrms.tests.test_utils import create_company, create_department, get_first_day_for_prev_month
+from hrms.tests.utils import HRMSTestSuite
+>>>>>>> ac335c4e3 (fix: missed to import to create test_company)
 
 
 class TestMonthlyAttendanceSheet(FrappeTestCase):
