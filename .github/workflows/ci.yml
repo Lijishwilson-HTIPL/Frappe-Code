@@ -8,6 +8,14 @@ on:
       - "**.md"
       - "**.html"
       - "**.csv"
+<<<<<<< HEAD
+=======
+      - "**.po"
+      - "**.pot"
+      - 'crowdin.yml'
+      - '.mergify.yml'
+      - '**.vue'
+>>>>>>> 61a8584df (ci: make ci skip for irrelevant file changes)
   schedule:
     # Run everday at midnight UTC / 5:30 IST
     - cron: "0 0 * * *"
