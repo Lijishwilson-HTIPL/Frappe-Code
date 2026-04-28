@@ -1,0 +1,4 @@
+frappe
+crm
+hrms
+erpnext

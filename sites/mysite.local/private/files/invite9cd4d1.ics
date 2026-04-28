@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260417T043000Z
+DTEND:20260417T050000Z
+DTSTAMP:20260416T084109Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:1krna0c83udsp4dr0ah9p9lgn4@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=lijishwilson@gmail.com;X-NUM-GUESTS=0:mailto:lijishwilson@gmail.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/vpd-wujd-yzb
+X-MICROSOFT-CDO-OWNERAPPTID:965446929
+CREATED:20260416T084058Z
+DESCRIPTION:Scheduled via website scheduler for Lijish Wilson (lijishwilson
+ @gmail.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com
+ /vpd-wujd-yzb\n\nLearn more about Meet at: https://support.google.com/a/use
+ rs/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260416T084059Z
+LOCATION:https://meet.google.com/vpd-wujd-yzb
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Consultation Meeting - Lijish Wilson
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

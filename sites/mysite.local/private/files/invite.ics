@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260414T043000Z
+DTEND:20260414T050000Z
+DTSTAMP:20260413T101650Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:mo7lpr0k0q69k2h3vokv8c2go4@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=test@example.com;X-NUM-GUESTS=0:mailto:test@example.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/siu-cqbd-rsi
+X-MICROSOFT-CDO-OWNERAPPTID:1008940742
+CREATED:20260413T101629Z
+DESCRIPTION:Scheduled via website scheduler for Test Setup (test@example.co
+ m)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com/siu-cqbd
+ -rsi\n\nLearn more about Meet at: https://support.google.com/a/users/answer
+ /9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260413T101630Z
+LOCATION:https://meet.google.com/siu-cqbd-rsi
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Testing Meeting - Test Setup
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

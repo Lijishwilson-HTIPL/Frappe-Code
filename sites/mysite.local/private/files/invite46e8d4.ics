@@ -1,0 +1,56 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VTIMEZONE
+TZID:America/New_York
+X-LIC-LOCATION:America/New_York
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20260428T090000
+DTEND;TZID=America/New_York:20260428T093000
+DTSTAMP:20260428T072151Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:9luh5imsnei00pggput8k6qjic@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=liji@mailinator.com;X-NUM-GUESTS=0:mailto:liji@mailinator.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/axf-mtjm-dcu
+X-MICROSOFT-CDO-OWNERAPPTID:-1101379837
+CREATED:20260428T072144Z
+DESCRIPTION:Scheduled via website scheduler for Lijish Immanuel (liji@maili
+ nator.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com/
+ axf-mtjm-dcu\n\nLearn more about Meet at: https://support.google.com/a/user
+ s/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260428T072145Z
+LOCATION:https://meet.google.com/axf-mtjm-dcu
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Discovery Call Meeting - Lijish Immanuel
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

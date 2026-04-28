@@ -1,0 +1,21 @@
+14:57:36 system     | web.1 started (pid=35438)
+14:57:36 system     | socketio.1 started (pid=35442)
+14:57:36 system     | watch.1 started (pid=35446)
+14:57:36 system     | schedule.1 started (pid=35447)
+14:57:36 system     | worker.1 started (pid=35452)
+14:57:37 socketio.1 | Realtime service listening on: ws://0.0.0.0:9000
+14:57:37 watch.1    | 
+14:57:37 web.1      | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+14:57:37 web.1      |  * Running on all addresses (0.0.0.0)
+14:57:37 web.1      |  * Running on http://127.0.0.1:8000
+14:57:37 web.1      |  * Running on http://172.28.27.59:8000
+14:57:37 web.1      | [33mPress CTRL+C to quit[0m
+14:57:37 web.1      |  * Restarting with stat
+14:57:37 watch.1    | yarn run v1.22.22
+14:57:37 watch.1    | $ node esbuild --watch --live-reload
+14:57:38 web.1      |  * Debugger is active!
+14:57:38 web.1      |  * Debugger PIN: 363-812-162
+14:57:39 watch.1    | Browserslist: caniuse-lite is outdated. Please run:
+14:57:39 watch.1    |   npx update-browserslist-db@latest
+14:57:39 watch.1    |   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+14:57:46 web.1      | 127.0.0.1 - - [21/Apr/2026 14:57:46] "GET / HTTP/1.1" 200 -

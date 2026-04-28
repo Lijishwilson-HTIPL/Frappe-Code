@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260414T093000Z
+DTEND:20260414T103000Z
+DTSTAMP:20260413T113343Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:8tmu1q4f7hb5c34pptsmgrk6ao@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=lijishwilson@gmail.com;X-NUM-GUESTS=0:mailto:lijishwilson@gmail.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/kyq-tyex-jcf
+X-MICROSOFT-CDO-OWNERAPPTID:-351909190
+CREATED:20260413T113322Z
+DESCRIPTION:Scheduled via website scheduler for James Kiruba (lijishwilson@
+ gmail.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com/
+ kyq-tyex-jcf\n\nLearn more about Meet at: https://support.google.com/a/user
+ s/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260413T113324Z
+LOCATION:https://meet.google.com/kyq-tyex-jcf
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Support Meeting - James Kiruba
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

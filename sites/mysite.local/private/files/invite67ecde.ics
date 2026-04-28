@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260417T090000Z
+DTEND:20260417T100000Z
+DTSTAMP:20260416T142601Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:2ldhvmnfsf9nvl295im3p9p504@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=lijishwilson@gmail.com;X-NUM-GUESTS=0:mailto:lijishwilson@gmail.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/osb-zxct-ohv
+X-MICROSOFT-CDO-OWNERAPPTID:244253327
+CREATED:20260416T142554Z
+DESCRIPTION:Scheduled via website scheduler for Lijish Wilson (lijishwilson
+ @gmail.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com
+ /osb-zxct-ohv\n\nLearn more about Meet at: https://support.google.com/a/use
+ rs/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260416T142556Z
+LOCATION:https://meet.google.com/osb-zxct-ohv
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Consultation Meeting - Lijish Wilson
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,45 @@
+2026-04-21 12:19:49,676 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'cmd': 'frappe.core.doctype.user.user.reset_password', 'user': 'akash.raj@hephzibahtech.com'}
+2026-04-21 12:25:35,898 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'cmd': 'frappe.core.doctype.user.user.reset_password', 'user': 'akash.raj@hephzibahtech.com'}
+2026-04-21 12:39:44,302 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'title': 'CRM', 'public': '1', 'new_widgets': '{}', 'blocks': '[{"id":"Cj2TyhgiWy","type":"chart","data":{"chart_name":"Territory Wise Sales","col":12}},{"id":"LAKRmpYMRA","type":"spacer","data":{"col":12}},{"id":"XGIwEUStw_","type":"header","data":{"text":"<span class=\\"h4\\"><b>Your Shortcuts</b></span>","col":12}},{"id":"wdROEmB_XG","type":"shortcut","data":{"shortcut_name":"Dashboard","col":3}},{"id":"69RN0XsiJK","type":"shortcut","data":{"shortcut_name":"Lead","col":3}},{"id":"t6PQ0vY-Iw","type":"shortcut","data":{"shortcut_name":"Opportunity","col":3}},{"id":"VOFE0hqXRD","type":"shortcut","data":{"shortcut_name":"Customer","col":3}},{"id":"0ik53fuemG","type":"shortcut","data":{"shortcut_name":"Sales Analytics","col":3}},{"id":"-I9HhcgUKE","type":"spacer","data":{"col":12}},{"id":"ttpROKW9vk","type":"header","data":{"text":"<span class=\\"h4\\"><b>Reports &amp; Masters</b></span>","col":12}},{"id":"_YmGwzVWRr","type":"card","data":{"card_name":"Masters","col":4}},{"id":"-76QPdbBHy","type":"card","data":{"card_name":"Sales Pipeline","col":8}},{"id":"Bma1PxoXk3","type":"card","data":{"card_name":"Reports","col":4}},{"id":"80viA0R83a","type":"card","data":{"card_name":"Campaign","col":4}},{"id":"Buo5HtKRFN","type":"card","data":{"card_name":"Settings","col":4}},{"id":"sLS_x4FMK2","type":"card","data":{"card_name":"Maintenance","col":4}}]', 'cmd': 'frappe.desk.doctype.workspace.workspace.save_page'}
+2026-04-21 12:57:48,515 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'title': 'CRM', 'public': '1', 'new_widgets': '{}', 'blocks': '[{"id":"-76QPdbBHy","type":"card","data":{"card_name":"Sales Pipeline","col":3}},{"id":"Cj2TyhgiWy","type":"chart","data":{"chart_name":"Territory Wise Sales","col":9}},{"id":"LAKRmpYMRA","type":"spacer","data":{"col":12}},{"id":"XGIwEUStw_","type":"header","data":{"text":"<span class=\\"h4\\"><b>Your Shortcuts</b></span>","col":12}},{"id":"69RN0XsiJK","type":"shortcut","data":{"shortcut_name":"Lead","col":3}},{"id":"t6PQ0vY-Iw","type":"shortcut","data":{"shortcut_name":"Opportunity","col":3}},{"id":"VOFE0hqXRD","type":"shortcut","data":{"shortcut_name":"Customer","col":3}},{"id":"0ik53fuemG","type":"shortcut","data":{"shortcut_name":"Sales Analytics","col":3}},{"id":"wdROEmB_XG","type":"shortcut","data":{"shortcut_name":"Dashboard","col":3}},{"id":"-I9HhcgUKE","type":"spacer","data":{"col":12}},{"id":"ttpROKW9vk","type":"header","data":{"text":"<span class=\\"h4\\"><b>Reports &amp; Masters</b></span>","col":12}},{"id":"_YmGwzVWRr","type":"card","data":{"card_name":"Masters","col":4}},{"id":"Bma1PxoXk3","type":"card","data":{"card_name":"Reports","col":4}},{"id":"80viA0R83a","type":"card","data":{"card_name":"Campaign","col":4}},{"id":"Buo5HtKRFN","type":"card","data":{"card_name":"Settings","col":4}},{"id":"sLS_x4FMK2","type":"card","data":{"card_name":"Maintenance","col":4}}]', 'cmd': 'frappe.desk.doctype.workspace.workspace.save_page'}
+2026-04-21 15:04:01,450 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'recipients': 'lijish.wilson@hephzibahtech.com', 'attachments': [], 'cc': '', 'bcc': '', 'subject': 'Lijish Wilson S (#CRM-LEAD-2026-00001)', 'content': '<p>Hi Lijish , <br><br>we receuived</p>', 'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00001', 'send_email': 1, 'sender': 'admin@example.com', 'sender_full_name': 'Administrator', 'cmd': 'frappe.core.doctype.communication.email.make'}
+2026-04-21 15:06:35,028 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'recipients': 'lijish.wilson@hephzibahtech.com', 'attachments': [], 'cc': '', 'bcc': '', 'subject': 'Lijish Wilson S (#CRM-LEAD-2026-00001)', 'content': '<p>Hi Lijish , <br><br>we receuived</p>', 'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00001', 'send_email': 1, 'sender': 'admin@example.com', 'sender_full_name': 'Administrator', 'cmd': 'frappe.core.doctype.communication.email.make'}
+2026-04-24 12:53:58,442 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00001', 'cmd': 'frappe.client.delete'}
+2026-04-24 12:53:58,443 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00001', 'cmd': 'frappe.client.delete'}
+2026-04-24 12:53:58,444 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00001', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:14,408 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:14,410 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:14,411 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:29,837 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:30,211 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-24 14:16:30,213 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}

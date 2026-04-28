@@ -1,0 +1,446 @@
+2026-04-21 10:39:58,276 DEBUG cd frappe-bench && uv venv env --seed --python python3
+2026-04-21 10:40:05,098 LOG Getting frappe
+2026-04-21 10:40:05,098 DEBUG cd frappe-bench/apps && git clone https://github.com/frappe/frappe.git --branch version-15 --depth 1 --origin upstream
+2026-04-21 10:40:15,581 LOG Installing frappe
+2026-04-21 10:40:15,583 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/frappe  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 10:40:38,078 DEBUG cd /home/ijish/frappe-bench/apps/frappe && yarn install --check-files
+2026-04-21 10:41:49,573 DEBUG cd frappe-bench && bench build
+2026-04-21 10:41:49,698 INFO /home/ijish/.local/bin/bench build
+2026-04-21 10:42:12,695 LOG setting up backups
+2026-04-21 10:42:12,756 LOG backups were set up
+2026-04-21 10:42:12,757 INFO Bench frappe-bench initialized
+2026-04-21 10:42:38,307 INFO /home/ijish/.local/bin/bench new-site mysite.local --db-root-password frappe123 --admin-password root
+2026-04-21 10:42:48,114 INFO /home/ijish/.local/bin/bench new-site mysite.local --db-root-password frappe123 --admin-password admin
+2026-04-21 10:42:55,739 INFO /home/ijish/.local/bin/bench --site mysite.local install-app frappe
+2026-04-21 10:42:56,598 INFO /home/ijish/.local/bin/bench --site mysite.local set-config developer_mode 1
+2026-04-21 10:44:22,749 INFO /home/ijish/.local/bin/bench drop-site mysite.local --force --no-backup --root-password frappe123
+2026-04-21 10:44:31,970 INFO /home/ijish/.local/bin/bench new-site mysite.local --db-root-password frappe123 --admin-password admin
+2026-04-21 10:45:06,585 INFO /home/ijish/.local/bin/bench --site mysite.local set-config developer_mode 1
+2026-04-21 10:45:06,925 INFO /home/ijish/.local/bin/bench --site mysite.local install-app frappe
+2026-04-21 10:45:07,753 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:45:08,015 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:45:08,020 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 10:45:08,022 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:45:08,027 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:45:54,701 INFO /home/ijish/.local/bin/bench setup redis
+2026-04-21 10:47:38,921 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:47:39,123 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 10:47:39,129 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:47:39,130 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:47:39,153 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:48:10,815 INFO /home/ijish/.local/bin/bench use mysite.local
+2026-04-21 10:48:13,369 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:48:13,609 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:48:13,611 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:48:13,617 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 10:48:13,620 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:50:15,074 INFO /home/ijish/.local/bin/bench drop-site mysite.local --force --no-backup --root-password frappe123
+2026-04-21 10:50:23,862 INFO /home/ijish/.local/bin/bench get-app erpnext --branch version-15
+2026-04-21 10:50:29,592 LOG Getting erpnext
+2026-04-21 10:50:29,592 DEBUG cd ./apps && git clone https://github.com/frappe/erpnext.git --branch version-15 --depth 1 --origin upstream
+2026-04-21 10:50:39,173 LOG Installing erpnext
+2026-04-21 10:50:39,174 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/erpnext  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 10:50:43,459 DEBUG cd /home/ijish/frappe-bench/apps/erpnext && yarn install --check-files
+2026-04-21 10:50:44,049 DEBUG bench build --app erpnext
+2026-04-21 10:50:44,146 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-21 10:50:52,138 INFO /home/ijish/.local/bin/bench new-site mysite.local --db-root-password frappe123 --admin-password admin
+2026-04-21 10:51:38,043 INFO /home/ijish/.local/bin/bench --site mysite.local install-app erpnext
+2026-04-21 10:51:52,036 INFO /home/ijish/.local/bin/bench --site mysite.local set-config developer_mode 1
+2026-04-21 10:51:52,563 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:51:52,786 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:51:52,791 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:51:52,792 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 10:51:52,799 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:53:55,796 INFO /home/ijish/.local/bin/bench --site mysite.local install-app erpnext
+2026-04-21 10:54:15,773 INFO /home/ijish/.local/bin/bench --site mysite.local install-app erpnext --force
+2026-04-21 10:55:18,164 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:55:18,395 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:55:18,398 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 10:55:18,398 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:55:18,405 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:59:44,588 INFO /home/ijish/.local/bin/bench start
+2026-04-21 10:59:44,768 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 10:59:44,775 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 10:59:44,778 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 10:59:44,782 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 11:44:37,486 INFO /home/ijish/.local/bin/bench migrate
+2026-04-21 11:44:47,906 INFO /home/ijish/.local/bin/bench start
+2026-04-21 11:44:48,145 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 11:44:48,145 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 11:44:48,146 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 11:44:48,154 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 11:51:50,987 INFO /home/ijish/.local/bin/bench migrate
+2026-04-21 11:52:00,854 INFO /home/ijish/.local/bin/bench start
+2026-04-21 11:52:01,065 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 11:52:01,066 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 11:52:01,073 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 11:52:01,084 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 11:57:51,907 INFO /home/ijish/.local/bin/bench new-app HTIPL
+2026-04-21 11:57:51,911 LOG creating new app htipl
+2026-04-21 11:59:14,328 LOG Installing htipl
+2026-04-21 11:59:14,329 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/htipl  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 11:59:14,919 DEBUG bench build --app htipl
+2026-04-21 11:59:15,045 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:00:01,883 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-21 12:00:08,944 INFO /home/ijish/.local/bin/bench --site your-site-name install-app HTIPL
+2026-04-21 12:00:36,776 INFO /home/ijish/.local/bin/bench --site mysite.local install-app HTIPL
+2026-04-21 12:01:09,243 INFO /home/ijish/.local/bin/bench --site mysite.local install-app htipl
+2026-04-21 12:01:39,617 INFO /home/ijish/.local/bin/bench start
+2026-04-21 12:01:39,859 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 12:01:39,874 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 12:01:39,879 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 12:01:39,882 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 12:03:46,120 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-04-21 12:04:19,812 INFO /home/ijish/.local/bin/bench start
+2026-04-21 12:04:20,017 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 12:04:20,019 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 12:04:20,020 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 12:04:20,038 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 12:14:28,008 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:14:49,877 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:17:02,565 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:17:22,957 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:17:30,954 INFO /home/ijish/.local/bin/bench restart
+2026-04-21 12:17:34,159 INFO /home/ijish/.local/bin/bench restart
+2026-04-21 12:27:41,786 INFO /home/ijish/.local/bin/bench start
+2026-04-21 12:27:41,966 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 12:27:41,967 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 12:27:41,968 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 12:27:41,979 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 12:29:48,932 INFO /home/ijish/.local/bin/bench --site all clear-cache
+2026-04-21 12:30:44,455 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 12:30:57,402 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-04-21 12:31:03,963 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.utils.get_installed_apps
+2026-04-21 12:31:13,660 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.get_hooks --kwargs {"hook": "app_include_css"}
+2026-04-21 12:34:06,961 INFO /home/ijish/.local/bin/bench --site mysite.local set-user-password akash.raj@hephzibahtech.com Akash@123qwe
+2026-04-21 12:34:12,254 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.core.doctype.user.user.update_password --kwargs {"new_password": "Akash@123qwe", "logout_all_sessions": 0, "key": "", "old_password": ""}
+2026-04-21 12:34:17,730 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.utils.password.update_password --args ["akash.raj@hephzibahtech.com", "Akash@123qwe"]
+2026-04-21 12:36:04,754 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 12:51:48,385 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 12:54:31,975 INFO /home/ijish/.local/bin/bench build --app htipl
+2026-04-21 12:54:42,661 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.set_value --args ["System Settings", "System Settings", "app_logo", "/assets/htipl/images/logo.png"]
+2026-04-21 12:54:55,388 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.get --args ["Navbar Settings"]
+2026-04-21 12:55:01,318 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.get --args ["Website Settings"]
+2026-04-21 12:55:08,545 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.set_value --args ["Navbar Settings", "Navbar Settings", "app_logo", "/assets/htipl/images/logo.png"]
+2026-04-21 12:55:14,124 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.set_value --args ["Website Settings", "Website Settings", "favicon", "/assets/htipl/images/logo.png"]
+2026-04-21 12:55:20,507 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 12:56:04,400 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.get --args ["System Settings"]
+2026-04-21 12:56:13,810 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.set_value --args ["System Settings", "System Settings", "app_name", "HTI"]
+2026-04-21 12:56:19,815 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 14:27:32,001 INFO /home/ijish/.local/bin/bench get-app crm
+2026-04-21 14:27:37,797 LOG Getting crm
+2026-04-21 14:27:37,797 DEBUG cd ./apps && git clone https://github.com/frappe/crm.git  --depth 1 --origin upstream
+2026-04-21 14:27:46,124 LOG Installing crm
+2026-04-21 14:27:46,124 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/crm  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 14:27:46,175 WARNING /home/ijish/.local/bin/bench get-app crm executed with exit code 167
+2026-04-21 14:28:30,695 INFO /home/ijish/.local/bin/bench --site mysite.local backup
+2026-04-21 14:28:38,732 INFO /home/ijish/.local/bin/bench switch-to-branch version-16 frappe erpnext
+2026-04-21 14:28:38,735 INFO Fetching upstream unshallow for frappe
+2026-04-21 14:28:38,735 DEBUG cd ./apps/frappe && git remote set-branches upstream  '*'
+2026-04-21 14:28:38,741 DEBUG cd ./apps/frappe && git fetch --all --unshallow --quiet
+2026-04-21 14:30:03,724 ERROR Switching to version-16 will cause upgrade from 15 to 16. Pass --upgrade to confirm
+2026-04-21 14:30:03,724 WARNING /home/ijish/.local/bin/bench switch-to-branch version-16 frappe erpnext executed with exit code 1
+2026-04-21 14:30:16,484 INFO /home/ijish/.local/bin/bench switch-to-branch version-16 frappe erpnext --upgrade
+2026-04-21 14:30:16,489 INFO Fetching upstream unshallow for frappe
+2026-04-21 14:30:16,489 DEBUG cd ./apps/frappe && git remote set-branches upstream  '*'
+2026-04-21 14:30:16,491 DEBUG cd ./apps/frappe && git fetch --all --unshallow --quiet
+2026-04-21 14:30:28,386 DEBUG cd ./apps/frappe && git checkout -f version-16
+2026-04-21 14:30:29,023 INFO Fetching upstream unshallow for erpnext
+2026-04-21 14:30:29,023 DEBUG cd ./apps/erpnext && git remote set-branches upstream  '*'
+2026-04-21 14:30:29,027 DEBUG cd ./apps/erpnext && git fetch --all --unshallow --quiet
+2026-04-21 14:33:01,056 DEBUG cd ./apps/erpnext && git checkout -f version-16
+2026-04-21 14:33:01,643 INFO Successfully switched branches for: frappe, erpnext
+2026-04-21 14:33:01,644 DEBUG uv pip install --quiet --upgrade pip --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 14:33:01,695 WARNING /home/ijish/.local/bin/bench switch-to-branch version-16 frappe erpnext --upgrade executed with exit code 1
+2026-04-21 14:36:37,155 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 14:36:39,349 INFO /home/ijish/.local/bin/bench restart
+2026-04-21 14:37:39,573 INFO /home/ijish/.local/bin/bench start
+2026-04-21 14:37:39,750 WARNING /home/ijish/.local/bin/bench start executed with exit code 1
+2026-04-21 14:38:28,225 INFO /home/ijish/.local/bin/bench start
+2026-04-21 14:38:28,416 WARNING /home/ijish/.local/bin/bench start executed with exit code 1
+2026-04-21 14:38:49,527 INFO /home/ijish/.local/bin/bench start
+2026-04-21 14:38:49,700 WARNING /home/ijish/.local/bin/bench start executed with exit code 1
+2026-04-21 14:39:55,409 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 14:39:55,413 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 14:39:55,420 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 14:39:55,421 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 14:49:16,593 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-04-21 14:49:21,481 INFO /home/ijish/.local/bin/bench --site mysite.local uninstall-app htipl --yes
+2026-04-21 14:49:29,264 INFO /home/ijish/.local/bin/bench remove-app htipl
+2026-04-21 14:49:29,329 WARNING /home/ijish/.local/bin/bench remove-app htipl executed with exit code 1
+2026-04-21 14:49:43,439 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 14:49:57,085 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 14:51:38,650 INFO /home/ijish/.local/bin/bench get-app crm --ignore-resolve
+2026-04-21 14:51:38,658 WARNING /home/ijish/.local/bin/bench get-app crm --ignore-resolve executed with exit code 2
+2026-04-21 14:51:42,173 INFO /home/ijish/.local/bin/bench get-app crm
+2026-04-21 14:51:47,944 LOG Getting crm
+2026-04-21 14:51:47,944 DEBUG cd ./apps && git clone https://github.com/frappe/crm.git  --depth 1 --origin upstream
+2026-04-21 14:51:56,114 LOG Installing crm
+2026-04-21 14:51:56,114 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/crm  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 14:51:56,173 WARNING /home/ijish/.local/bin/bench get-app crm executed with exit code 167
+2026-04-21 14:52:05,519 INFO /home/ijish/.local/bin/bench get-app crm
+2026-04-21 14:52:05,525 WARNING /home/ijish/.local/bin/bench get-app crm executed with exit code 1
+2026-04-21 14:52:10,637 INFO /home/ijish/.local/bin/bench get-app crm
+2026-04-21 14:52:16,124 LOG Getting crm
+2026-04-21 14:52:16,125 DEBUG cd ./apps && git clone https://github.com/frappe/crm.git  --depth 1 --origin upstream
+2026-04-21 14:52:28,183 LOG Installing crm
+2026-04-21 14:52:28,183 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/crm  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-21 14:52:29,564 DEBUG cd /home/ijish/frappe-bench/apps/crm && yarn install --check-files
+2026-04-21 14:53:04,220 WARNING cd /home/ijish/frappe-bench/apps/crm && yarn install --check-files executed with exit code 1
+2026-04-21 14:53:04,220 WARNING /home/ijish/.local/bin/bench get-app crm executed with exit code 1
+2026-04-21 14:54:15,687 INFO /home/ijish/.local/bin/bench --site mysite.local install-app crm
+2026-04-21 14:54:29,601 INFO /home/ijish/.local/bin/bench --site mysite.local install-app crm
+2026-04-21 14:54:41,610 INFO /home/ijish/.local/bin/bench build --app crm
+2026-04-21 14:55:48,895 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 14:57:14,018 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 14:57:14,020 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 14:57:14,027 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 14:57:14,033 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 14:57:36,762 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 14:57:36,775 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 14:57:36,777 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 14:57:36,781 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 15:13:09,726 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 15:50:12,831 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, email_id, enable_incoming, enable_outgoing FROM `tabEmail Account`;
+2026-04-21 15:50:23,946 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, email_id, enable_incoming, enable_outgoing, use_imap, imap_server, imap_port, use_ssl FROM `tabEmail Account`;
+2026-04-21 15:50:33,711 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e DESCRIBE `tabEmail Account`;
+2026-04-21 15:50:43,953 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, email_id, enable_incoming, enable_outgoing, use_imap, use_ssl, email_server, incoming_port, smtp_server, smtp_port, use_ssl_for_outgoing FROM `tabEmail Account`;
+2026-04-21 15:51:06,695 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e UPDATE `tabEmail Account` SET smtp_port='587', use_ssl_for_outgoing=0, use_tls=1 WHERE name='Hephzibah Tech';
+2026-04-21 15:53:33,435 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, email_id, sender, sender_name, default_outgoing FROM `tabEmail Account`;
+2026-04-21 15:53:42,656 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e DESCRIBE `tabEmail Account`;
+2026-04-21 15:53:50,811 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e UPDATE `tabEmail Account` SET always_use_account_email_id_as_sender=1, always_use_account_name_as_sender_name=1, default_outgoing=1 WHERE name='Hephzibah Tech';
+2026-04-21 16:18:05,602 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 16:22:15,930 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, email FROM `tabUser` WHERE name='Administrator';
+2026-04-21 16:22:24,501 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e UPDATE `tabUser` SET email='mark.intell@hephzibahtech.com' WHERE name='Administrator';
+2026-04-21 16:22:25,070 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 16:27:41,174 INFO /home/ijish/.local/bin/bench --site mysite.local backup --with-files
+2026-04-21 16:29:21,065 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, status, error, creation FROM `tabEmail Queue` ORDER BY creation DESC LIMIT 5;
+2026-04-21 16:29:55,104 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.queue.flush
+2026-04-21 16:30:05,194 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, status, error, creation FROM `tabEmail Queue` ORDER BY creation DESC LIMIT 5;
+2026-04-21 16:30:30,136 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e UPDATE `tabEmail Queue` SET status='Not Sent', error=NULL WHERE name='n08k0j6f7g';
+2026-04-21 16:30:35,718 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.queue.flush
+2026-04-21 16:30:49,421 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, status, error, creation FROM `tabEmail Queue` ORDER BY creation DESC LIMIT 5;
+2026-04-21 16:36:20,995 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.receive.fetch_all
+2026-04-21 16:36:54,560 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.doctype.email_account.email_account.pull --kwargs {"now": true}
+2026-04-21 16:37:05,255 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.doctype.email_account.email_account.pull --kwargs {"now": True}
+2026-04-21 16:37:52,621 INFO /home/ijish/.local/bin/bench --site mysite.local scheduler status
+2026-04-21 16:41:06,089 INFO /home/ijish/.local/bin/bench start
+2026-04-21 16:41:06,388 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 16:41:06,390 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 16:41:06,407 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 16:41:06,419 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:14:23,543 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.doctype.email_account.email_account.pull_from_email_account --args ["Hephzibah Tech"]
+2026-04-21 17:15:43,086 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 17:15:49,289 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:15:49,606 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:15:49,607 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:15:49,612 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:15:49,617 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:16:47,860 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:16:48,342 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:16:48,343 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:16:48,350 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:16:48,362 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:17:56,808 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-21 17:17:59,547 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:17:59,818 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:17:59,824 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:17:59,826 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:17:59,836 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:18:42,909 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:18:43,200 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:18:43,203 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:18:43,210 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:18:43,212 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:20:04,703 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:20:04,983 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:20:04,987 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:20:04,989 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:20:04,990 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:21:42,697 INFO /home/ijish/.local/bin/bench start
+2026-04-21 17:21:42,970 INFO /home/ijish/.local/bin/bench worker
+2026-04-21 17:21:42,971 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 17:21:42,973 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 17:21:42,976 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 17:30:25,702 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.email.doctype.email_account.email_account.pull --kwargs {"now": True}
+2026-04-21 18:00:00,428 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-21 18:03:11,224 INFO /home/ijish/.local/bin/bench start
+2026-04-21 18:03:11,629 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-21 18:03:11,630 INFO /home/ijish/.local/bin/bench schedule
+2026-04-21 18:03:11,631 INFO /home/ijish/.local/bin/bench watch
+2026-04-21 18:03:11,646 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 09:14:11,732 INFO /home/ijish/.local/bin/bench start
+2026-04-22 09:14:12,617 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 09:14:12,625 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-22 09:14:12,653 INFO /home/ijish/.local/bin/bench schedule
+2026-04-22 09:14:12,695 INFO /home/ijish/.local/bin/bench watch
+2026-04-22 09:14:36,399 INFO /home/ijish/.local/bin/bench start
+2026-04-22 09:14:36,654 INFO /home/ijish/.local/bin/bench schedule
+2026-04-22 09:14:36,655 INFO /home/ijish/.local/bin/bench watch
+2026-04-22 09:14:36,660 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-22 09:14:36,675 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 09:55:41,834 INFO /home/ijish/.local/bin/bench start
+2026-04-22 09:55:42,112 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-22 09:55:42,126 INFO /home/ijish/.local/bin/bench watch
+2026-04-22 09:55:42,129 INFO /home/ijish/.local/bin/bench schedule
+2026-04-22 09:55:42,130 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 10:00:40,548 INFO /home/ijish/.local/bin/bench set-admin-password
+2026-04-22 10:00:55,144 INFO /home/ijish/.local/bin/bench start
+2026-04-22 10:00:55,329 INFO /home/ijish/.local/bin/bench watch
+2026-04-22 10:00:55,330 INFO /home/ijish/.local/bin/bench schedule
+2026-04-22 10:00:55,333 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-22 10:00:55,345 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 11:58:50,423 INFO /home/ijish/.local/bin/bench build --app crm
+2026-04-22 12:00:02,383 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-22 12:00:02,387 INFO /home/ijish/.local/bin/bench start
+2026-04-22 12:00:02,911 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-22 12:00:02,929 INFO /home/ijish/.local/bin/bench watch
+2026-04-22 12:00:02,934 INFO /home/ijish/.local/bin/bench worker
+2026-04-22 12:00:02,951 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 10:06:45,494 INFO /home/ijish/.local/bin/bench start
+2026-04-24 10:06:45,788 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 10:06:45,790 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 10:06:45,791 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 10:06:45,799 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 10:06:55,120 INFO /home/ijish/.local/bin/bench start
+2026-04-24 10:06:55,318 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 10:06:55,330 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 10:06:55,331 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 10:06:55,332 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 12:00:01,246 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-24 12:56:07,102 INFO /home/ijish/.local/bin/bench build --app crm
+2026-04-24 12:59:05,498 INFO /home/ijish/.local/bin/bench restart
+2026-04-24 12:59:09,653 INFO /home/ijish/.local/bin/bench start
+2026-04-24 12:59:09,878 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 12:59:09,883 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 12:59:09,890 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 12:59:09,890 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 13:03:02,905 INFO /home/ijish/.local/bin/bench build --app crm
+2026-04-24 13:03:54,381 INFO /home/ijish/.local/bin/bench start
+2026-04-24 13:03:54,563 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 13:03:54,568 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 13:03:54,569 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 13:03:54,573 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 14:14:42,301 INFO /home/ijish/.local/bin/bench start
+2026-04-24 14:14:42,504 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 14:14:42,505 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 14:14:42,506 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 14:14:42,515 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 14:14:49,630 INFO /home/ijish/.local/bin/bench build --app crm
+2026-04-24 14:15:32,339 INFO /home/ijish/.local/bin/bench start
+2026-04-24 14:15:32,649 INFO /home/ijish/.local/bin/bench watch
+2026-04-24 14:15:32,653 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-24 14:15:32,663 INFO /home/ijish/.local/bin/bench worker
+2026-04-24 14:15:32,690 INFO /home/ijish/.local/bin/bench schedule
+2026-04-24 14:15:50,911 INFO /home/ijish/.local/bin/bench restart
+2026-04-24 14:16:50,552 INFO /home/ijish/.local/bin/bench restart
+2026-04-24 15:43:36,998 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, subject, document_type, event, channel, enabled FROM tabNotification WHERE document_type IN ('CRM Lead','Lead');
+2026-04-24 15:44:08,015 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, document_type, event, channel, enabled FROM tabNotification;
+2026-04-24 15:51:49,505 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, script_type, reference_doctype, doctype_event, disabled FROM \ WHERE disabled=0;
+2026-04-24 15:51:56,201 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb -e SELECT name, script_type, reference_doctype, doctype_event, disabled FROM ;
+2026-04-24 15:52:02,543 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:52:11,413 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:52:16,457 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:52:24,487 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:52:30,625 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:52:58,202 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:53:29,555 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:53:38,661 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-04-24 15:53:56,062 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe._find_src.run
+2026-04-28 10:07:04,389 INFO /home/ijish/.local/bin/bench get-app hrms
+2026-04-28 10:07:10,079 LOG Getting hrms
+2026-04-28 10:07:10,079 DEBUG cd ./apps && git clone https://github.com/frappe/hrms.git  --depth 1 --origin upstream
+2026-04-28 10:07:17,267 LOG Installing hrms
+2026-04-28 10:07:17,267 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/hrms  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-28 10:07:17,843 DEBUG cd /home/ijish/frappe-bench/apps/hrms && yarn install --check-files
+2026-04-28 10:08:01,247 INFO /home/ijish/.local/bin/bench start
+2026-04-28 10:08:01,632 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 10:08:01,634 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 10:08:01,636 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 10:08:01,652 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 10:08:44,957 DEBUG bench build --app hrms
+2026-04-28 10:08:45,040 INFO /home/ijish/.local/bin/bench build --app hrms
+2026-04-28 10:08:55,316 INFO /home/ijish/.local/bin/bench start
+2026-04-28 10:08:55,773 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 10:08:55,775 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 10:08:55,784 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 10:08:55,817 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 10:09:34,061 INFO /home/ijish/.local/bin/bench start
+2026-04-28 10:09:34,242 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 10:09:34,243 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 10:09:34,251 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 10:09:34,253 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 10:09:49,447 INFO /home/ijish/.local/bin/bench --site mysite.local install-app hrms
+2026-04-28 10:10:49,749 INFO /home/ijish/.local/bin/bench remove-app hrms
+2026-04-28 10:10:49,861 INFO /home/ijish/.local/bin/bench --site all list-apps --format json
+2026-04-28 10:10:50,432 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-04-28 10:10:50,869 DEBUG cd /home/ijish/frappe-bench && uv pip uninstall hrms --python /home/ijish/frappe-bench/env/bin/python
+2026-04-28 10:11:05,897 INFO App moved from apps/hrms to archived/apps/hrms-2026-04-28
+2026-04-28 10:11:14,486 INFO /home/ijish/.local/bin/bench get-app hrms --branch version-15
+2026-04-28 10:11:17,276 LOG Getting hrms
+2026-04-28 10:11:17,277 DEBUG cd ./apps && git clone https://github.com/frappe/hrms.git --branch version-15 --depth 1 --origin upstream
+2026-04-28 10:11:24,181 LOG Installing hrms
+2026-04-28 10:11:24,181 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/hrms  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-28 10:11:24,794 DEBUG cd /home/ijish/frappe-bench/apps/hrms && yarn install --check-files
+2026-04-28 10:12:17,148 DEBUG bench build --app hrms
+2026-04-28 10:12:17,240 INFO /home/ijish/.local/bin/bench build --app hrms
+2026-04-28 10:12:47,847 INFO /home/ijish/.local/bin/bench --site mysite.local install-app hrms
+2026-04-28 10:13:14,548 INFO /home/ijish/.local/bin/bench --site mysite.local install-app hrms --force
+2026-04-28 10:15:01,565 INFO /home/ijish/.local/bin/bench start
+2026-04-28 10:15:01,754 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 10:15:01,757 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 10:15:01,759 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 10:15:01,764 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 12:00:06,366 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-28 12:20:05,062 INFO /home/ijish/.local/bin/bench migrate
+2026-04-28 12:21:02,997 INFO /home/ijish/.local/bin/bench build
+2026-04-28 12:23:04,613 INFO /home/ijish/.local/bin/bench start
+2026-04-28 12:23:04,850 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 12:23:04,856 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 12:23:04,864 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 12:23:04,864 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 12:29:32,561 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-04-28 12:30:00,985 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 12:30:10,074 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 12:30:31,394 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 12:32:22,814 INFO /home/ijish/.local/bin/bench --site mysite.local execute erpnext.patches.v16_0.add_career_inquiry_fixtures.execute
+2026-04-28 12:32:34,250 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 12:32:43,923 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 12:32:53,721 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 12:33:00,978 INFO /home/ijish/.local/bin/bench start
+2026-04-28 12:33:01,144 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 12:33:01,153 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 12:33:01,158 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 12:33:01,169 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 12:37:00,875 INFO /home/ijish/.local/bin/bench --site mysite.local execute erpnext.patches.v16_0.add_career_inquiry_fixtures.execute
+2026-04-28 12:37:01,347 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 12:37:02,114 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 12:37:04,301 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 13:02:57,238 INFO /home/ijish/.local/bin/bench --site mysite.local execute erpnext.patches.v16_0.add_career_inquiry_fixtures.execute
+2026-04-28 13:02:57,697 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 13:02:58,444 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 13:03:00,932 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 13:03:18,410 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 13:03:19,177 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 13:03:21,538 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 13:03:41,837 INFO /home/ijish/.local/bin/bench start
+2026-04-28 13:03:42,084 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 13:03:42,085 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 13:03:42,086 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 13:03:42,091 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 13:03:58,731 INFO /home/ijish/.local/bin/bench build
+2026-04-28 13:05:43,104 INFO /home/ijish/.local/bin/bench start
+2026-04-28 13:05:43,314 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 13:05:43,318 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 13:05:43,319 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 13:05:43,369 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 14:13:58,353 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-04-28 14:14:40,572 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-28 14:14:41,372 INFO /home/ijish/.local/bin/bench --site mysite.local clear-website-cache
+2026-04-28 14:14:42,039 INFO /home/ijish/.local/bin/bench build --app erpnext
+2026-04-28 14:14:52,073 INFO /home/ijish/.local/bin/bench restart
+2026-04-28 14:15:57,081 INFO /home/ijish/.local/bin/bench start
+2026-04-28 14:15:57,480 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 14:15:57,497 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 14:15:57,515 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 14:15:57,515 INFO /home/ijish/.local/bin/bench watch

@@ -1,0 +1,55 @@
+2026-04-24 15:52:06,266 INFO ipython === bench console session ===
+2026-04-24 15:52:06,267 INFO ipython import frappe
+2026-04-24 15:52:06,267 INFO ipython scripts = frappe.db.sql('SELECT name, script_type, reference_doctype, doctype_event, disabled FROM ', as_dict=True)
+2026-04-24 15:52:06,267 INFO ipython for s in scripts: print(s)
+2026-04-24 15:52:06,267 INFO ipython === session end ===
+2026-04-24 15:52:12,316 INFO ipython === bench console session ===
+2026-04-24 15:52:12,316 INFO ipython import frappe
+2026-04-24 15:52:12,316 INFO ipython scripts = frappe.get_all('Server Script', fields=['name','script_type','reference_doctype','doctype_event','disabled'])
+2026-04-24 15:52:12,316 INFO ipython for s in scripts: print(s)
+2026-04-24 15:52:12,316 INFO ipython === session end ===
+2026-04-24 15:52:17,359 INFO ipython === bench console session ===
+2026-04-24 15:52:17,359 INFO ipython import frappe
+2026-04-24 15:52:17,359 INFO ipython scripts = frappe.get_all('Server Script', fields=['name','script_type','reference_doctype','doctype_event','disabled'])
+2026-04-24 15:52:17,359 INFO ipython print('COUNT:', len(scripts))
+2026-04-24 15:52:17,359 INFO ipython for s in scripts: print(s)
+2026-04-24 15:52:17,359 INFO ipython === session end ===
+2026-04-24 15:52:25,383 INFO ipython === bench console session ===
+2026-04-24 15:52:25,384 INFO ipython import frappe
+2026-04-24 15:52:25,384 INFO ipython comms = frappe.get_all('Communication', filters={'reference_doctype':'CRM Lead'}, fields=['name','subject','sent_or_received','sender','owner','creation','delivery_status','status'], order_by='creation desc', limit=5)
+2026-04-24 15:52:25,384 INFO ipython for c in comms: print(c)
+2026-04-24 15:52:25,384 INFO ipython print('---')
+2026-04-24 15:52:25,384 INFO ipython print('Sample content:')
+2026-04-24 15:52:25,384 INFO ipython === session end ===
+2026-04-24 15:52:31,879 INFO ipython === bench console session ===
+2026-04-24 15:52:31,879 INFO ipython import frappe
+2026-04-24 15:52:31,880 INFO ipython d = frappe.get_doc('Communication', 'jdpn06cetk')
+2026-04-24 15:52:31,880 INFO ipython print('content:', (d.content or '')[:600])
+2026-04-24 15:52:31,880 INFO ipython print('---')
+2026-04-24 15:52:31,880 INFO ipython print('sent_or_received:', d.sent_or_received, '| status:', d.status, '| delivery_status:', d.delivery_status)
+2026-04-24 15:52:31,880 INFO ipython print('has_attachment:', d.has_attachment, '| comm_type:', d.communication_type, '| comm_medium:', d.communication_medium)
+2026-04-24 15:52:31,880 INFO ipython print('email_status:', d.email_status)
+2026-04-24 15:52:31,880 INFO ipython === session end ===
+2026-04-24 15:52:59,464 INFO ipython === bench console session ===
+2026-04-24 15:52:59,465 INFO ipython import frappe
+2026-04-24 15:52:59,466 INFO ipython cs = frappe.get_all('Client Script', fields=['name','dt','view','enabled'])
+2026-04-24 15:52:59,466 INFO ipython print('Client Scripts:', len(cs))
+2026-04-24 15:52:59,466 INFO ipython for c in cs: print(' ', c)
+2026-04-24 15:52:59,467 INFO ipython print()
+2026-04-24 15:52:59,467 INFO ipython # Check doc_events in hooks.py  
+2026-04-24 15:52:59,467 INFO ipython from frappe import get_hooks
+2026-04-24 15:52:59,467 INFO ipython de = get_hooks('doc_events') or {}
+2026-04-24 15:52:59,467 INFO ipython for dt, evts in de.items():
+    if 'Lead' in dt or 'CRM' in dt:
+        print('doc_event:', dt, evts)
+# also all hooks on CRM Lead / Communication
+print('CRM Lead hooks:', de.get('CRM Lead'))
+2026-04-24 15:52:59,467 INFO ipython print('Communication hooks:', de.get('Communication'))
+2026-04-24 15:52:59,467 INFO ipython === session end ===
+2026-04-24 15:53:30,828 INFO ipython === bench console session ===
+2026-04-24 15:53:30,829 INFO ipython import frappe
+2026-04-24 15:53:30,829 INFO ipython # find all tabs mentioning hephzibah phrases via search in doctypes likely holding templates
+2026-04-24 15:53:30,829 INFO ipython === session end ===
+2026-04-24 15:53:39,838 INFO ipython === bench console session ===
+2026-04-24 15:53:39,838 INFO ipython import frappe
+2026-04-24 15:53:39,838 INFO ipython === session end ===

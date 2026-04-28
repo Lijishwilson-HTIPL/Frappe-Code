@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260414T103000Z
+DTEND:20260414T110000Z
+DTSTAMP:20260413T112055Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:48kcvtohduhns0p3j1v7j8o6rs@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=lijishwilson@gmail.com;X-NUM-GUESTS=0:mailto:lijishwilson@gmail.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/unh-ihec-ggv
+X-MICROSOFT-CDO-OWNERAPPTID:-83704664
+CREATED:20260413T112035Z
+DESCRIPTION:Scheduled via website scheduler for Lijish Wilson (lijishwilson
+ @gmail.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com
+ /unh-ihec-ggv\n\nLearn more about Meet at: https://support.google.com/a/use
+ rs/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260413T112037Z
+LOCATION:https://meet.google.com/unh-ihec-ggv
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Consultation Meeting - Lijish Wilson
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

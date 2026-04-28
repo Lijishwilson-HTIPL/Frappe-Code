@@ -1,0 +1,39 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260417T170000Z
+DTEND:20260417T173000Z
+DTSTAMP:20260417T071305Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:sgrd7a6tpju7p353a6m794rcns@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=asir.moses@hephzibahtech.com;X-NUM-GUESTS=0:mailto:asir.moses@hephz
+ ibahtech.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/yzd-vska-pbf
+X-MICROSOFT-CDO-OWNERAPPTID:-811758120
+CREATED:20260417T071256Z
+DESCRIPTION:Scheduled via website scheduler for Annie M Hodder (asir.moses@
+ hephzibahtech.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.goo
+ gle.com/yzd-vska-pbf\n\nLearn more about Meet at: https://support.google.co
+ m/a/users/answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260417T071257Z
+LOCATION:https://meet.google.com/yzd-vska-pbf
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Consultation Meeting - Annie M Hodder
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

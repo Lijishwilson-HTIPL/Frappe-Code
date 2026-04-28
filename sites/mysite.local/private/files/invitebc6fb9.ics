@@ -1,0 +1,39 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+DTSTART:20260417T120000Z
+DTEND:20260417T123000Z
+DTSTAMP:20260417T060150Z
+ORGANIZER;CN=Mark Intell:mailto:markintell.hephzibahtech@gmail.com
+UID:ro1f23j2v9pt9tl3uop5qict20@google.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=jameskirupa1103@gmail.com;X-NUM-GUESTS=0:mailto:jameskirupa1103@gma
+ il.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=
+ TRUE;CN=mark.intell@hephzibahtech.com;X-NUM-GUESTS=0:mailto:mark.intell@hep
+ hzibahtech.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/hww-aent-hhq
+X-MICROSOFT-CDO-OWNERAPPTID:748358584
+CREATED:20260417T060141Z
+DESCRIPTION:Scheduled via website scheduler for james jk (jameskirupa1103@g
+ mail.com)\n\n-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~::~:~::-\nJoin with Google Meet: https://meet.google.com/h
+ ww-aent-hhq\n\nLearn more about Meet at: https://support.google.com/a/users
+ /answer/9282720\n\nPlease do not edit this section.\n-::~:~::~:~:~:~:~:~:~:
+ ~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-
+LAST-MODIFIED:20260417T060142Z
+LOCATION:https://meet.google.com/hww-aent-hhq
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Consultation Meeting - james jk
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H30M0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR
