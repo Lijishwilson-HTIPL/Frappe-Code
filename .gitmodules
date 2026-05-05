@@ -1,0 +1,19 @@
+[submodule "apps/frappe"]
+	path = apps/frappe
+	url = https://github.com/frappe/frappe.git
+	branch = version-15
+
+[submodule "apps/erpnext"]
+	path = apps/erpnext
+	url = https://github.com/frappe/erpnext.git
+	branch = version-15
+
+[submodule "apps/hrms"]
+	path = apps/hrms
+	url = https://github.com/corporaterulers/hrms.git
+	branch = master
+
+[submodule "apps/crm"]
+	path = apps/crm
+	url = https://github.com/frappe/crm.git
+	branch = main
