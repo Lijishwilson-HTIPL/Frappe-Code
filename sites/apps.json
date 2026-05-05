@@ -27,5 +27,15 @@
         "required": [],
         "idx": 3,
         "version": "1.69.1"
+    },
+    "sbiq_core": {
+        "is_repo": true,
+        "resolution": {
+            "commit_hash": "0dcad749d2dc067b7b90ffeef192faa1a1cd49a0",
+            "branch": "develop"
+        },
+        "required": [],
+        "idx": 4,
+        "version": "0.0.1"
     }
 }

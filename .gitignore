@@ -56,3 +56,7 @@ build/
 .DS_Store
 Thumbs.db
 apps/erpnext/erpnext/patches/v16_0/*.Identifier
+
+# Site lock files and uploaded calendar invites
+sites/*/locks/
+sites/*/private/files/*.ics
