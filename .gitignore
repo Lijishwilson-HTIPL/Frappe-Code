@@ -45,6 +45,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Python virtualenv (regenerable; do NOT track, OS-specific)
+env/
+
 # Node modules
 node_modules/
 
