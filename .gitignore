@@ -66,3 +66,7 @@ apps/crm/
 # Exclude all uploaded site files (broad)
 sites/*/public/files/
 sites/*/private/files/
+
+# Site lock files and uploaded calendar invites
+sites/*/locks/
+sites/*/private/files/*.ics

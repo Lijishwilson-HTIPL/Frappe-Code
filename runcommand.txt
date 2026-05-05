@@ -1,0 +1,11 @@
+
+
+wsl -d ubuntu-22.04
+
+copy all 3 together and run <->
+redis-server config/redis_socketio.conf &
+redis-server config/redis_cache.conf &
+redis-server config/redis_queue.conf &
+
+start
+bench start

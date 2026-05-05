@@ -4,6 +4,8 @@ from frappe.model.document import Document
 
 class CareerInquiry(Document):
 	def after_insert(self):
+		if self.job_applicant_ref:
+			return
 		create_job_applicant(self)
 
 
