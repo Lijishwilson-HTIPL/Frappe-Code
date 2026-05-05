@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"careers_header\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Careers</b></span>\", \"col\": 12}}, {\"id\": \"careers_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Career Inquiries\", \"col\": 4}}, {\"id\": \"onboarding_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Onboarding\", \"col\": 4}}, {\"id\": \"interviews_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Interviews\", \"col\": 4}}, {\"id\": \"appointment_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Appointment\", \"col\": 4}}, {\"id\": \"reports_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"jobs_card\", \"type\": \"card\", \"data\": {\"card_name\": \"Jobs\", \"col\": 4}}]",
+ "content": "[{\"id\":\"careers_header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Careers</b></span>\",\"col\":12}},{\"id\":\"careers_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Career Inquiries\",\"col\":4}},{\"id\":\"onboarding_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Onboarding\",\"col\":4}},{\"id\":\"interviews_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Interviews\",\"col\":4}},{\"id\":\"appointment_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Appointment\",\"col\":4}},{\"id\":\"reports_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}},{\"id\":\"jobs_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Jobs\",\"col\":4}}]",
  "creation": "2026-04-22 00:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -29,74 +29,6 @@
    "link_to": "Career Inquiry",
    "link_type": "DocType",
    "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Onboarding",
-   "link_count": 0,
-   "link_to": "",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Employee Onboarding Template",
-   "link_count": 0,
-   "link_to": "Employee Onboarding Template",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Onboarding",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Employee Onboarding Template",
-   "link_count": 0,
-   "link_to": "Employee Onboarding Template",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Requirements",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Job Opening",
-   "link_count": 0,
-   "link_to": "Job Opening",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Job Applicant",
-   "link_count": 0,
-   "link_to": "Job Applicant",
-   "link_type": "DocType",
-   "onboard": 0,
    "type": "Link"
   },
   {
@@ -269,9 +201,58 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Onboarding",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Employee Onboarding Template",
+   "link_count": 0,
+   "link_to": "Employee Onboarding Template",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job Opening",
+   "link_count": 0,
+   "link_to": "Job Opening",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job Applicant",
+   "link_count": 0,
+   "link_to": "Job Applicant",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Employee Onboarding",
+   "link_count": 0,
+   "link_to": "Employee Onboarding",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-04 11:57:30.807773",
+ "modified": "2026-05-05 10:09:42.478704",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Careers",
