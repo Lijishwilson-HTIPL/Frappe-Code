@@ -1,0 +1,58 @@
+# Sensitive site config (contains DB passwords, encryption keys)
+sites/*/site_config.json
+archived/sites/*/site_config.json
+sites/common_site_config.json
+
+# Logs
+logs/
+sites/*/logs/
+archived/sites/*/logs/
+
+# PID files
+config/pids/
+
+# Claude local settings
+.claude/settings.local.json
+
+# Compiled/symlinked assets (generated at runtime)
+sites/assets/crm
+sites/assets/erpnext
+sites/assets/frappe
+sites/assets/hrms
+
+# Database backups
+sites/*/private/backups/*.sql.gz
+sites/*/private/backups/*.sql
+
+# Uploaded public files
+sites/*/public/files/*.jpg
+sites/*/public/files/*.jpeg
+sites/*/public/files/*.png
+sites/*/public/files/*.pdf
+sites/*/public/files/*.doc
+sites/*/public/files/*.docx
+
+# Site runtime/index files
+sites/*/indexes/
+sites/*/touched_tables.json
+sites/*/.test_log
+
+# Backups with credentials
+sites/*/private/backups/*site_config_backup*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+apps/erpnext/erpnext/patches/v16_0/*.Identifier

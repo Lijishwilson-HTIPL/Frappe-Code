@@ -108,3 +108,8 @@ redis.exceptions.ConnectionError: Error 111 connecting to 127.0.0.1:11000. Conne
 2026-04-28 10:11:35,917 ERROR scheduler Skipped queueing erpnext.utilities.doctype.video.video.update_youtube_data because it was found in queue for mysite.local
 2026-04-28 10:11:35,934 ERROR scheduler Skipped queueing erpnext.support.doctype.issue.issue.auto_close_tickets because it was found in queue for mysite.local
 2026-04-28 10:11:35,966 ERROR scheduler Skipped queueing frappe.oauth.delete_oauth2_data because it was found in queue for mysite.local
+2026-05-04 10:15:53,606 ERROR scheduler Skipped queueing crm.lead_syncing.background_sync.sync_leads_from_sources_daily because it was found in queue for mysite.local
+2026-05-04 10:15:53,627 ERROR scheduler Skipped queueing erpnext.crm.doctype.email_campaign.email_campaign.send_email_to_leads_or_contacts because it was found in queue for mysite.local
+2026-05-04 10:15:53,634 ERROR scheduler Skipped queueing frappe.integrations.doctype.google_drive.google_drive.weekly_backup because it was found in queue for mysite.local
+2026-05-04 10:15:53,646 ERROR scheduler Skipped queueing frappe.desk.page.backups.backups.delete_downloadable_backups because it was found in queue for mysite.local
+2026-05-04 10:15:53,654 ERROR scheduler Skipped queueing frappe.email.doctype.auto_email_report.auto_email_report.send_daily because it was found in queue for mysite.local

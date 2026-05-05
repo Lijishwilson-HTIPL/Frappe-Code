@@ -444,3 +444,170 @@
 2026-04-28 14:15:57,497 INFO /home/ijish/.local/bin/bench schedule
 2026-04-28 14:15:57,515 INFO /home/ijish/.local/bin/bench worker
 2026-04-28 14:15:57,515 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 14:38:41,666 INFO /home/ijish/.local/bin/bench start
+2026-04-28 14:38:41,887 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 14:38:41,894 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 14:38:41,895 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 14:38:41,903 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 14:38:57,437 INFO /home/ijish/.local/bin/bench build
+2026-04-28 14:40:46,845 INFO /home/ijish/.local/bin/bench start
+2026-04-28 14:40:47,169 INFO /home/ijish/.local/bin/bench schedule
+2026-04-28 14:40:47,173 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-28 14:40:47,187 INFO /home/ijish/.local/bin/bench worker
+2026-04-28 14:40:47,188 INFO /home/ijish/.local/bin/bench watch
+2026-04-28 14:42:35,691 INFO /home/ijish/.local/bin/bench install-app crm
+2026-04-28 14:44:01,430 INFO /home/ijish/.local/bin/bench --site mysite.local install-app crm
+2026-04-28 18:00:01,676 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-29 09:46:05,050 INFO /home/ijish/.local/bin/bench start
+2026-04-29 09:46:05,410 INFO /home/ijish/.local/bin/bench watch
+2026-04-29 09:46:05,411 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-29 09:46:05,421 INFO /home/ijish/.local/bin/bench worker
+2026-04-29 09:46:05,429 INFO /home/ijish/.local/bin/bench schedule
+2026-04-29 09:49:43,581 INFO /home/ijish/.local/bin/bench start
+2026-04-29 09:49:43,871 INFO /home/ijish/.local/bin/bench watch
+2026-04-29 09:49:43,897 INFO /home/ijish/.local/bin/bench schedule
+2026-04-29 09:49:43,903 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-29 09:49:43,904 INFO /home/ijish/.local/bin/bench worker
+2026-04-29 09:50:34,777 INFO /home/ijish/.local/bin/bench start
+2026-04-29 09:50:35,072 INFO /home/ijish/.local/bin/bench watch
+2026-04-29 09:50:35,078 INFO /home/ijish/.local/bin/bench schedule
+2026-04-29 09:50:35,079 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-29 09:50:35,089 INFO /home/ijish/.local/bin/bench worker
+2026-04-29 12:00:02,055 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-29 15:36:44,676 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-04-29 15:36:58,748 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-29 15:37:00,254 INFO /home/ijish/.local/bin/bench restart
+2026-04-29 18:00:01,556 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-30 09:29:32,913 INFO /home/ijish/.local/bin/bench start
+2026-04-30 09:29:33,145 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-30 09:29:33,150 INFO /home/ijish/.local/bin/bench watch
+2026-04-30 09:29:33,152 INFO /home/ijish/.local/bin/bench schedule
+2026-04-30 09:29:33,152 INFO /home/ijish/.local/bin/bench worker
+2026-04-30 09:29:45,472 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 09:30:00,110 INFO /home/ijish/.local/bin/bench supervisor start
+2026-04-30 09:32:41,637 INFO /home/ijish/.local/bin/bench start
+2026-04-30 09:32:41,912 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-30 09:32:41,916 INFO /home/ijish/.local/bin/bench schedule
+2026-04-30 09:32:41,919 INFO /home/ijish/.local/bin/bench worker
+2026-04-30 09:32:41,919 INFO /home/ijish/.local/bin/bench watch
+2026-04-30 10:44:56,730 INFO /home/ijish/.local/bin/bench new-app sbiq
+2026-04-30 10:44:56,736 LOG creating new app sbiq
+2026-04-30 10:45:52,674 LOG Installing sbiq
+2026-04-30 10:45:52,675 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/sbiq  --python /home/ijish/frappe-bench/env/bin/python
+2026-04-30 10:45:53,280 DEBUG bench build --app sbiq
+2026-04-30 10:45:53,373 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 10:46:18,310 INFO /home/ijish/.local/bin/bench --site mysite.local install-app sbiq
+2026-04-30 10:46:46,706 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 10:47:09,435 INFO /home/ijish/.local/bin/bench start
+2026-04-30 10:47:09,627 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-30 10:47:09,634 INFO /home/ijish/.local/bin/bench watch
+2026-04-30 10:47:09,640 INFO /home/ijish/.local/bin/bench schedule
+2026-04-30 10:47:09,647 INFO /home/ijish/.local/bin/bench worker
+2026-04-30 10:49:05,709 INFO /home/ijish/.local/bin/bench build
+2026-04-30 10:50:47,889 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:35:48,890 INFO /home/ijish/.local/bin/bench build
+2026-04-30 11:37:52,544 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:39:47,577 INFO /home/ijish/.local/bin/bench build app sbiq
+2026-04-30 11:40:05,171 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:40:12,233 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:41:25,602 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:41:31,573 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:45:19,098 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:45:22,067 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:52:02,710 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:52:05,868 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:54:11,278 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:54:14,080 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 11:57:37,205 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 11:57:40,456 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 12:00:02,126 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-04-30 12:07:51,958 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 12:07:57,893 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 12:35:56,609 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.setup.after_install
+2026-04-30 12:36:00,817 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.setup.after_install
+2026-04-30 12:36:05,759 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 12:37:34,754 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.setup.after_install
+2026-04-30 12:37:48,028 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 12:38:51,943 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT role, read, write, create FROM \ WHERE parent='CRM Lead'", True]
+2026-04-30 12:39:08,504 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.fix_perms.fix
+2026-04-30 12:39:51,508 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.fix_perms.fix
+2026-04-30 12:40:32,935 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.fix_perms.fix
+2026-04-30 12:41:09,666 INFO /home/ijish/.local/bin/bench --site mysite.local execute sbiq.fix_perms.fix
+2026-04-30 12:46:23,367 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 12:49:09,839 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 12:50:00,570 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 12:50:04,404 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 13:02:48,985 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 13:04:30,900 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-04-30 13:04:37,836 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 13:04:42,668 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-04-30 13:06:46,545 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 13:07:08,391 INFO /home/ijish/.local/bin/bench build --app sbiq
+2026-04-30 13:07:11,432 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 13:21:15,600 INFO /home/ijish/.local/bin/bench --site mysite.local uninstall-app sbiq --yes
+2026-04-30 13:21:21,742 INFO /home/ijish/.local/bin/bench remove-app sbiq
+2026-04-30 13:21:21,828 INFO /home/ijish/.local/bin/bench --site all list-apps --format json
+2026-04-30 13:21:22,364 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-04-30 13:21:22,759 DEBUG cd /home/ijish/frappe-bench && uv pip uninstall sbiq --python /home/ijish/frappe-bench/env/bin/python
+2026-04-30 13:21:22,897 INFO App moved from apps/sbiq to archived/apps/sbiq-2026-04-30
+2026-04-30 13:21:26,165 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 13:22:09,455 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.delete --args {"doctype": "Workspace", "name": "SBIQ"}
+2026-04-30 13:22:15,518 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.delete --args ['Workspace', {'module': 'SBIQ'}]
+2026-04-30 13:22:15,993 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.commit
+2026-04-30 13:22:19,692 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-04-30 13:22:39,572 INFO /home/ijish/.local/bin/bench build
+2026-04-30 13:24:38,617 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 15:09:32,328 INFO /home/ijish/.local/bin/bench --site mysite.local execute crm.demo.setup_invoice_demo.run
+2026-04-30 15:10:01,886 INFO /home/ijish/.local/bin/bench --site mysite.local execute crm.demo.setup_invoice_demo.run
+2026-04-30 15:10:35,840 INFO /home/ijish/.local/bin/bench --site mysite.local execute crm.demo.setup_invoice_demo.run
+2026-04-30 15:11:08,699 INFO /home/ijish/.local/bin/bench --site mysite.local execute crm.demo.setup_invoice_demo.run
+2026-04-30 15:36:46,540 INFO /home/ijish/.local/bin/bench --site mysite.local execute crm.demo.create_invoice_print_format.run
+2026-04-30 15:50:23,574 INFO /home/ijish/.local/bin/bench restart
+2026-04-30 20:05:19,710 INFO /home/ijish/.local/bin/bench start
+2026-04-30 20:05:20,070 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-30 20:05:20,070 INFO /home/ijish/.local/bin/bench watch
+2026-04-30 20:05:20,089 INFO /home/ijish/.local/bin/bench worker
+2026-04-30 20:05:20,094 INFO /home/ijish/.local/bin/bench schedule
+2026-04-30 20:19:32,943 INFO /home/ijish/.local/bin/bench start
+2026-04-30 20:19:33,387 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-04-30 20:19:33,388 INFO /home/ijish/.local/bin/bench worker
+2026-04-30 20:19:33,396 INFO /home/ijish/.local/bin/bench watch
+2026-04-30 20:19:33,413 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 10:12:56,769 INFO /home/ijish/.local/bin/bench start
+2026-05-04 10:12:56,997 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 10:12:57,009 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 10:12:57,011 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 10:12:57,012 INFO /home/ijish/.local/bin/bench worker
+2026-05-04 10:14:52,232 INFO /home/ijish/.local/bin/bench start
+2026-05-04 10:14:52,424 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 10:14:52,425 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 10:14:52,431 INFO /home/ijish/.local/bin/bench worker
+2026-05-04 10:14:52,432 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 12:00:01,845 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-04 12:49:00,408 INFO /home/ijish/.local/bin/bench build
+2026-05-04 12:49:14,954 INFO /home/ijish/.local/bin/bench build
+2026-05-04 12:51:04,318 INFO /home/ijish/.local/bin/bench build
+2026-05-04 12:54:30,036 INFO /home/ijish/.local/bin/bench build
+2026-05-04 13:55:46,000 INFO /home/ijish/.local/bin/bench build
+2026-05-04 13:57:37,803 INFO /home/ijish/.local/bin/bench start
+2026-05-04 13:57:38,250 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 13:57:38,252 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 13:57:38,254 INFO /home/ijish/.local/bin/bench worker
+2026-05-04 13:57:38,304 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 13:58:14,488 INFO /home/ijish/.local/bin/bench migrate mysite.local
+2026-05-04 13:58:23,153 INFO /home/ijish/.local/bin/bench start
+2026-05-04 13:58:23,370 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 13:58:23,371 INFO /home/ijish/.local/bin/bench worker
+2026-05-04 13:58:23,377 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 13:58:23,396 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 17:09:01,967 INFO /home/ijish/.local/bin/bench start
+2026-05-04 17:09:02,265 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 17:09:02,267 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 17:09:02,269 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 17:09:02,277 INFO /home/ijish/.local/bin/bench worker
+2026-05-04 21:08:45,337 INFO /home/ijish/.local/bin/bench start
+2026-05-04 21:08:45,734 INFO /home/ijish/.local/bin/bench watch
+2026-05-04 21:08:45,735 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-04 21:08:45,738 INFO /home/ijish/.local/bin/bench schedule
+2026-05-04 21:08:45,742 INFO /home/ijish/.local/bin/bench worker
+2026-05-05 10:26:06,472 INFO /home/ijish/.local/bin/bench --site mysite.local backup --with-files

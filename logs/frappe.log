@@ -43,3 +43,18 @@ Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe
 2026-04-24 14:16:30,213 ERROR frappe New Exception collected in error log
 Site: mysite.local
 Form Dict: {'doctype': 'CRM Lead', 'name': 'CRM-LEAD-2026-00003', 'cmd': 'frappe.client.delete'}
+2026-04-30 11:45:32,703 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'Crm Lead', 'cmd': 'frappe.client.get_count', 'filters': None, 'debug': False}
+2026-04-30 12:43:22,081 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', 'default_filters': {'converted': 0}, 'view': {'custom_view_name': '', 'view_type': 'list', 'group_by_field': 'owner'}, 'column_field': 'status', 'title_field': '', 'kanban_columns': '', 'kanban_fields': '', 'columns': '', 'rows': '', 'page_length': 20, 'page_length_count': 20, 'cmd': 'crm.api.doc.get_data'}
+2026-04-30 12:44:33,457 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', 'default_filters': {'converted': 0}, 'view': {'custom_view_name': '', 'view_type': 'list', 'group_by_field': 'owner'}, 'column_field': 'status', 'title_field': '', 'kanban_columns': '', 'kanban_fields': '', 'columns': '', 'rows': '', 'page_length': 20, 'page_length_count': 20, 'cmd': 'crm.api.doc.get_data'}
+2026-04-30 12:50:26,095 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', 'default_filters': {'converted': 0}, 'view': {'custom_view_name': '', 'view_type': 'list', 'group_by_field': 'owner'}, 'column_field': 'status', 'title_field': '', 'kanban_columns': '', 'kanban_fields': '', 'columns': '', 'rows': '', 'page_length': 20, 'page_length_count': 20, 'cmd': 'crm.api.doc.get_data'}
+2026-04-30 13:00:48,019 ERROR frappe Error while inserting deferred Route History record: Could not find User: lijish.wilson@hephzibahtech.com
+Site: mysite.local
+Form Dict: {}

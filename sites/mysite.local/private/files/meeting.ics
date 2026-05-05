@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Hephzibah Technologies//Meeting Scheduler//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:8ue5z38yi6j@Hephzibah Technologies.com
+DTSTAMP:20260429T115700
+DTSTART:20260429T100000
+DTEND:20260429T103000
+SUMMARY:Hephzibah Technologies Discovery Call Meeting
+DESCRIPTION:Meeting scheduled with Hephzibah Technologies Team. 
+Join Link: https://meet.google.com/aid-mznn-nnt
+LOCATION:https://meet.google.com/aid-mznn-nnt
+ORGANIZER;CN=Hephzibah Technologies:mailto:mark.intell@hephzibahtech.com
+ATTENDEE;CN=Akash Immanuel;RSVP=TRUE:mailto:ron@testdae.com
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

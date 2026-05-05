@@ -18,14 +18,14 @@
         "idx": 2,
         "version": "15.104.3"
     },
-    "hrms": {
+    "crm": {
         "is_repo": true,
         "resolution": {
-            "commit_hash": "2ffc5aa37c1c9b5e3dc6f19bcd51c4c6f2c4fca5",
-            "branch": "version-15"
+            "commit_hash": "fa2497bba001a50b9ab6e6f2509f393e302ef4a3",
+            "branch": "main"
         },
         "required": [],
         "idx": 3,
-        "version": "15.59.2"
+        "version": "1.69.1"
     }
 }
