@@ -15,4 +15,33 @@ cp "$PATCHES_DIR/erpnext/erpnext/setup/doctype/career_inquiry/career_inquiry.jso
 cp "$PATCHES_DIR/erpnext/erpnext/setup/doctype/career_inquiry/career_inquiry.py" \
    "$BENCH_DIR/apps/erpnext/erpnext/setup/doctype/career_inquiry/career_inquiry.py"
 
+# Frappe CRM: CRM Lead — website_message, primary_interest, preferred_contact, how_found_us fields
+cp "$PATCHES_DIR/crm/crm/fcrm/doctype/crm_lead/crm_lead.json" \
+   "$BENCH_DIR/apps/crm/crm/fcrm/doctype/crm_lead/crm_lead.json"
+
+echo ""
+echo "Applying logo settings to database..."
+SITE="${1:-mysite.local}"
+
+bench --site "$SITE" mariadb --execute "
+INSERT INTO tabSingles (doctype, field, value) VALUES ('System Settings','brand_logo','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('Navbar Settings','app_logo','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('Website Settings','app_logo','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('Website Settings','banner_image','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('Website Settings','favicon','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('Website Settings','set_banner_from_image','1')
+  ON DUPLICATE KEY UPDATE value='1';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('FCRM Settings','brand_logo','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+INSERT INTO tabSingles (doctype, field, value) VALUES ('FCRM Settings','favicon','/files/logo.png')
+  ON DUPLICATE KEY UPDATE value='/files/logo.png';
+"
+
+bench --site "$SITE" clear-cache
+
 echo "Done. Now run: bench --site <site> migrate"
