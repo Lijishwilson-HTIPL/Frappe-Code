@@ -33,6 +33,8 @@ cp "$BENCH_DIR/patches/assets/erp-logo.png" "$BENCH_DIR/apps/erpnext/erpnext/pub
 echo "Applying logo settings to database..."
 
 bench --site "$SITE" mariadb --execute "
+INSERT INTO tabSingles (doctype, field, value) VALUES ('System Settings','app_name','Hephzibah Technologies')
+  ON DUPLICATE KEY UPDATE value='Hephzibah Technologies';
 INSERT INTO tabSingles (doctype, field, value) VALUES ('System Settings','brand_logo','/files/logo.png')
   ON DUPLICATE KEY UPDATE value='/files/logo.png';
 INSERT INTO tabSingles (doctype, field, value) VALUES ('Navbar Settings','app_logo','/files/logo.png')
