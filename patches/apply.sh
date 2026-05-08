@@ -53,6 +53,13 @@ INSERT INTO tabSingles (doctype, field, value) VALUES ('FCRM Settings','favicon'
   ON DUPLICATE KEY UPDATE value='/files/crm-logo.png';
 "
 
+echo "Renaming Frappe CRM workspace to SBIQ CRM..."
+bench --site "$SITE" mariadb --execute "
+UPDATE tabWorkspace SET name='SBIQ CRM', label='SBIQ CRM', title='SBIQ CRM' WHERE name='Frappe CRM';
+UPDATE \`tabWorkspace Link\` SET parent='SBIQ CRM' WHERE parent='Frappe CRM';
+UPDATE \`tabWorkspace Shortcut\` SET parent='SBIQ CRM' WHERE parent='Frappe CRM';
+" 2>/dev/null || true
+
 bench --site "$SITE" clear-cache
 
 echo "Done. Now run: bench --site <site> migrate"
