@@ -24,8 +24,11 @@ echo "Copying logo files to site public files..."
 SITE="${1:-mysite.local}"
 SITE_DIR="$BENCH_DIR/sites/$SITE/public/files"
 mkdir -p "$SITE_DIR"
-cp "$BENCH_DIR/patches/assets/logo.png" "$SITE_DIR/logo.png"
+cp "$BENCH_DIR/patches/assets/logo.png"     "$SITE_DIR/logo.png"
 cp "$BENCH_DIR/patches/assets/crm-logo.png" "$SITE_DIR/crm-logo.png"
+cp "$BENCH_DIR/patches/assets/hr-logo.png"  "$BENCH_DIR/apps/hrms/hrms/public/images/frappe-hr-logo.png"
+cp "$BENCH_DIR/patches/assets/erp-logo.png" "$BENCH_DIR/apps/erpnext/erpnext/public/images/erpnext-logo-blue.png"
+cp "$BENCH_DIR/patches/assets/erp-logo.png" "$BENCH_DIR/apps/erpnext/erpnext/public/images/erpnext-logo.png"
 
 echo "Applying logo settings to database..."
 
