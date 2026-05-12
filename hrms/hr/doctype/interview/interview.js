@@ -24,6 +24,17 @@ frappe.ui.form.on("Interview", {
 	},
 
 	add_custom_buttons: async function (frm) {
+		// Email Applicant — show always (even on draft); click handler prompts save if needed
+		if (frm.doc.docstatus !== 2) {
+			frm.add_custom_button(__("Email Applicant"), function () {
+				if (frm.doc.__islocal || frm.is_dirty()) {
+					frappe.msgprint(__("Save the Interview first, then click Email Applicant."));
+					return;
+				}
+				frm.events.email_applicant(frm);
+			}).addClass("btn-primary");
+		}
+
 		if (frm.doc.docstatus === 2 || frm.doc.__islocal) return;
 
 		if (frm.doc.status === "Pending") {
@@ -204,9 +215,13 @@ frappe.ui.form.on("Interview", {
 	},
 
 	job_applicant: function (frm) {
-		if (!frm.doc.interview_round) {
+		if (frm.doc.job_applicant && !frm.doc.interview_round) {
 			frm.set_value("job_applicant", "");
-			frappe.throw(__("Select Interview Round First"));
+			frappe.show_alert({
+				message: __("Select Interview Round first"),
+				indicator: "orange",
+			});
+			return;
 		}
 
 		if (frm.doc.job_applicant && !frm.doc.designation) {
@@ -276,5 +291,67 @@ frappe.ui.form.on("Interview", {
 		frm.reviews_per_rating = reviews_per_rating.map((x) =>
 			flt((x * 100) / frm.feedback.length, 1),
 		);
+	},
+
+	email_applicant: async function (frm) {
+		if (!frm.doc.job_applicant) {
+			frappe.msgprint(__("Set the Job Applicant first."));
+			return;
+		}
+		const r = await frappe.db.get_value("Job Applicant", frm.doc.job_applicant, [
+			"email_id",
+			"applicant_name",
+		]);
+		const email_id = r?.message?.email_id;
+		const applicant_name = r?.message?.applicant_name || "";
+		if (!email_id) {
+			frappe.msgprint(__("This applicant has no email address on file."));
+			return;
+		}
+
+		const d = new frappe.ui.Dialog({
+			title: __("Choose Email Template"),
+			fields: [
+				{
+					label: __("Email Template"),
+					fieldname: "email_template",
+					fieldtype: "Link",
+					options: "Email Template",
+					reqd: 1,
+					description: __("Pick a template to pre-fill the email."),
+				},
+			],
+			primary_action_label: __("Continue"),
+			primary_action(values) {
+				d.hide();
+				frm.events.open_interview_composer(frm, email_id, applicant_name, values.email_template);
+			},
+			secondary_action_label: __("Skip & Compose Blank"),
+			secondary_action() {
+				d.hide();
+				frm.events.open_interview_composer(frm, email_id, applicant_name, null);
+			},
+		});
+		d.show();
+	},
+
+	open_interview_composer: function (frm, email_id, applicant_name, template_name) {
+		const default_subject = __("Interview scheduled — {0}", [
+			frm.doc.interview_round || frm.doc.name,
+		]);
+		const launch = (subject, content) => {
+			new frappe.views.CommunicationComposer({
+				doc: frm.doc,
+				frm: frm,
+				subject: subject || default_subject,
+				recipients: email_id,
+				content: content || "",
+				attach_document_print: false,
+			});
+		};
+		if (!template_name) return launch();
+		frappe.db.get_doc("Email Template", template_name).then((tpl) => {
+			launch(tpl.subject, tpl.response_html || tpl.response || "");
+		});
 	},
 });

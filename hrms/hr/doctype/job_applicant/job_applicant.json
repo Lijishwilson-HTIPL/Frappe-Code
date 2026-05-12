@@ -19,6 +19,7 @@
   "job_title",
   "designation",
   "status",
+  "recruitment_stage",
   "source_and_rating_section",
   "source",
   "source_name",
@@ -67,6 +68,15 @@
    "label": "Status",
    "options": "Open\nReplied\nRejected\nHold\nAccepted",
    "reqd": 1
+  },
+  {
+   "default": "Applied",
+   "fieldname": "recruitment_stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Recruitment Stage",
+   "options": "Applied\nScreening\nAssessment\nInterview\nOffered\nOnboard"
   },
   {
    "fieldname": "column_break_3",
@@ -269,5 +279,6 @@
  "sort_order": "ASC",
  "states": [],
  "subject_field": "notes",
- "title_field": "applicant_name"
+ "title_field": "applicant_name",
+ "track_changes": 1
 }

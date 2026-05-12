@@ -76,8 +76,93 @@ frappe.ui.form.on("Job Applicant", {
 						}),
 						__("Interview Summary"),
 					);
+
+					const interview_map = r.message.interviews || {};
+					const interview_list = Array.isArray(interview_map)
+						? interview_map
+						: Object.values(interview_map);
+					const has_cleared = interview_list.some(
+						(i) => (i && i.status ? String(i.status).toLowerCase() : "") === "cleared",
+					);
+					if (has_cleared) {
+						setTimeout(() => frm.events.add_interview_email_button(frm), 50);
+					}
 				}
 			},
+		});
+	},
+
+	add_interview_email_button: function (frm) {
+		const target = $(".form-dashboard-section.custom").filter(function () {
+			return $(this).text().toLowerCase().includes("interview summary");
+		}).last();
+		const $section = target.length ? target : $(".form-dashboard-section.custom").last();
+		if (!$section.length || $section.find(".btn-email-applicant").length) return;
+
+		const $btn = $(
+			`<button class="btn btn-primary btn-sm btn-email-applicant" style="position:absolute;top:6px;right:16px;z-index:5;">
+				<svg style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+				${__("Email Applicant")}
+			</button>`,
+		);
+		$btn.on("click", () => frm.events.choose_email_template(frm));
+
+		$section.css("position", "relative");
+		$section.prepend($btn);
+
+		// Also add a top-toolbar button as a reliable backup
+		if (!frm.custom_buttons[__("Email Applicant")]) {
+			frm.add_custom_button(__("Email Applicant"), () =>
+				frm.events.choose_email_template(frm),
+			).addClass("btn-primary");
+		}
+	},
+
+	choose_email_template: function (frm) {
+		if (!frm.doc.email_id) {
+			frappe.msgprint(__("Applicant has no email address on file."));
+			return;
+		}
+		const d = new frappe.ui.Dialog({
+			title: __("Choose Email Template"),
+			fields: [
+				{
+					label: __("Email Template"),
+					fieldname: "email_template",
+					fieldtype: "Link",
+					options: "Email Template",
+					reqd: 1,
+					description: __("Pick a template to pre-fill the email."),
+				},
+			],
+			primary_action_label: __("Continue"),
+			primary_action(values) {
+				d.hide();
+				frm.events.open_email_composer(frm, values.email_template);
+			},
+			secondary_action_label: __("Skip & Compose Blank"),
+			secondary_action() {
+				d.hide();
+				frm.events.open_email_composer(frm, null);
+			},
+		});
+		d.show();
+	},
+
+	open_email_composer: function (frm, template_name) {
+		const launch = (subject, content) => {
+			new frappe.views.CommunicationComposer({
+				doc: frm.doc,
+				frm: frm,
+				subject: subject || __("Regarding your application — {0}", [frm.doc.applicant_name || ""]),
+				recipients: frm.doc.email_id,
+				content: content || "",
+				attach_document_print: false,
+			});
+		};
+		if (!template_name) return launch();
+		frappe.db.get_doc("Email Template", template_name).then((tpl) => {
+			launch(tpl.subject, tpl.response_html || tpl.response || "");
 		});
 	},
 
