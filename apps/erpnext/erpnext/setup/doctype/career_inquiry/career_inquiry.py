@@ -46,6 +46,7 @@ def submit_career_inquiry(
 	portfolio_site=None,
 	how_did_you_hear=None,
 	other_source=None,
+	job_applicant_ref=None,
 ):
 	hear_value = how_did_you_hear
 	other_value = other_source
@@ -68,6 +69,7 @@ def submit_career_inquiry(
 		"portfolio_site": portfolio_site,
 		"how_did_you_hear": hear_value,
 		"other_source": other_value,
+		"job_applicant_ref": job_applicant_ref,
 	})
 	doc.insert(ignore_permissions=True)
 	frappe.db.commit()

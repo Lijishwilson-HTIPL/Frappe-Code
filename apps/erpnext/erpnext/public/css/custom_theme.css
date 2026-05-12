@@ -1,213 +1,705 @@
-/* ── Custom Theme: Light & Fresh ─────────────────────────────── */
+/* =========================================================
+   MODERN FRAPPE CRM GLASSMORPHISM THEME
+   Copy & Paste Full File
+========================================================= */
 
-/* Navbar */
-.navbar {
-  background: #ffffff !important;
-  border-bottom: 2px solid #e2e8f0 !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
-}
-.navbar .nav-link,
-.navbar .navbar-nav .nav-link,
-.navbar .dropdown-toggle,
-.navbar .help-links a {
-  color: #374151 !important;
-}
-.navbar .nav-link:hover { color: #10b981 !important; }
-.navbar-home svg, .navbar-home use { color: #374151 !important; fill: #374151 !important; }
-.navbar .avatar { border: 2px solid #10b981 !important; }
-.navbar .input-group .form-control,
-.navbar .search-bar .form-control {
-  background: #f9fafb !important;
-  color: #374151 !important;
-  border-color: #e5e7eb !important;
-}
-.navbar .input-group .form-control::placeholder { color: #9ca3af !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Sidebar */
-.layout-side-section,
-.desk-sidebar {
-  background: #f0fdf4 !important;
-}
-.standard-sidebar-item,
-.sidebar-item-container .sidebar-item {
-  border-radius: 8px !important;
-  margin: 2px 6px !important;
-}
-.standard-sidebar-item:hover,
-.sidebar-item-container .sidebar-item:hover {
-  background: #d1fae5 !important;
-}
-.standard-sidebar-item.selected,
-.sidebar-item-container .sidebar-item.selected {
-  background: #10b981 !important;
-}
-.standard-sidebar-item .sidebar-item-label,
-.sidebar-item-container .sidebar-item-label {
-  color: #374151 !important;
-}
-.standard-sidebar-item.selected .sidebar-item-label {
-  color: #ffffff !important;
-  font-weight: 600 !important;
-}
-.sidebar-group-title,
-.sidebar-section-head,
-.desk-sidebar .item-group-title {
-  color: #6b7280 !important;
-  font-size: 10px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-}
-.desk-sidebar .sidebar-child-item .sidebar-item-label { color: #6b7280 !important; }
-.desk-sidebar svg use, .desk-sidebar svg path { stroke: #9ca3af !important; }
-.desk-sidebar .selected svg use, .desk-sidebar .selected svg path { stroke: #ffffff !important; }
+/* =========================================================
+   ROOT COLORS
+========================================================= */
 
-/* Main background */
+:root {
+
+  --uic-primary: #7C3AED;
+  --uic-primary-hover: #6D28D9;
+  --uic-primary-light: #F3E8FF;
+
+  --uic-secondary: #4F46E5;
+  --uic-accent: #06B6D4;
+
+  --uic-bg: #F5F3FF;
+
+  --uic-surface: rgba(255,255,255,0.72);
+
+  --uic-card: rgba(255,255,255,0.78);
+
+  --uic-text: #1E293B;
+  --uic-text-muted: #64748B;
+
+  --uic-border: rgba(255,255,255,0.22);
+
+  --uic-shadow:
+    0 8px 32px rgba(124,58,237,0.08);
+
+  --uic-glow:
+    0 0 0 1px rgba(255,255,255,0.15),
+    0 8px 32px rgba(124,58,237,0.12);
+}
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+* {
+  font-family: 'Inter', sans-serif !important;
+}
+
+html,
+body,
+.frappe-app {
+
+  background:
+    radial-gradient(
+      circle at top left,
+      #C4B5FD 0%,
+      #DDD6FE 20%,
+      #F5F3FF 45%,
+      #FFFFFF 100%
+    ) !important;
+
+  min-height: 100vh !important;
+
+  color: var(--uic-text) !important;
+
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Remove boring solid backgrounds */
+
+.main-section,
 .page-container,
 .layout-main-section-wrapper,
 .layout-main-section,
-.frappe-app,
-body {
-  background-color: #f9fafb !important;
+.page-body,
+.workspace-content,
+.desk-page,
+.content,
+.container,
+.layout-main {
+
+  background: transparent !important;
 }
 
-/* Workspace cards */
-.widget.links-widget-box,
-.widget-group-body .widget,
-.widget.shortcut-widget-box,
-.widget.number-widget-box {
-  background: #ffffff !important;
-  border: 1px solid #d1fae5 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(16,185,129,0.07) !important;
-  transition: box-shadow 0.2s, transform 0.2s !important;
-}
-.widget.links-widget-box:hover,
-.widget.shortcut-widget-box:hover {
-  box-shadow: 0 6px 20px rgba(16,185,129,0.15) !important;
-  transform: translateY(-2px) !important;
-}
-.widget-head .widget-title,
-.links-widget-box .widget-head .widget-label .widget-title {
-  color: #065f46 !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-}
-.widget-body .link-item:hover {
-  background: #ecfdf5 !important;
-  border-radius: 6px !important;
-}
-.widget-body .link-item .link-content { color: #10b981 !important; }
+/* =========================================================
+   NAVBAR
+========================================================= */
 
-/* Workspace section headers */
-.widget-group-title,
-.workspace-section-header {
-  color: #065f46 !important;
-  font-weight: 700 !important;
+.navbar {
+
+  background:
+    rgba(255,255,255,0.65) !important;
+
+  backdrop-filter: blur(18px);
+
+  border-bottom:
+    1px solid rgba(255,255,255,0.22) !important;
+
+  box-shadow:
+    0 4px 30px rgba(0,0,0,0.04) !important;
 }
 
-/* Page header */
+/* Search */
+
+.awesome-bar,
+.search-bar input {
+
+  background:
+    rgba(255,255,255,0.75) !important;
+
+  border:
+    1px solid rgba(255,255,255,0.22) !important;
+
+  border-radius: 14px !important;
+}
+
+/* =========================================================
+   LIGHT PREMIUM SIDEBAR
+========================================================= */
+
+.layout-side-section,
+.desk-sidebar,
+.body-sidebar-container,
+.workspace-sidebar {
+
+  background:
+    linear-gradient(
+      180deg,
+      #EEF2FF 0%,
+      #DDD6FE 45%,
+      #C4B5FD 100%
+    ) !important;
+
+  border-right:
+    1px solid rgba(124,58,237,0.12) !important;
+
+  box-shadow:
+    6px 0 24px rgba(124,58,237,0.08) !important;
+}
+
+/* Sidebar Text */
+
+.layout-side-section *,
+.workspace-sidebar * {
+
+  color:
+    #312E81 !important;
+
+  font-weight:
+    500;
+}
+
+/* Sidebar Items */
+
+.standard-sidebar-item {
+
+  border-radius:
+    14px !important;
+
+  margin:
+    4px 10px !important;
+
+  transition:
+    all 0.25s ease !important;
+}
+
+/* Hover */
+
+.standard-sidebar-item:hover {
+
+  background:
+    rgba(124,58,237,0.10) !important;
+
+  transform:
+    translateX(3px);
+}
+
+/* Active */
+
+.standard-sidebar-item.selected {
+
+  background:
+    linear-gradient(
+      135deg,
+      #7C3AED,
+      #A855F7
+    ) !important;
+
+  box-shadow:
+    0 8px 20px rgba(124,58,237,0.18);
+}
+
+/* Active text */
+
+.standard-sidebar-item.selected *,
+.standard-sidebar-item.selected svg {
+
+  color:
+    white !important;
+}
+
+/* Sidebar Icons */
+
+.standard-sidebar-item svg {
+
+  opacity:
+    0.85;
+}
+
+/* Sidebar Section Labels */
+
+.sidebar-label,
+.standard-sidebar-section {
+
+  color:
+    #6D28D9 !important;
+
+  font-weight:
+    700 !important;
+
+  letter-spacing:
+    0.4px;
+}
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
 .page-head {
-  background: #ffffff !important;
-  border-bottom: 1px solid #e5e7eb !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
-}
-.page-title .title-text { color: #111827 !important; font-weight: 700 !important; }
-.page-head .breadcrumb .breadcrumb-item a { color: #10b981 !important; }
 
-/* Buttons */
+  background:
+    transparent !important;
+
+  border-bottom:
+    none !important;
+
+  box-shadow:
+    none !important;
+}
+
+.page-title .title-text {
+
+  font-size: 24px !important;
+
+  font-weight: 700 !important;
+
+  color: var(--uic-text) !important;
+}
+
+/* =========================================================
+   WIDGETS / CARDS
+========================================================= */
+
+.widget,
+.widget.links-widget-box,
+.widget.shortcut-widget-box,
+.widget.chart-widget-box,
+.widget.dashboard-widget-box,
+.widget.quick-list-widget-box,
+.widget.onboarding-widget-box,
+.widget.number-widget-box,
+.form-section.card-section {
+
+  background:
+    rgba(255,255,255,0.72) !important;
+
+  backdrop-filter:
+    blur(18px);
+
+  border:
+    1px solid rgba(255,255,255,0.28) !important;
+
+  border-radius:
+    24px !important;
+
+  box-shadow:
+    var(--uic-shadow) !important;
+
+  transition:
+    all 0.25s ease !important;
+
+  overflow: hidden;
+}
+
+/* Card Hover */
+
+.widget:hover,
+.form-section.card-section:hover {
+
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 18px 40px rgba(124,58,237,0.14) !important;
+}
+
+/* =========================================================
+   CARD HEADERS
+========================================================= */
+
+.widget-head {
+
+  border-bottom:
+    1px solid rgba(255,255,255,0.18) !important;
+
+  padding-bottom:
+    12px !important;
+}
+
+.workspace-section-header,
+.widget-title {
+
+  font-size:
+    15px !important;
+
+  font-weight:
+    700 !important;
+
+  letter-spacing:
+    0.3px !important;
+
+  color:
+    #312E81 !important;
+}
+
+/* =========================================================
+   LINK ITEMS
+========================================================= */
+
+.widget-body .link-item {
+
+  border-radius:
+    14px !important;
+
+  transition:
+    all 0.2s ease !important;
+}
+
+.widget-body .link-item:hover {
+
+  background:
+    rgba(124,58,237,0.08) !important;
+
+  transform:
+    translateX(4px);
+}
+
+/* =========================================================
+   INDICATOR PILLS
+========================================================= */
+
+.indicator-pill {
+
+  background:
+    linear-gradient(
+      135deg,
+      #8B5CF6,
+      #C026D3
+    ) !important;
+
+  color:
+    white !important;
+
+  border:
+    none !important;
+
+  border-radius:
+    999px !important;
+
+  padding:
+    4px 10px !important;
+
+  font-weight:
+    600 !important;
+
+  box-shadow:
+    0 4px 12px rgba(124,58,237,0.25);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
 .btn-primary {
-  background: #10b981 !important;
-  border-color: #10b981 !important;
-  color: #fff !important;
-  border-radius: 8px !important;
-  font-weight: 600 !important;
-}
-.btn-primary:hover, .btn-primary:focus {
-  background: #059669 !important;
-  border-color: #059669 !important;
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.25) !important;
-}
-.btn-secondary, .btn-default {
-  background: #f3f4f6 !important;
-  border-color: #e5e7eb !important;
-  color: #374151 !important;
-  border-radius: 8px !important;
-}
-.btn-secondary:hover { background: #e5e7eb !important; }
 
-/* List view */
-.list-row-container .list-row,
-.result .list-row-col {
-  background: #ffffff !important;
+  background:
+    linear-gradient(
+      135deg,
+      #7C3AED,
+      #C026D3
+    ) !important;
+
+  border:
+    none !important;
+
+  border-radius:
+    12px !important;
+
+  color:
+    white !important;
+
+  font-weight:
+    600 !important;
+
+  box-shadow:
+    0 8px 20px rgba(124,58,237,0.25);
+
+  transition:
+    all 0.25s ease !important;
 }
-.list-row-container .list-row:hover { background: #ecfdf5 !important; }
-.list-row-container .list-row .list-subject .level-item a { color: #10b981 !important; font-weight: 600 !important; }
-.list-filters { background: #ffffff !important; border-bottom: 1px solid #e5e7eb !important; }
-.list-header-subject { color: #6b7280 !important; font-weight: 600 !important; }
 
-/* Form */
-.form-page { background: #f9fafb !important; }
-.form-layout .section-head {
-  color: #059669 !important;
-  font-weight: 600 !important;
-  border-bottom: 2px solid #d1fae5 !important;
-  padding-bottom: 6px !important;
+.btn-primary:hover {
+
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 14px 30px rgba(124,58,237,0.35);
 }
-.frappe-control .control-label,
-.control-label { color: #6b7280 !important; font-weight: 500 !important; }
-.frappe-control input,
-.frappe-control select,
-.frappe-control textarea,
-.form-control {
-  border-color: #e5e7eb !important;
-  border-radius: 8px !important;
-  background: #ffffff !important;
-  color: #111827 !important;
+
+/* Secondary Buttons */
+
+.btn-default,
+.btn-secondary {
+
+  background:
+    rgba(255,255,255,0.7) !important;
+
+  border:
+    1px solid rgba(255,255,255,0.22) !important;
+
+  border-radius:
+    12px !important;
+
+  color:
+    var(--uic-text) !important;
 }
-.frappe-control input:focus,
-.frappe-control textarea:focus,
-.form-control:focus {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.15) !important;
-  background: #ffffff !important;
+
+.btn-default:hover,
+.btn-secondary:hover {
+
+  background:
+    rgba(124,58,237,0.08) !important;
 }
-.form-save { background: #f9fafb !important; border-top: 1px solid #e5e7eb !important; }
 
-/* Tabs */
-.form-tabs-list .nav-link.active {
-  color: #10b981 !important;
-  border-bottom: 2px solid #10b981 !important;
-  font-weight: 600 !important;
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.form-control,
+input,
+textarea,
+select {
+
+  background:
+    rgba(255,255,255,0.7) !important;
+
+  border:
+    1px solid rgba(255,255,255,0.24) !important;
+
+  border-radius:
+    14px !important;
+
+  min-height:
+    42px !important;
+
+  box-shadow:
+    none !important;
 }
-.form-tabs-list .nav-link { color: #9ca3af !important; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #f3f4f6; }
-::-webkit-scrollbar-thumb { background: #a7f3d0; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #10b981; }
+.form-control:focus,
+input:focus,
+textarea:focus,
+select:focus {
 
-/* Table */
-.dt-scrollable thead th { background: #ecfdf5 !important; color: #065f46 !important; }
-.dt-cell--col-0 { color: #10b981 !important; }
+  border-color:
+    #8B5CF6 !important;
 
-/* Indicators */
-.indicator-pill.blue, .indicator-pill.blue-light { background: #dbeafe !important; color: #1d4ed8 !important; }
-.indicator-pill.green { background: #d1fae5 !important; color: #059669 !important; }
-.indicator-pill.red { background: #fee2e2 !important; color: #dc2626 !important; }
-.indicator-pill.orange { background: #ffedd5 !important; color: #ea580c !important; }
-.indicator-pill.yellow { background: #fef9c3 !important; color: #ca8a04 !important; }
+  box-shadow:
+    0 0 0 4px rgba(139,92,246,0.14) !important;
+}
 
-/* Dropdown menus */
+/* =========================================================
+   LIST VIEW
+========================================================= */
+
+.list-row {
+
+  background:
+    rgba(255,255,255,0.68) !important;
+
+  border-radius:
+    16px !important;
+
+  margin-bottom:
+    8px !important;
+
+  border:
+    1px solid rgba(255,255,255,0.22) !important;
+
+  transition:
+    all 0.2s ease !important;
+}
+
+.list-row:hover {
+
+  transform:
+    translateY(-2px);
+
+  background:
+    rgba(255,255,255,0.82) !important;
+
+  box-shadow:
+    0 10px 24px rgba(124,58,237,0.08);
+}
+
+/* =========================================================
+   DROPDOWNS
+========================================================= */
+
 .dropdown-menu {
-  border: 1px solid #e5e7eb !important;
-  border-radius: 10px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
-}
-.dropdown-item:hover {
-  background: #ecfdf5 !important;
-  color: #059669 !important;
+
+  background:
+    rgba(255,255,255,0.82) !important;
+
+  backdrop-filter:
+    blur(18px);
+
+  border:
+    1px solid rgba(255,255,255,0.24) !important;
+
+  border-radius:
+    18px !important;
+
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.08) !important;
 }
 
-/* Module icons on home */
-.app-icon { background: #ecfdf5 !important; border-color: #a7f3d0 !important; }
+.dropdown-item {
+
+  border-radius:
+    10px !important;
+
+  margin:
+    4px 8px !important;
+}
+
+.dropdown-item:hover {
+
+  background:
+    rgba(124,58,237,0.08) !important;
+}
+
+/* =========================================================
+   CHECKBOXES — force native tickbox style everywhere
+   (overrides Frappe's pill/toggle-style switches that are
+   built on input[type=checkbox] with appearance:none)
+========================================================= */
+
+input[type="checkbox"],
+.checkbox input[type="checkbox"],
+.checkbox .input-area input[type="checkbox"],
+.frappe-control[data-fieldtype="Check"] input[type="checkbox"],
+.list-row-checkbox,
+.list-row-checkbox-wrap input[type="checkbox"],
+.list-header-subject .list-check-all,
+label.switch input[type="checkbox"],
+.switch input[type="checkbox"],
+.toggle input[type="checkbox"] {
+  -webkit-appearance: checkbox !important;
+  -moz-appearance: checkbox !important;
+  appearance: checkbox !important;
+  accent-color: var(--uic-primary, #2196F3) !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  border: 1px solid var(--uic-border, #c4c7cd) !important;
+  border-radius: 2px !important;
+  background-color: #fff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  position: relative !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Strip any pseudo-element knobs Frappe / Bootstrap add for toggle look */
+input[type="checkbox"]::before,
+input[type="checkbox"]::after,
+.checkbox input[type="checkbox"]::before,
+.checkbox input[type="checkbox"]::after,
+label.switch input[type="checkbox"]::before,
+label.switch input[type="checkbox"]::after,
+.switch input[type="checkbox"]::before,
+.switch input[type="checkbox"]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Neutralise toggle-track wrappers (the pill background) */
+label.switch,
+.switch,
+.toggle {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar {
+
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+
+  background:
+    transparent;
+}
+
+::-webkit-scrollbar-thumb {
+
+  background:
+    linear-gradient(
+      180deg,
+      #8B5CF6,
+      #C026D3
+    );
+
+  border-radius:
+    999px;
+}
+
+/* =========================================================
+   REMOVE FRAPPE BORING SPACERS
+========================================================= */
+
+.widget.spacer,
+.widget.new-widget {
+
+  background:
+    transparent !important;
+
+  min-height:
+    12px !important;
+}
+
+/* =========================================================
+   AVATAR
+========================================================= */
+
+.avatar {
+
+  border:
+    2px solid rgba(255,255,255,0.4) !important;
+
+  box-shadow:
+    0 4px 14px rgba(124,58,237,0.2);
+}
+
+/* =========================================================
+   SECTION LABELS
+========================================================= */
+
+.ce-paragraph.widget b {
+
+  color:
+    #6D28D9 !important;
+
+  font-size:
+    16px !important;
+
+  letter-spacing:
+    0.5px;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .widget,
+  .form-section.card-section {
+
+    border-radius:
+      18px !important;
+  }
+
+  .navbar {
+
+    backdrop-filter:
+      blur(12px);
+  }
+}
