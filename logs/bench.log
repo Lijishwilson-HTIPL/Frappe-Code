@@ -638,3 +638,7 @@
 2026-05-13 14:50:41,933 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
 2026-05-13 15:01:35,317 INFO /home/ijish/.local/bin/bench build --app crm
 2026-05-13 15:02:25,549 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 15:08:17,577 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-13 15:08:29,827 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-13 15:08:44,263 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 15:08:45,650 INFO /home/ijish/.local/bin/bench build --app hrms

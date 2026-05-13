@@ -40,9 +40,9 @@
     "erpnext-web.bundle.css": "/assets/erpnext/dist/css/erpnext-web.bundle.2QFEAJP4.css",
     "erpnext.bundle.css": "/assets/erpnext/dist/css/erpnext.bundle.4UB6ZTKG.css",
     "erpnext_email.bundle.css": "/assets/erpnext/dist/css/erpnext_email.bundle.QMQYV6ZZ.css",
-    "hierarchy-chart.bundle.js": "/assets/hrms/dist/js/hierarchy-chart.bundle.HUSAB7FQ.js",
-    "hrms.bundle.js": "/assets/hrms/dist/js/hrms.bundle.7UJIMGFM.js",
-    "interview.bundle.js": "/assets/hrms/dist/js/interview.bundle.OVLRRHKF.js",
-    "performance.bundle.js": "/assets/hrms/dist/js/performance.bundle.4NQI3QTB.js",
-    "hrms.bundle.css": "/assets/hrms/dist/css/hrms.bundle.BSSKN2QS.css"
+    "hierarchy-chart.bundle.js": "/assets/hrms/dist/js/hierarchy-chart.bundle.AAA56IUM.js",
+    "hrms.bundle.js": "/assets/hrms/dist/js/hrms.bundle.EVBFI6U6.js",
+    "interview.bundle.js": "/assets/hrms/dist/js/interview.bundle.SND3IQPE.js",
+    "performance.bundle.js": "/assets/hrms/dist/js/performance.bundle.OBH6EVVT.js",
+    "hrms.bundle.css": "/assets/hrms/dist/css/hrms.bundle.5IVDMTQK.css"
 }
