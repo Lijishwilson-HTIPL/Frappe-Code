@@ -611,3 +611,30 @@
 2026-05-04 21:08:45,738 INFO /home/ijish/.local/bin/bench schedule
 2026-05-04 21:08:45,742 INFO /home/ijish/.local/bin/bench worker
 2026-05-05 10:26:06,472 INFO /home/ijish/.local/bin/bench --site mysite.local backup --with-files
+2026-05-13 14:03:09,191 INFO /home/ijish/.local/bin/bench build --app frappe --app erpnext --app hrms
+2026-05-13 14:04:59,415 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-13 14:05:38,537 INFO /home/ijish/.local/bin/bench restart
+2026-05-13 14:05:48,940 INFO /home/ijish/.local/bin/bench build
+2026-05-13 14:08:03,453 INFO /home/ijish/.local/bin/bench restart
+2026-05-13 14:15:21,426 INFO /home/ijish/.local/bin/bench restart
+2026-05-13 14:16:04,113 INFO /home/ijish/.local/bin/bench build
+2026-05-13 14:17:51,388 INFO /home/ijish/.local/bin/bench restart
+2026-05-13 14:19:39,769 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 14:19:40,683 INFO /home/ijish/.local/bin/bench --site mysite.local clear-website-cache
+2026-05-13 14:19:47,327 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-13 14:22:50,308 INFO /home/ijish/.local/bin/bench setup assets
+2026-05-13 14:22:50,315 WARNING /home/ijish/.local/bin/bench setup assets executed with exit code 2
+2026-05-13 14:22:56,294 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 14:28:27,426 INFO /home/ijish/.local/bin/bench build --app frappe --app crm
+2026-05-13 14:30:14,942 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 14:36:40,995 INFO /home/ijish/.local/bin/bench start
+2026-05-13 14:36:41,298 INFO /home/ijish/.local/bin/bench schedule
+2026-05-13 14:36:41,299 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-13 14:36:41,305 INFO /home/ijish/.local/bin/bench watch
+2026-05-13 14:36:41,307 INFO /home/ijish/.local/bin/bench worker
+2026-05-13 14:39:33,935 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-13 14:40:31,686 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 14:49:33,044 INFO /home/ijish/.local/bin/bench build --app erpnext --app hrms --app crm
+2026-05-13 14:50:41,933 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-13 15:01:35,317 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-13 15:02:25,549 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
