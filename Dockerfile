@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     xvfb xfonts-75dpi xfonts-base \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node 18 (Frappe requires it)
+# Install Node 18
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g yarn
@@ -24,28 +24,26 @@ RUN useradd -m -s /bin/bash frappe
 WORKDIR /home/frappe
 USER frappe
 
-# Init bench with Frappe v15
-RUN bench init \
-    --frappe-branch version-15 \
-    --python python3 \
+# Clone Frappe-Code with all submodules (your full bench)
+RUN git clone \
+    --branch liji-overall-update \
+    --recurse-submodules \
+    https://github.com/Lijishwilson-HTIPL/Frappe-Code.git \
     frappe-bench
 
 WORKDIR /home/frappe/frappe-bench
 
-# ERPNext — official v15
-RUN bench get-app erpnext \
-    https://github.com/frappe/erpnext.git \
-    --branch version-15
+# Install Python dependencies for all apps
+RUN pip install -e apps/frappe && \
+    pip install -e apps/erpnext && \
+    pip install -e apps/crm && \
+    pip install -e apps/hrms
 
-# CRM — Hephzibah custom build (your updates)
-RUN bench get-app crm \
-    https://github.com/hephzibahtechnologies/frappe-demo.git \
-    --branch main
-
-# HRMS — CorporateRulers custom build (your updates)
-RUN bench get-app hrms \
-    https://github.com/corporaterulers/hrms.git \
-    --branch master
+# Build frontend assets
+RUN cd apps/frappe && yarn install --frozen-lockfile && cd ../.. && \
+    cd apps/erpnext && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
+    cd apps/crm && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
+    cd apps/hrms && yarn install --frozen-lockfile 2>/dev/null || true && cd ../..
 
 EXPOSE 8000 9000
 

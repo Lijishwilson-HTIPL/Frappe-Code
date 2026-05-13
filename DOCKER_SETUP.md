@@ -3,6 +3,7 @@
 ## Prerequisites
 - Docker Desktop installed
 - Docker Compose v2+
+- Internet connection (clones from GitHub on first build)
 
 ## Steps
 
@@ -10,7 +11,7 @@
 ```bash
 docker compose up -d --build
 ```
-> First build takes ~10–15 minutes (downloads Frappe, ERPNext, CRM, HRMS).
+> First build takes ~15–20 minutes — it clones the full Frappe-Code repo with all apps.
 
 ### 2. Create a new site
 ```bash
@@ -24,6 +25,7 @@ bench --site mysite.local install-app erpnext
 bench --site mysite.local install-app crm
 bench --site mysite.local install-app hrms
 bench --site mysite.local set-config host_name "http://localhost:8000"
+exit
 ```
 
 ### 3. Open in browser
@@ -35,7 +37,7 @@ Password: admin
 
 ## Stop / restart
 ```bash
-docker compose down       # stop
-docker compose up -d      # start again (data is preserved in volumes)
-docker compose down -v    # ⚠ stop AND delete all data
+docker compose down       # stop (data preserved)
+docker compose up -d      # start again
+docker compose down -v    # ⚠ stop AND wipe all data
 ```
