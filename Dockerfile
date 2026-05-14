@@ -33,11 +33,12 @@ RUN git clone \
 
 WORKDIR /home/frappe/frappe-bench
 
-# Install Python dependencies for all apps
-RUN pip install -e apps/frappe && \
-    pip install -e apps/erpnext && \
-    pip install -e apps/crm && \
-    pip install -e apps/hrms
+# Set up Python virtualenv and install all apps
+RUN bench setup env && \
+    env/bin/pip install -e apps/frappe && \
+    env/bin/pip install -e apps/erpnext && \
+    env/bin/pip install -e apps/crm && \
+    env/bin/pip install -e apps/hrms
 
 # Build frontend assets
 RUN cd apps/frappe && yarn install --frozen-lockfile && cd ../.. && \
