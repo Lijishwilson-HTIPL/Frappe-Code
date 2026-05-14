@@ -5,7 +5,7 @@
 
 [submodule "apps/erpnext"]
 	path = apps/erpnext
-	url = https://github.com/frappe/erpnext.git
+	url = https://github.com/Lijishwilson-HTIPL/erpnext.git
 	branch = version-15
 
 [submodule "apps/hrms"]
