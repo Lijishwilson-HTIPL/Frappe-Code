@@ -15,5 +15,5 @@
 
 [submodule "apps/crm"]
 	path = apps/crm
-	url = https://github.com/frappe/crm.git
+	url = https://github.com/corporaterulers/Frappe_Crm.git
 	branch = main
