@@ -9,9 +9,9 @@
   "interview_details_section",
   "interview_round",
   "job_applicant",
+  "applicant_name",
   "job_opening",
   "designation",
-  "resume_link",
   "column_break_4",
   "status",
   "scheduled_on",
@@ -90,11 +90,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "job_applicant.resume_link",
-   "fetch_if_empty": 1,
-   "fieldname": "resume_link",
+   "fetch_from": "job_applicant.applicant_name",
+   "fieldname": "applicant_name",
    "fieldtype": "Data",
-   "label": "Resume link"
+   "label": "Applicant Name",
+   "read_only": 1
   },
   {
    "fieldname": "interview_details_section",

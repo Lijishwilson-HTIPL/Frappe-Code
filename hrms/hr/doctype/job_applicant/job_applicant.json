@@ -87,7 +87,7 @@
    "fieldname": "job_title",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Job Opening",
+   "label": "Role You Are Applying For",
    "options": "Job Opening",
    "search_index": 1
   },
