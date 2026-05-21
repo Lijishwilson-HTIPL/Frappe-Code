@@ -7,6 +7,8 @@
 [![Frappe](https://img.shields.io/badge/Frappe-v15-blue?style=flat-square&logo=python)](https://frappeframework.com)
 [![ERPNext](https://img.shields.io/badge/ERPNext-v15-orange?style=flat-square)](https://erpnext.com)
 [![HRMS](https://img.shields.io/badge/HRMS-corporaterulers-green?style=flat-square)](https://github.com/corporaterulers/hrms)
+[![CRM](https://img.shields.io/badge/CRM-corporaterulers-purple?style=flat-square)](https://github.com/corporaterulers/Frappe_Crm)
+[![Helpdesk](https://img.shields.io/badge/Helpdesk-v1.17-blue?style=flat-square)](https://github.com/frappe/helpdesk)
 [![Python](https://img.shields.io/badge/Python-3.10+-yellow?style=flat-square&logo=python)](https://python.org)
 [![MariaDB](https://img.shields.io/badge/MariaDB-10.6+-brown?style=flat-square&logo=mariadb)](https://mariadb.org)
 
@@ -18,16 +20,22 @@
 
 | App | Fork / Source | Purpose |
 |-----|--------------|---------|
-| `frappe` | corporaterulers/frappe | Core framework |
+| `frappe` | frappe/frappe | Core framework (v15) |
 | `erpnext` | corporaterulers/erpnext | ERP + **Career Inquiry** DocType |
 | `hrms` | corporaterulers/hrms | HR module with native Job Applicant career fields |
-| `crm` | frappe/crm | CRM module |
+| `crm` | corporaterulers/Frappe_Crm | CRM with Leads Journey, custom status flow, export filters |
+| `helpdesk` | frappe/helpdesk (v1.17.4) | Support ticket management with custom ticket journey & data tab |
 
 ### ✨ Key Customisations
 
 - **Career Inquiry** — tracks every website job application; `job_applicant_ref` Link field connects speculative and role-specific applications back to HRMS Job Applicant records.
 - **Job Applicant** — extended with native career fields: `role_applying_for`, `years_of_experience`, `linkedin_profile_url`, `portfolio_site`, `how_did_you_hear`, `other_source`.
 - **Website Integration** — the public careers page reads live Job Opening records (title, HTML description, salary range gated by `publish_salary_range`), and form submissions create both a Job Applicant and a Career Inquiry atomically.
+- **CRM — Leads Journey** — bug fix: qualified count now excludes converted leads so stats match the list. Status progression is enforced (New → Contacted → Nurture → Qualified → Converted, one step at a time, with back-navigation and Unqualified/Junk always available).
+- **CRM — Export** — time range filter (Today, Last 7/30 Days, This Month, Last Month, This Year, Custom) with dynamic record count that updates as you change the range.
+- **CRM — Lead Data tab** — renamed from "Data" to "Lead Data" for clarity.
+- **Helpdesk — Ticket Journey** — new `TicketJourney.vue` component visualising ticket stage progression.
+- **Helpdesk — Ticket Data Tab** — new `TicketDataTab.vue` component consolidating ticket detail fields.
 
 ---
 
@@ -86,6 +94,7 @@ bench pip install -e apps/frappe
 bench pip install -e apps/erpnext
 bench pip install -e apps/hrms
 bench pip install -e apps/crm
+bench pip install -e apps/helpdesk
 ```
 
 ---
@@ -130,6 +139,7 @@ bench new-site mysite.local \
 bench --site mysite.local install-app erpnext
 bench --site mysite.local install-app hrms
 bench --site mysite.local install-app crm
+bench --site mysite.local install-app helpdesk
 ```
 
 ---
@@ -283,7 +293,8 @@ frappe-bench/
 │   ├── frappe/          # Core framework (submodule)
 │   ├── erpnext/         # ERP + Career Inquiry (submodule — corporaterulers fork)
 │   ├── hrms/            # HR module (submodule — corporaterulers fork)
-│   └── crm/             # CRM module (submodule)
+│   ├── crm/             # CRM module with custom status flow & export (submodule)
+│   └── helpdesk/        # Helpdesk module with Ticket Journey & Data Tab
 ├── sites/
 │   └── mysite.local/    # Site data, uploads, private files (not fully committed)
 ├── config/              # Procfile, Redis configs
