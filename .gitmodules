@@ -3,11 +3,6 @@
 	url = https://github.com/Lijishwilson-HTIPL/erpnext.git
 	branch = version-15
 
-[submodule "apps/hrms"]
-	path = apps/hrms
-	url = https://github.com/corporaterulers/hrms.git
-	branch = master
-
 [submodule "apps/crm"]
 	path = apps/crm
 	url = https://github.com/corporaterulers/Frappe_Crm.git
