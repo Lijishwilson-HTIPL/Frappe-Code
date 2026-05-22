@@ -48,6 +48,10 @@ RUN cd apps/frappe   && yarn install --frozen-lockfile && cd ../.. && \
     cd apps/hrms     && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
     cd apps/helpdesk && yarn install --frozen-lockfile 2>/dev/null || true && cd ../..
 
+# Regenerate Procfile and Redis configs with correct container paths
+# (the repo's Procfile has hardcoded local machine paths — this overwrites them)
+RUN bench setup procfile && bench setup redis
+
 EXPOSE 8000 9000
 
 CMD ["bench", "start"]
