@@ -1,0 +1,165 @@
+{
+ "actions": [],
+ "autoname": "format:CAR-APP-{####}",
+ "creation": "2026-04-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "first_name",
+  "last_name",
+  "role_applying_for",
+  "col_break_1",
+  "email",
+  "phone_number",
+  "years_of_experience",
+  "sec_break_1",
+  "linkedin_profile_url",
+  "portfolio_site",
+  "how_did_you_hear",
+  "other_source",
+  "col_break_2",
+  "resume_link",
+  "tell_us_about_yourself",
+  "sec_break_ref",
+  "job_applicant_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Last Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "role_applying_for",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Role You Are Applying For",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email Address",
+   "options": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "years_of_experience",
+   "fieldtype": "Data",
+   "label": "Years of Relevant Experience",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sec_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "linkedin_profile_url",
+   "fieldtype": "Data",
+   "label": "LinkedIn Profile URL",
+   "options": "URL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "portfolio_site",
+   "fieldtype": "Data",
+   "label": "Portfolio / Personal Site",
+   "options": "URL"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resume_link",
+   "fieldtype": "Attach",
+   "label": "Resume / CV"
+  },
+  {
+   "fieldname": "tell_us_about_yourself",
+   "fieldtype": "Text",
+   "label": "Tell Us About Yourself",
+   "reqd": 1
+  },
+  {
+   "fieldname": "how_did_you_hear",
+   "fieldtype": "Select",
+   "label": "How Did You Hear About Us?",
+   "options": "\nGoogle Search\nLinkedIn\nSocial Media\nReferral\nConference / Event\nBlog / Article\nOther"
+  },
+  {
+   "depends_on": "eval:doc.how_did_you_hear == 'Other'",
+   "fieldname": "other_source",
+   "fieldtype": "Small Text",
+   "label": "Please specify",
+   "max_length": 250
+  },
+  {
+   "fieldname": "sec_break_ref",
+   "fieldtype": "Section Break",
+   "label": "HRMS Reference"
+  },
+  {
+   "fieldname": "job_applicant_ref",
+   "fieldtype": "Link",
+   "label": "Job Applicant",
+   "options": "Job Applicant",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-04-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Setup",
+ "name": "Career Inquiry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "All",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "first_name",
+ "track_changes": 1
+}

@@ -1,9 +1,0 @@
-[submodule "apps/erpnext"]
-	path = apps/erpnext
-	url = https://github.com/Lijishwilson-HTIPL/erpnext.git
-	branch = version-15
-
-[submodule "apps/crm"]
-	path = apps/crm
-	url = https://github.com/corporaterulers/Frappe_Crm.git
-	branch = main
