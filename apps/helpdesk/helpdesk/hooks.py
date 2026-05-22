@@ -11,7 +11,7 @@ required_apps = ["frappe/telephony"]
 add_to_apps_screen = [
     {
         "name": "helpdesk",
-        "logo": "/assets/helpdesk/desk/favicon.svg",
+        "logo": "/assets/helpdesk/images/Helpdesk.png",
         "title": "Helpdesk",
         "route": "/helpdesk",
         "has_permission": "helpdesk.api.permission.has_app_permission",
