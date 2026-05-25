@@ -1,0 +1,6 @@
+app_name = "mft_integration"
+app_title = "MFT Integration"
+app_publisher = "Hephzibah Technologies"
+app_description = "MFT Platform License Management"
+app_email = "support@hephzibahtech.com"
+app_license = "MIT"

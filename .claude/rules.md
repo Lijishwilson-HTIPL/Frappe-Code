@@ -51,18 +51,18 @@ Then commit the JSON file to git.
 1. Open the DocType in the Frappe desk and make your changes
 2. Click **Save** in the UI
 3. In the terminal, export the DocType to JSON:
-   ```bash
-   bench --site mysite.local export-doc "DocType" "<DocType Name>"
-   ```
+   ```bash
+   bench --site mysite.local export-doc "DocType" "<DocType Name>"
+   ```
 4. Confirm the JSON changed:
-   ```bash
-   git diff apps/<app>/
-   ```
+   ```bash
+   git diff apps/<app>/
+   ```
 5. Commit the JSON:
-   ```bash
-   git add apps/<app>/path/to/doctype.json
-   git commit -m "feat(DocType): describe what changed and why"
-   ```
+   ```bash
+   git add apps/<app>/path/to/doctype.json
+   git commit -m "feat(DocType): describe what changed and why"
+   ```
 
 ---
 
@@ -112,8 +112,8 @@ Add to `hooks.py`:
 
 ```python
 fixtures = [
-    {"dt": "Custom Field", "filters": [["module", "=", "Your Module"]]},
-    {"dt": "Property Setter", "filters": [["module", "=", "Your Module"]]},
+    {"dt": "Custom Field", "filters": [["module", "=", "Your Module"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "Your Module"]]},
 ]
 ```
 
@@ -134,26 +134,6 @@ bench --site mysite.local export-fixtures --app <app_name>
 | Rollback via `git revert` | Not possible | Works cleanly |
 | Another developer pulls the branch | Gets a broken schema | Gets the correct schema |
 | DB restore from backup | Change depends on backup date | Change is always in code |
-
----
-
-## Backup mysite.local
-
-When asked to "backup mysite", run:
-
-```bash
-bench --site mysite.local backup --with-files
-```
-
-Backup files are saved to:
-```
-~/frappe-bench/sites/mysite.local/private/backups/
-```
-
-Also accessible from Windows at:
-```
-\\wsl.localhost\Ubuntu-22.04\home\paul\frappe-bench\sites\mysite.local\private\backups\
-```
 
 ---
 
