@@ -11,8 +11,8 @@ archived/sites/*/logs/
 # PID files
 config/pids/
 
-# Claude local settings
-.claude/settings.local.json
+# Claude
+.claude/
 
 # Compiled/symlinked assets (generated at runtime)
 sites/assets/crm
