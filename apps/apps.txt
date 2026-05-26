@@ -1,0 +1,6 @@
+frappe
+erpnext
+hrms
+crm
+telephony
+helpdesk
