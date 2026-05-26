@@ -58,3 +58,44 @@ Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', '
 2026-04-30 13:00:48,019 ERROR frappe Error while inserting deferred Route History record: Could not find User: lijish.wilson@hephzibahtech.com
 Site: mysite.local
 Form Dict: {}
+2026-05-25 17:10:20,817 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', 'default_filters': {'converted': 0}, 'view': {'custom_view_name': '', 'view_type': 'list', 'group_by_field': 'owner'}, 'column_field': 'status', 'title_field': '', 'kanban_columns': '', 'kanban_fields': '', 'columns': '', 'rows': '', 'cmd': 'crm.api.doc.get_data'}
+2026-05-25 17:11:44,166 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', 'default_filters': {'converted': 0}, 'view': {'custom_view_name': '', 'view_type': 'list', 'group_by_field': 'owner'}, 'column_field': 'status', 'title_field': '', 'kanban_columns': '', 'kanban_fields': '', 'columns': '', 'rows': '', 'cmd': 'crm.api.doc.get_data'}
+2026-05-25 22:53:55,896 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'stripe_session_id': 'cs_test_a1UK8JAegk620zvteyJEVrchdFnMfpgsyq46YjYmCUQBcfnHiBGy4tXZ6z', 'name': 'Test user6', 'org': 'Test org6', 'email': 'testorg6@mailinator.com', 'bill_number': 'MFTBILL-00024', 'cmd': 'mft_integration.api.process_payment'}
+2026-05-25 23:01:10,026 ERROR frappe Error while inserting deferred Error Log record: Error Log idc9krn69c: 'Title' (Module import failed for MFT License, the DocType you're trying to open might be deleted.
+Error: No module named 'frappe.core.doctype.mft_license') will get truncated, as max characters allowed is 140
+Site: mysite.local
+Form Dict: {}
+2026-05-25 23:14:08,474 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'stripe_session_id': 'cs_test_a1UK8JAegk620zvteyJEVrchdFnMfpgsyq46YjYmCUQBcfnHiBGy4tXZ6z', 'name': 'Test user6', 'org': 'Test org6', 'email': 'testorg6@mailinator.com', 'bill_number': 'MFTBILL-00024', 'cmd': 'mft_integration.api.process_payment'}
+2026-05-25 23:14:11,626 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'stripe_session_id': 'cs_test_a1UK8JAegk620zvteyJEVrchdFnMfpgsyq46YjYmCUQBcfnHiBGy4tXZ6z', 'name': 'Test user6', 'org': 'Test org6', 'email': 'testorg6@mailinator.com', 'bill_number': 'MFTBILL-00024', 'cmd': 'mft_integration.api.process_payment'}
+2026-05-25 23:15:12,320 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'stripe_session_id': 'cs_test_a1PJoAU1TD2APHAnyXSvPjDBRZVMkI5ltC8lSf0hnxJVeMtguclMiOdyIc', 'name': 'doss', 'org': 'doss ltd', 'email': 'dossltd@mailinator.com', 'bill_number': 'MFTBILL-00025', 'cmd': 'mft_integration.api.process_payment'}
+2026-05-25 23:15:19,475 ERROR frappe Error while inserting deferred Error Log record: Error Log qmqhj4c1hi: 'Title' (Module import failed for MFT License, the DocType you're trying to open might be deleted.
+Error: No module named 'frappe.core.doctype.mft_license') will get truncated, as max characters allowed is 140
+Site: mysite.local
+Form Dict: {}
+2026-05-25 23:15:19,479 ERROR frappe Error while inserting deferred Error Log record: Error Log qmqj8it33f: 'Title' (Module import failed for MFT License, the DocType you're trying to open might be deleted.
+Error: No module named 'frappe.core.doctype.mft_license') will get truncated, as max characters allowed is 140
+Site: mysite.local
+Form Dict: {}
+2026-05-25 23:15:19,484 ERROR frappe Error while inserting deferred Error Log record: Error Log qmq2aesffr: 'Title' (Module import failed for MFT License, the DocType you're trying to open might be deleted.
+Error: No module named 'frappe.core.doctype.mft_license') will get truncated, as max characters allowed is 140
+Site: mysite.local
+Form Dict: {}
+2026-05-25 23:16:49,637 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'stripe_session_id': 'test_debug_001', 'name': 'Test User', 'org': 'Test Org', 'email': 'test@test.com', 'bill_number': '001', 'cmd': 'mft_integration.api.process_payment'}
+2026-05-25 23:30:54,479 ERROR frappe Error while inserting deferred Error Log record: Error Log 3r0dvhrdpa: 'Title' (Module import failed for MFT License, the DocType you're trying to open might be deleted.
+Error: No module named 'frappe.core.doctype.mft_license') will get truncated, as max characters allowed is 140
+Site: mysite.local
+Form Dict: {}

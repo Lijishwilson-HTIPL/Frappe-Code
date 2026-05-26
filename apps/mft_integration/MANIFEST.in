@@ -1,2 +1,0 @@
-include MANIFEST.in
-recursive-include mft_integration *.json *.js *.css *.html *.py

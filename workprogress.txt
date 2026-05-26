@@ -1,0 +1,271 @@
+================================================================================
+  MFT Landing 2026 — Work Progress Log
+  Project: Hephzibah Technologies — MFT Platform SaaS
+  Last Updated: 2026-05-15
+================================================================================
+
+--------------------------------------------------------------------------------
+PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+MFT (Managed File Transfer) Platform — Lifetime License at $999 USD.
+Landing page collects leads, processes payments via Stripe, records customers
+in Frappe CRM, and syncs billing to ERPNext.
+
+Stack:
+  - Frontend  : HTML/CSS/JS (index.html, style.css, main.js)
+  - Backend   : Node.js + Express (server.js)
+  - Payment   : Stripe Checkout (hosted payment page)
+  - CRM       : Frappe CRM (self-hosted via WSL Ubuntu 22.04)
+  - Billing   : ERPNext (self-hosted, same Frappe bench)
+  - Email     : SMTP via hephzibahtech.com mail server
+
+--------------------------------------------------------------------------------
+COMPLETED WORK
+--------------------------------------------------------------------------------
+
+[1] LANDING PAGE SERVER (server.js)
+------------------------------------
+- Built Express server on port 7000 (configurable via .env PORT)
+- CORS configured with allowed origin (configurable via ALLOWED_ORIGIN)
+- Security headers: HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- Static file serving for HTML/CSS/JS assets
+- BASE_PATH support for reverse proxy / subpath deployment
+- In-memory session store (Map) to track Stripe checkout sessions
+- /api/session-details/:sessionId endpoint for success page to retrieve payment data
+  - Checks in-memory store first (fast path)
+  - Falls back to Stripe API if server was restarted
+  - Triggers processERPNext() on first access (fire-and-forget, non-blocking)
+  - On Stripe fallback: calls processERPNextDirect() (awaited, enriches response)
+
+[2] STRIPE PAYMENT INTEGRATION (routes/checkout.js)
+-----------------------------------------------------
+- POST /api/create-checkout-session
+  - Accepts: { name, org, email } from the landing page form
+  - Validates required fields (name, org, email)
+  - Generates a sequential bill number (MFTBILL-00001, MFTBILL-00002, ...)
+  - Creates a Stripe Checkout Session:
+      Product : MFT Platform — Lifetime License
+      Price   : $999.00 USD (unit_amount: 99900)
+      Mode    : payment (one-time, not subscription)
+      Metadata: billNumber, customerName, organization
+  - Stores session data in in-memory sessionStore
+  - Returns Stripe hosted checkout URL to frontend
+- Bill counter persisted in bill-counter.json (survives server restarts)
+  - Format: MFTBILL-XXXXX (zero-padded 5 digits)
+- Success URL: /success.html?session_id={CHECKOUT_SESSION_ID}
+- Cancel URL : /cancel.html
+
+[3] BILL NUMBER COUNTER (utils/store.js)
+-----------------------------------------
+- Persistent counter stored in bill-counter.json
+- nextBillNumber() reads, increments, and writes atomically
+- Format: MFTBILL-00001, MFTBILL-00002, ...
+- sessionStore (Map) holds active sessions keyed by Stripe session ID
+
+[4] ERPNEXT FULL PAYMENT AUTOMATION (server.js -> processERPNext)
+-----------------------------------------------------------------
+- Replaces old pushToFrappe() Lead-only push
+- Calls ERPNext API: mft_integration.api.process_payment (via POST)
+- Triggered fire-and-forget when success page first loaded
+- ERPNext creates (in order):
+    1. Customer     - found by email (deduped) or created new
+    2. Sales Invoice - MFT-LIFETIME, qty=1, fetched price from ERPNext
+    3. Payment Entry - linked to invoice, reference_no = Stripe session ID
+    4. MFT License  - unique license key, stored in ERPNext custom DocType
+- Idempotent: same Stripe session ID never creates duplicate records
+- Enriches sessionStore with: invoiceNumber, licenseKey, itemName, amount, purchaseDate
+- Auth: HTTP Basic with API key + API secret (Base64 encoded)
+
+[5] CONTACT FORM (routes/contact.js)
+--------------------------------------
+- POST /api/contact
+- Accepts: { name, email, countryCode, mobile, message }
+- Validates: name (required, <=100 chars), email (regex), message (10-2000 chars)
+- Sends styled HTML + plain text email via SMTP (nodemailer)
+- Reply-To set to the submitter's email
+- SMTP config: hephzibahtech.com mail server, port 587
+
+[6] EMAIL TEMPLATES (templates/contactEmail.js, utils/mailer.js)
+------------------------------------------------------------------
+- HTML email template for contact form submissions
+- Plain-text fallback
+- Nodemailer transporter configured from env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)
+
+[7] CONFIG MANAGEMENT (config/env.js)
+---------------------------------------
+- Loads all config from .env via dotenv
+- Required vars validated at startup (server exits if missing):
+    STRIPE_SECRET_KEY, SMTP_USER, SMTP_PASS, RECIPIENT_EMAIL
+- Frappe settings optional (not required at startup, checked at runtime)
+- Full config structure:
+    port, basePath, stripe.secretKey, smtp.*, recipientEmail,
+    allowedOrigin, frappe.{enabled, baseUrl, apiKey, apiSecret, doctype}
+
+[8] SUCCESS PAGE (success.html)
+--------------------------------
+- Displays 12 fields in exact order after successful Stripe payment:
+    1.  Payment Status       - "Paid" (shown in header badge)
+    2.  Invoice Number       - ERPNext Sales Invoice number (e.g. ACC-SINV-0001)
+    3.  Payment Reference ID - Stripe Session ID (cs_test_xxx...)
+    4.  Purchase Date        - from ERPNext, formatted DD Mon YYYY
+    5.  Customer Name        - from session / Stripe
+    6.  Organization         - from session / Stripe metadata
+    7.  Email                - from session / Stripe
+    8.  Product Name         - fetched dynamically from ERPNext Item master
+    9.  Subscription Type    - "Single Purchase" (hardcoded, future: plans)
+    10. Amount Paid          - fetched dynamically from ERPNext Item Price ($999.00 USD)
+    11. Mode of Payment      - "Stripe" (hardcoded)
+    12. License Key          - unique key generated by ERPNext (MFT-LIFE-XXXX-XXXX-YYYY)
+- Polling: retries every 2 seconds (up to 10x) until license key arrives from ERPNext
+- cancel.html: shown when user abandons Stripe checkout
+
+[9] ERPNEXT MANUAL SETUP (Frappe Bench - WSL Ubuntu 22.04)
+------------------------------------------------------------
+Company     : Hephzibah Technologies Inc (Currency: USD, Country: United States)
+Item Group  : SaaS Products
+Product Item:
+  - Item Code : MFT-LIFETIME
+  - Item Name : MFT Platform Lifetime License
+  - Item Group: SaaS Products
+  - UOM       : Nos
+  - Allow Sales: Yes, Maintain Stock: No (software license, non-inventory)
+Pricing     : Standard Selling / MFT Selling price list - $999 USD
+Validated manual workflow:
+  Customer -> Sales Invoice (MFT-LIFETIME, Qty=1, $999) -> Submit ->
+  Create Payment Entry -> Submit -> Invoice status = Paid, Outstanding = $0
+
+[10] MFT INTEGRATION FRAPPE APP (frappe-bench/apps/mft_integration)
+---------------------------------------------------------------------
+App installed on site: mysite.local | Frappe v15.107.2
+Structure:
+  mft_integration/
+  +-- api.py                         <- Whitelisted API: process_payment()
+  +-- hooks.py
+  +-- modules.txt
+  +-- mft_license/
+      +-- doctype/
+          +-- mft_license/
+              +-- mft_license.json   <- DocType definition
+              +-- mft_license.py     <- Controller
+
+DocType: MFT License (tabMFT License in MariaDB - VERIFIED)
+  Fields:
+    - license_key         (Data, UNIQUE, required)    - MFT-LIFE-XXXX-XXXX-YYYY
+    - status              (Select: Active/Revoked/Expired)
+    - customer            (Link -> Customer)
+    - email               (Data, Email, indexed)
+    - invoice_number      (Link -> Sales Invoice, indexed)
+    - stripe_session_id   (Data, UNIQUE, "Payment Reference ID", indexed)
+    - product             (Link -> Item)
+    - purchase_date       (Date)
+    - expiry              (Date)
+    - amount_paid         (Currency)
+
+API Endpoint: POST /api/method/mft_integration.api.process_payment
+  Params  : stripe_session_id, name, org, email, bill_number
+  Returns : invoice_number, license_key, item_name, amount, purchase_date, status
+  Logic   :
+    1. Idempotency check - if session already processed, return existing data
+    2. Fetch item name + price from ERPNext Item master (MFT-LIFETIME)
+    3. Find customer by email (Contact Email) OR create new Customer + Contact
+    4. Create + submit Sales Invoice (MFT-LIFETIME, price from ERPNext)
+    5. Create + submit Payment Entry (reference_no = stripe_session_id)
+    6. Generate unique license key (MFT-LIFE-XXXX-XXXX-YEAR)
+    7. Insert MFT License record
+    8. Return all data to landing page
+
+Duplicate Prevention:
+  - Customer    : checked by email via Contact Email doctype (not name/org)
+  - Payment     : checked by stripe_session_id uniqueness in MFT License
+  - License Key : UNIQUE constraint in ERPNext + generation loop
+
+--------------------------------------------------------------------------------
+PENDING / NEXT STEPS
+--------------------------------------------------------------------------------
+
+[ ] Test full end-to-end flow locally:
+    - Stripe sandbox payment -> success.html -> ERPNext records created -> license shown
+    - Ensure ERPNext bench is running: bench start (or bench serve --port 8000)
+    - Verify FRAPPE_BASE_URL=http://127.0.0.1:8000 in .env
+
+[ ] Production Deployment
+    - Deploy Node.js server behind nginx reverse proxy
+    - Configure BASE_PATH=/mft-landing-page in server .env
+    - Set ALLOWED_ORIGIN to production domain
+    - Enable HTTPS / TLS termination at nginx
+    - Ensure ERPNext is reachable from Node.js on same host
+
+[ ] Future: Monthly subscription plans
+    - Subscription Type currently shows "Single Purchase"
+    - Future: Stripe Subscriptions + recurring plan support
+
+[ ] Future: License activation in MFT application
+    - MFT app validates license key against ERPNext MFT License DocType
+    - Activate / revoke licenses from ERPNext UI
+
+--------------------------------------------------------------------------------
+ENVIRONMENT VARIABLES (.env)
+--------------------------------------------------------------------------------
+PORT=7000
+BASE_PATH=                          # empty = serve at root; /mft-landing-page on server
+STRIPE_SECRET_KEY=sk_...
+SMTP_HOST=mail.hephzibahtech.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=...@hephzibahtech.com
+SMTP_PASS=...
+SMTP_REJECT_UNAUTHORIZED=false
+RECIPIENT_EMAIL=...@hephzibahtech.com
+ALLOWED_ORIGIN=*
+FRAPPE_ENABLED=true
+FRAPPE_BASE_URL=http://127.0.0.1:8000
+FRAPPE_API_KEY=...
+FRAPPE_API_SECRET=...
+FRAPPE_DOCTYPE=Lead                 # legacy field, main flow now uses mft_integration.api
+
+--------------------------------------------------------------------------------
+FILE STRUCTURE
+--------------------------------------------------------------------------------
+MFT Landing 2026/
++-- config/
+|   +-- env.js               # All environment config loaded from .env
++-- routes/
+|   +-- checkout.js          # Stripe checkout session creation
+|   +-- contact.js           # Contact form -> SMTP email
++-- templates/
+|   +-- contactEmail.js      # HTML + text email templates
++-- utils/
+|   +-- mailer.js            # Nodemailer transporter
+|   +-- store.js             # In-memory session store + bill counter
++-- image&icons/
+|   +-- HephzibahTechnologiesLogo.png
++-- .env                     # Environment variables (not committed)
++-- bill-counter.json        # Persistent bill number counter
++-- cancel.html              # Stripe checkout cancellation page
++-- CLAUDE.md                # AI assistant rules for this project
++-- hero.png                 # Landing page hero image
++-- index.html               # Main landing page
++-- main.js                  # Frontend JS (form handling, API calls)
++-- package.json             # Node.js dependencies
++-- server.js                # Main Express server + ERPNext integration
++-- style.css                # Styles
++-- success.html             # Post-payment success page (12 fields)
++-- run_landing_page.bat
++-- run_landing_page_node.bat
+
+frappe-bench/
++-- apps/
+    +-- mft_integration/    # Custom Frappe app
+        +-- setup.py
+        +-- mft_integration/
+            +-- api.py       # process_payment() API endpoint
+            +-- hooks.py
+            +-- mft_license/
+                +-- doctype/
+                    +-- mft_license/
+                        +-- mft_license.json
+                        +-- mft_license.py
+
+================================================================================
+END OF WORK PROGRESS LOG
+================================================================================
