@@ -99,61 +99,6 @@ class CRMLead(Document):
 				now=frappe.flags.in_test,
 			)
 
-def send_inquiry_followup(lead_name):
-	lead = frappe.get_doc("CRM Lead", lead_name)
-	if not lead.email:
-		return
-
-	first_name       = lead.first_name or lead.lead_name or "there"
-	organization     = lead.organization or ""
-	industry         = lead.industry or ""
-	job_title        = lead.job_title or ""
-	primary_interest = lead.get("primary_interest") or "your inquiry"
-	preferred_contact = lead.get("preferred_contact") or "Email"
-	website_message  = lead.get("website_message") or ""
-
-	# Build organisation context line dynamically
-	org_parts = filter(None, [industry, organization])
-	org_context = f" ({', '.join(org_parts)})" if any([industry, organization]) else ""
-
-	# Role line
-	role_line = f", {job_title}" if job_title else ""
-
-	content = f"""<p>Hi {first_name},</p>
-
-<p>Thank you for reaching out to Hephzibah Technologies.</p>
-
-<p>We understand that you{role_line}{org_context} are looking for support with \
-<strong>{primary_interest}</strong>, and we appreciate the opportunity to connect with you.</p>
-
-{f"<p>Regarding your message: <em>{website_message}</em></p>" if website_message else ""}
-<p>As per the preferred time shared by your team, we have scheduled the discussion call accordingly. \
-During the meeting, we will discuss your requirements in detail and explore how \
-Hephzibah Technologies can support your organization with the required \
-{primary_interest} activities.</p>
-
-<p>Looking forward to speaking with you.</p>
-
-<p>Best regards,<br>
-<strong>Hephzibah Technologies Team</strong></p>"""
-
-	subject = f"Discussion Call Scheduled — {primary_interest} | Hephzibah Technologies"
-
-	sender = (
-		frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
-		or "contact@hephzibahtech.in"
-	)
-
-	frappe.sendmail(
-		recipients=[lead.email],
-		sender=sender,
-		subject=subject,
-		message=content,
-		reference_doctype="CRM Lead",
-		reference_name=lead_name,
-		now=True,
-	)
-
 	def before_save(self):
 		self.apply_sla()
 
@@ -549,6 +494,59 @@ Hephzibah Technologies can support your organization with the required \
 			"title_field": "lead_name",
 			"kanban_fields": '["organization", "email", "mobile_no", "_assign", "modified"]',
 		}
+
+
+def send_inquiry_followup(lead_name):
+	lead = frappe.get_doc("CRM Lead", lead_name)
+	if not lead.email:
+		return
+
+	first_name       = lead.first_name or lead.lead_name or "there"
+	organization     = lead.organization or ""
+	industry         = lead.industry or ""
+	job_title        = lead.job_title or ""
+	primary_interest = lead.get("primary_interest") or "your inquiry"
+	preferred_contact = lead.get("preferred_contact") or "Email"
+	website_message  = lead.get("website_message") or ""
+
+	org_parts = filter(None, [industry, organization])
+	org_context = f" ({', '.join(org_parts)})" if any([industry, organization]) else ""
+	role_line = f", {job_title}" if job_title else ""
+
+	content = f"""<p>Hi {first_name},</p>
+
+<p>Thank you for reaching out to Hephzibah Technologies.</p>
+
+<p>We understand that you{role_line}{org_context} are looking for support with \
+<strong>{primary_interest}</strong>, and we appreciate the opportunity to connect with you.</p>
+
+{f"<p>Regarding your message: <em>{website_message}</em></p>" if website_message else ""}
+<p>As per the preferred time shared by your team, we have scheduled the discussion call accordingly. \
+During the meeting, we will discuss your requirements in detail and explore how \
+Hephzibah Technologies can support your organization with the required \
+{primary_interest} activities.</p>
+
+<p>Looking forward to speaking with you.</p>
+
+<p>Best regards,<br>
+<strong>Hephzibah Technologies Team</strong></p>"""
+
+	subject = f"Discussion Call Scheduled — {primary_interest} | Hephzibah Technologies"
+
+	sender = (
+		frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
+		or "contact@hephzibahtech.in"
+	)
+
+	frappe.sendmail(
+		recipients=[lead.email],
+		sender=sender,
+		subject=subject,
+		message=content,
+		reference_doctype="CRM Lead",
+		reference_name=lead_name,
+		now=True,
+	)
 
 
 @frappe.whitelist()
