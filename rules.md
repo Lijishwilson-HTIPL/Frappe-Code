@@ -137,6 +137,26 @@ bench --site mysite.local export-fixtures --app <app_name>
 
 ---
 
+## Backup mysite.local
+
+When asked to "backup mysite", run:
+
+```bash
+bench --site mysite.local backup --with-files
+```
+
+Backup files are saved to:
+```
+~/frappe-bench/sites/mysite.local/private/backups/
+```
+
+Also accessible from Windows at:
+```
+\\wsl.localhost\Ubuntu-22.04\home\paul\frappe-bench\sites\mysite.local\private\backups\
+```
+
+---
+
 ## Quick Reference
 
 ```bash
