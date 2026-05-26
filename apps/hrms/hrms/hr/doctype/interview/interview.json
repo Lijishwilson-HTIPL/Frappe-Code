@@ -155,17 +155,19 @@
   },
   {
    "fieldname": "from_time",
-   "fieldtype": "Time",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "From Time",
+   "label": "From Time (HH:MM)",
+   "options": "Time",
    "reqd": 1,
    "set_only_once": 1
   },
   {
    "fieldname": "to_time",
-   "fieldtype": "Time",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "To Time",
+   "label": "To Time (HH:MM)",
+   "options": "Time",
    "reqd": 1,
    "set_only_once": 1
   },
