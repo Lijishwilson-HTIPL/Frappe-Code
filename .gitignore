@@ -11,8 +11,8 @@ archived/sites/*/logs/
 # PID files
 config/pids/
 
-# Claude
-.claude/
+# Claude local settings
+.claude/settings.local.json
 
 # Compiled/symlinked assets (generated at runtime)
 sites/assets/crm
@@ -63,4 +63,3 @@ apps/erpnext/erpnext/patches/v16_0/*.Identifier
 # Site lock files and uploaded calendar invites
 sites/*/locks/
 sites/*/private/files/*.ics
-.claude/
