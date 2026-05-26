@@ -642,107 +642,170 @@
 2026-05-13 15:08:29,827 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
 2026-05-13 15:08:44,263 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
 2026-05-13 15:08:45,650 INFO /home/ijish/.local/bin/bench build --app hrms
-2026-05-25 15:32:45,263 INFO /usr/local/bin/bench start
-2026-05-25 16:43:23,388 INFO /usr/local/bin/bench start
-2026-05-25 16:43:41,038 INFO /usr/local/bin/bench --version
-2026-05-25 16:44:00,471 INFO /usr/local/bin/bench start
-2026-05-25 16:44:00,626 INFO /usr/local/bin/bench schedule
-2026-05-25 16:44:00,628 INFO /usr/local/bin/bench watch
-2026-05-25 16:44:00,629 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:44:00,641 INFO /usr/local/bin/bench worker
-2026-05-25 16:45:15,564 INFO /usr/local/bin/bench start
-2026-05-25 16:45:15,735 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:45:15,737 INFO /usr/local/bin/bench watch
-2026-05-25 16:45:15,739 INFO /usr/local/bin/bench worker
-2026-05-25 16:45:15,745 INFO /usr/local/bin/bench schedule
-2026-05-25 16:47:39,924 INFO /usr/local/bin/bench start
-2026-05-25 16:47:40,086 INFO /usr/local/bin/bench watch
-2026-05-25 16:47:40,095 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:47:40,095 INFO /usr/local/bin/bench worker
-2026-05-25 16:47:40,098 INFO /usr/local/bin/bench schedule
-2026-05-25 16:48:04,802 INFO /usr/local/bin/bench start
-2026-05-25 16:48:04,950 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:48:04,951 INFO /usr/local/bin/bench watch
-2026-05-25 16:48:04,952 INFO /usr/local/bin/bench worker
-2026-05-25 16:48:04,976 INFO /usr/local/bin/bench schedule
-2026-05-25 16:48:35,234 INFO /usr/local/bin/bench start
-2026-05-25 16:48:35,376 INFO /usr/local/bin/bench watch
-2026-05-25 16:48:35,376 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:48:35,386 INFO /usr/local/bin/bench worker
-2026-05-25 16:48:35,406 INFO /usr/local/bin/bench schedule
-2026-05-25 16:49:02,186 INFO /usr/local/bin/bench start
-2026-05-25 16:49:02,332 INFO /usr/local/bin/bench schedule
-2026-05-25 16:49:02,337 INFO /usr/local/bin/bench worker
-2026-05-25 16:49:02,341 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:49:02,342 INFO /usr/local/bin/bench watch
-2026-05-25 16:54:39,483 INFO /usr/local/bin/bench start
-2026-05-25 16:54:39,635 INFO /usr/local/bin/bench watch
-2026-05-25 16:54:39,637 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 16:54:39,640 INFO /usr/local/bin/bench schedule
-2026-05-25 16:54:39,643 INFO /usr/local/bin/bench worker
-2026-05-25 17:00:45,769 INFO /usr/local/bin/bench start
-2026-05-25 17:00:45,917 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 17:00:45,921 INFO /usr/local/bin/bench worker
-2026-05-25 17:00:45,924 INFO /usr/local/bin/bench watch
-2026-05-25 17:00:45,933 INFO /usr/local/bin/bench schedule
-2026-05-25 17:06:32,732 INFO /usr/local/bin/bench build --force
-2026-05-25 17:27:49,678 INFO /usr/local/bin/bench --site mysite.local generate-api-key --user Administrator
-2026-05-25 17:27:53,039 INFO /usr/local/bin/bench --site mysite.local execute frappe.core.doctype.user.user.generate_keys --args ['Administrator']
-2026-05-25 17:46:55,203 INFO /usr/local/bin/bench --site mysite.local list-apps
-2026-05-25 17:47:02,178 INFO /usr/local/bin/bench --site mysite.local migrate
-2026-05-25 17:49:21,449 INFO /usr/local/bin/bench start
-2026-05-25 17:49:21,911 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 17:49:21,921 INFO /usr/local/bin/bench watch
-2026-05-25 17:49:21,931 INFO /usr/local/bin/bench schedule
-2026-05-25 17:49:21,944 INFO /usr/local/bin/bench worker
-2026-05-25 17:51:05,025 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT name FROM \ WHERE app_name='mft_integration'"]
-2026-05-25 17:51:10,018 INFO /usr/local/bin/bench --site mysite.local reinstall-app mft_integration
-2026-05-25 17:51:18,733 INFO /usr/local/bin/bench --site mysite.local uninstall-app mft_integration --yes
-2026-05-25 17:51:20,961 INFO /usr/local/bin/bench --site mysite.local install-app mft_integration
-2026-05-25 17:54:43,183 INFO /usr/local/bin/bench --site mysite.local install-app mft_integration
-2026-05-25 18:00:10,228 INFO /usr/local/bin/bench --verbose --site all backup
-2026-05-25 22:47:59,159 INFO /usr/local/bin/bench start
-2026-05-25 22:47:59,810 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 22:47:59,859 INFO /usr/local/bin/bench schedule
-2026-05-25 22:47:59,861 INFO /usr/local/bin/bench watch
-2026-05-25 22:47:59,862 INFO /usr/local/bin/bench worker
-2026-05-25 23:05:28,310 INFO /usr/local/bin/bench --site mysite.local clear-cache
-2026-05-25 23:05:46,522 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.get_value --args ['DocType', 'MFT License', ['name','module']]
-2026-05-25 23:05:54,276 INFO /usr/local/bin/bench --site mysite.local list-apps
-2026-05-25 23:08:30,442 INFO /usr/local/bin/bench start
-2026-05-25 23:08:30,717 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 23:08:30,722 INFO /usr/local/bin/bench watch
-2026-05-25 23:08:30,729 INFO /usr/local/bin/bench worker
-2026-05-25 23:08:30,737 INFO /usr/local/bin/bench schedule
-2026-05-25 23:17:02,012 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT name, module, app FROM tabDocType WHERE name='MFT License'", [], True]
-2026-05-25 23:17:55,599 INFO /usr/local/bin/bench --site mysite.local migrate
-2026-05-25 23:23:10,486 INFO /usr/local/bin/bench start
-2026-05-25 23:23:10,858 INFO /usr/local/bin/bench serve --port 8000
-2026-05-25 23:23:10,874 INFO /usr/local/bin/bench worker
-2026-05-25 23:23:10,877 INFO /usr/local/bin/bench watch
-2026-05-25 23:23:10,880 INFO /usr/local/bin/bench schedule
-2026-05-26 12:00:02,824 INFO /usr/local/bin/bench --verbose --site all backup
-2026-05-26 12:02:42,291 INFO /usr/local/bin/bench --site mysite.local migrate
-2026-05-26 12:03:31,915 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.get_value --args ['DocType','MFT License',['module','app']]
-2026-05-26 12:03:45,496 INFO /usr/local/bin/bench --site mysite.local reload-doc erpnext accounts doctype mft_license
-2026-05-26 12:03:53,263 INFO /usr/local/bin/bench --site mysite.local reload-doc erpnext accounts mft_license
-2026-05-26 12:04:08,027 INFO /usr/local/bin/bench --site mysite.local reload-doc Accounts DocType MFT License
-2026-05-26 12:04:16,101 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.get_value --args ['DocType','MFT License',['module','app']]
-2026-05-26 12:05:20,947 INFO /usr/local/bin/bench --site mysite.local uninstall-app mft_integration
-2026-05-26 12:05:28,131 INFO /usr/local/bin/bench --site mysite.local uninstall-app mft_integration
-2026-05-26 12:05:39,935 INFO /usr/local/bin/bench remove-app mft_integration
-2026-05-26 12:05:40,054 INFO /usr/local/bin/bench --site all list-apps --format json
-2026-05-26 12:05:40,833 WARNING /usr/local/bin/bench remove-app mft_integration executed with exit code 1
-2026-05-26 12:05:59,069 INFO /usr/local/bin/bench remove-app mft_integration
-2026-05-26 12:05:59,375 INFO /usr/local/bin/bench --site all list-apps --format json
-2026-05-26 12:06:00,373 WARNING /usr/local/bin/bench remove-app mft_integration executed with exit code 1
-2026-05-26 12:06:08,659 INFO /usr/local/bin/bench --site mysite.local execute frappe.db.delete --args ['Installed Applications',{'app_name':'mft_integration'}]
-2026-05-26 12:06:24,983 INFO /usr/local/bin/bench remove-app mft_integration
-2026-05-26 12:06:25,103 INFO /usr/local/bin/bench --site all list-apps --format json
-2026-05-26 12:06:25,735 WARNING /usr/local/bin/bench remove-app mft_integration executed with exit code 1
-2026-05-26 12:06:40,085 INFO /usr/local/bin/bench --site mysite.local list-apps
-2026-05-26 12:06:54,284 INFO /usr/local/bin/bench --site mysite.local execute frappe.get_installed_apps
-2026-05-26 12:07:04,047 INFO /usr/local/bin/bench remove-app mft_integration --no-backup
-2026-05-26 12:07:04,140 INFO /usr/local/bin/bench --site all list-apps --format json
-2026-05-26 12:07:04,623 WARNING /usr/local/bin/bench remove-app mft_integration --no-backup executed with exit code 1
-2026-05-26 12:07:15,703 INFO /usr/local/bin/bench --site mysite.local list-apps
+2026-05-13 15:21:40,287 INFO /home/ijish/.local/bin/bench --site mysite.local backup --with-files
+2026-05-13 15:21:50,170 INFO /home/ijish/.local/bin/bench version
+2026-05-13 15:32:07,886 INFO /home/ijish/.local/bin/bench version
+2026-05-13 16:42:53,605 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_single_value --args ['System Settings', 'app_name']
+2026-05-13 16:43:02,183 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT app_name, app_logo, favicon FROM \ LIMIT 1"]
+2026-05-13 16:43:02,693 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_single_value --args ['Website Settings', 'favicon']
+2026-05-13 16:43:03,169 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_single_value --args ['Website Settings', 'splash_image']
+2026-05-14 09:38:24,830 INFO /home/ijish/.local/bin/bench start
+2026-05-14 09:38:26,146 INFO /home/ijish/.local/bin/bench watch
+2026-05-14 09:38:26,189 INFO /home/ijish/.local/bin/bench worker
+2026-05-14 09:38:26,227 INFO /home/ijish/.local/bin/bench schedule
+2026-05-14 09:38:26,356 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-14 10:32:09,251 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.client.get_list --args ['CRM Fields Layout', {'filters': [['dt', '=', 'CRM Lead']], 'fields': ['name', 'layout']}]
+2026-05-14 10:32:14,047 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT name, layout FROM \ WHERE dt='CRM Lead' LIMIT 1"]
+2026-05-14 10:33:00,577 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb --execute SELECT name, LEFT(layout, 1000) FROM `tabCRM Fields Layout` WHERE dt="CRM Lead";
+2026-05-14 10:35:30,799 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-14 10:35:55,148 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-14 10:35:56,927 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb --execute SHOW COLUMNS FROM `tabCRM Lead` LIKE "%interest%";SHOW COLUMNS FROM `tabCRM Lead` LIKE "%contact%";SHOW COLUMNS FROM `tabCRM Lead` LIKE "%found%";SHOW COLUMNS FROM `tabCRM Lead` LIKE "%message%";
+2026-05-14 12:00:02,034 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-14 13:09:37,360 INFO /home/ijish/.local/bin/bench get-app helpdesk https://github.com/frappe/helpdesk
+2026-05-14 13:09:37,370 LOG Getting helpdesk
+2026-05-14 13:09:37,370 DEBUG cd ./apps && git clone https://github.com/frappe/helpdesk  --depth 1 --origin upstream
+2026-05-14 13:09:45,246 LOG Installing helpdesk
+2026-05-14 13:09:45,246 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/helpdesk  --python /home/ijish/frappe-bench/env/bin/python
+2026-05-14 13:09:45,787 WARNING cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/helpdesk  --python /home/ijish/frappe-bench/env/bin/python executed with exit code 1
+2026-05-14 13:09:45,787 WARNING /home/ijish/.local/bin/bench get-app helpdesk https://github.com/frappe/helpdesk executed with exit code 167
+2026-05-14 13:13:41,051 INFO /home/ijish/.local/bin/bench --site mysite.local install-app helpdesk
+2026-05-14 13:13:46,202 INFO /home/ijish/.local/bin/bench get-app https://github.com/frappe/frappe_telephony
+2026-05-14 13:13:46,215 LOG Getting frappe_telephony
+2026-05-14 13:13:46,215 DEBUG cd ./apps && git clone https://github.com/frappe/frappe_telephony  --depth 1 --origin upstream
+2026-05-14 13:16:18,843 INFO /home/ijish/.local/bin/bench get-app --branch main https://github.com/frappe/telephony
+2026-05-14 13:16:18,850 LOG Getting telephony
+2026-05-14 13:16:18,850 DEBUG cd ./apps && git clone https://github.com/frappe/telephony --branch main --depth 1 --origin upstream
+2026-05-14 13:16:24,653 WARNING cd ./apps && git clone https://github.com/frappe/telephony --branch main --depth 1 --origin upstream executed with exit code 128
+2026-05-14 13:16:24,654 WARNING /home/ijish/.local/bin/bench get-app --branch main https://github.com/frappe/telephony executed with exit code 1
+2026-05-14 13:16:28,710 INFO /home/ijish/.local/bin/bench get-app https://github.com/frappe/telephony
+2026-05-14 13:16:28,717 LOG Getting telephony
+2026-05-14 13:16:28,717 DEBUG cd ./apps && git clone https://github.com/frappe/telephony  --depth 1 --origin upstream
+2026-05-14 13:16:30,010 LOG Installing telephony
+2026-05-14 13:16:30,011 DEBUG cd /home/ijish/frappe-bench && uv pip install --quiet --upgrade -e /home/ijish/frappe-bench/apps/telephony  --python /home/ijish/frappe-bench/env/bin/python
+2026-05-14 13:16:31,063 DEBUG bench build --app telephony
+2026-05-14 13:16:31,143 INFO /home/ijish/.local/bin/bench build --app telephony
+2026-05-14 13:16:38,794 INFO /home/ijish/.local/bin/bench --site mysite.local install-app telephony
+2026-05-14 13:16:44,798 INFO /home/ijish/.local/bin/bench --site mysite.local install-app helpdesk
+2026-05-14 13:16:57,722 INFO /home/ijish/.local/bin/bench build --app helpdesk
+2026-05-14 13:21:20,269 INFO /home/ijish/.local/bin/bench --site mysite.local clear-cache
+2026-05-14 13:21:21,906 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-05-15 09:30:11,242 INFO /home/ijish/.local/bin/bench start
+2026-05-15 09:30:11,642 INFO /home/ijish/.local/bin/bench watch
+2026-05-15 09:30:11,650 INFO /home/ijish/.local/bin/bench schedule
+2026-05-15 09:30:11,654 INFO /home/ijish/.local/bin/bench worker
+2026-05-15 09:30:11,665 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-15 12:00:01,471 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-18 10:38:58,705 INFO /home/ijish/.local/bin/bench start
+2026-05-18 10:38:59,729 INFO /home/ijish/.local/bin/bench watch
+2026-05-18 10:38:59,742 INFO /home/ijish/.local/bin/bench schedule
+2026-05-18 10:38:59,744 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-18 10:38:59,760 INFO /home/ijish/.local/bin/bench worker
+2026-05-18 12:00:01,706 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-18 12:56:01,684 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-18 14:20:29,383 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-19 10:18:40,558 INFO /home/ijish/.local/bin/bench start
+2026-05-19 10:18:40,769 INFO /home/ijish/.local/bin/bench watch
+2026-05-19 10:18:40,783 INFO /home/ijish/.local/bin/bench schedule
+2026-05-19 10:18:40,789 INFO /home/ijish/.local/bin/bench worker
+2026-05-19 10:18:40,793 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-19 12:00:02,061 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-20 10:54:18,712 INFO /home/ijish/.local/bin/bench start
+2026-05-20 10:54:19,136 INFO /home/ijish/.local/bin/bench schedule
+2026-05-20 10:54:19,138 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-20 10:54:19,142 INFO /home/ijish/.local/bin/bench watch
+2026-05-20 10:54:19,196 INFO /home/ijish/.local/bin/bench worker
+2026-05-20 12:00:01,725 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-21 12:09:59,782 INFO /home/ijish/.local/bin/bench start
+2026-05-21 12:10:00,263 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 12:10:00,266 INFO /home/ijish/.local/bin/bench worker
+2026-05-21 12:10:00,267 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 12:10:00,326 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 12:38:38,514 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-21 12:46:25,766 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-21 12:58:10,122 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-21 13:02:14,250 INFO /home/ijish/.local/bin/bench build --app crm
+2026-05-21 15:57:05,225 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-05-21 15:57:14,487 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.get_doc --args ["Website Theme", "Royal Purple"]
+2026-05-21 15:57:14,968 INFO /home/ijish/.local/bin/bench --site mysite.local list-apps
+2026-05-21 15:57:48,192 INFO /home/ijish/.local/bin/bench --site mysite.local export-fixtures
+2026-05-21 16:00:09,851 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.sql --args ["SELECT name, custom FROM `tabDesk Theme` WHERE custom=1", True]
+2026-05-21 16:00:14,120 INFO /home/ijish/.local/bin/bench --site mysite.local mariadb --execute SELECT name, custom FROM \ WHERE custom=1;
+2026-05-21 16:22:29,741 INFO /home/ijish/.local/bin/bench --site mysite.local console --quiet
+2026-05-21 16:23:00,182 INFO /home/ijish/.local/bin/bench --site mysite.local export-doc Desk Theme SBIQ Core
+2026-05-21 16:23:08,515 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-05-21 16:23:15,293 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-05-21 16:26:39,125 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-05-21 16:26:46,158 INFO /home/ijish/.local/bin/bench --site mysite.local console
+2026-05-21 16:59:06,700 INFO /home/ijish/.local/bin/bench start
+2026-05-21 16:59:06,929 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 16:59:06,932 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 16:59:06,937 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 16:59:06,947 INFO /home/ijish/.local/bin/bench worker
+2026-05-21 16:59:34,120 INFO /home/ijish/.local/bin/bench start
+2026-05-21 16:59:34,493 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 16:59:34,495 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 16:59:34,507 INFO /home/ijish/.local/bin/bench worker
+2026-05-21 16:59:34,512 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 17:01:48,643 INFO /home/ijish/.local/bin/bench migrate
+2026-05-21 17:02:14,815 INFO /home/ijish/.local/bin/bench start
+2026-05-21 17:02:15,001 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 17:02:15,004 INFO /home/ijish/.local/bin/bench worker
+2026-05-21 17:02:15,005 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 17:02:15,007 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 17:16:58,921 INFO /home/ijish/.local/bin/bench start
+2026-05-21 17:16:59,175 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 17:16:59,180 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 17:16:59,181 INFO /home/ijish/.local/bin/bench worker
+2026-05-21 17:16:59,184 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 17:17:13,249 INFO /home/ijish/.local/bin/bench migrate
+2026-05-21 17:17:32,279 INFO /home/ijish/.local/bin/bench build
+2026-05-21 17:20:25,929 INFO /home/ijish/.local/bin/bench restart
+2026-05-21 19:57:56,088 INFO /home/ijish/.local/bin/bench start
+2026-05-21 19:57:56,671 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-21 19:57:56,687 INFO /home/ijish/.local/bin/bench schedule
+2026-05-21 19:57:56,689 INFO /home/ijish/.local/bin/bench watch
+2026-05-21 19:57:56,723 INFO /home/ijish/.local/bin/bench worker
+2026-05-22 10:25:51,119 INFO /home/ijish/.local/bin/bench start
+2026-05-22 10:25:51,786 INFO /home/ijish/.local/bin/bench watch
+2026-05-22 10:25:51,788 INFO /home/ijish/.local/bin/bench schedule
+2026-05-22 10:25:51,852 INFO /home/ijish/.local/bin/bench worker
+2026-05-22 10:25:51,853 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-22 10:43:43,431 INFO /home/ijish/.local/bin/bench start
+2026-05-22 10:43:43,618 INFO /home/ijish/.local/bin/bench schedule
+2026-05-22 10:43:43,632 INFO /home/ijish/.local/bin/bench watch
+2026-05-22 10:43:43,632 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-22 10:43:43,645 INFO /home/ijish/.local/bin/bench worker
+2026-05-22 10:51:17,109 INFO /home/ijish/.local/bin/bench build
+2026-05-22 10:52:43,431 INFO /home/ijish/.local/bin/bench build
+2026-05-22 10:55:24,772 INFO /home/ijish/.local/bin/bench restart
+2026-05-22 11:47:26,451 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["CRM Form Script"] --kwargs {"fields": ["name", "dt", "enabled", "script"]}
+2026-05-22 11:48:14,541 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Server Script"] --kwargs {"filters": {"module": "CRM"}, "fields": ["name", "script_type", "reference_doctype", "script"]}
+2026-05-22 11:48:30,223 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Notification"] --kwargs {"filters": {"document_type": "CRM Lead"}, "fields": ["name", "event", "message", "enabled"]}
+2026-05-22 11:49:09,611 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Server Script"] --kwargs {"filters": {"reference_doctype": "CRM Lead"}, "fields": ["name", "script_type", "script"]}
+2026-05-22 11:49:19,898 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Server Script"] --kwargs {"fields": ["name", "script_type", "reference_doctype"], "filters": [["script", "like", "%Hephzibah%"]]}
+2026-05-22 11:49:28,006 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Notification"] --kwargs {"fields": ["name", "document_type", "event", "enabled"]}
+2026-05-22 11:50:55,569 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Email Template"] --kwargs {"fields": ["name", "subject"], "filters": [["response", "like", "%Hephzibah%"]]}
+2026-05-22 11:50:56,055 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Communication"] --kwargs {"filters": {"reference_doctype": "CRM Lead", "communication_type": "Communication", "sent_or_received": "Sent"}, "fields": ["name", "subject",
+  "content", "creation"], "limit": 3, "order_by": "creation desc"}
+2026-05-22 11:50:56,543 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Server Script"] --kwargs {"fields": ["name", "script_type", "reference_doctype", "enabled"], "limit": 50}
+2026-05-22 11:53:29,972 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Server Script"] --kwargs {"fields": ["name", "script_type", "reference_doctype"], "limit": 50}
+2026-05-22 11:53:37,427 INFO /home/ijish/.local/bin/bench --site mysite.local execute frappe.db.get_all --args ["Communication"] --kwargs {"filters": {"name": "142teqapk2"}, "fields": ["name", "sent_or_received", "email_status", "send_after", "communication_medium", "sender",
+  "recipients"]}
+2026-05-22 12:00:01,692 INFO /home/ijish/.local/bin/bench --verbose --site all backup
+2026-05-26 10:20:09,524 INFO /home/ijish/.local/bin/bench start
+2026-05-26 10:20:09,937 INFO /home/ijish/.local/bin/bench watch
+2026-05-26 10:20:09,942 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-26 10:20:09,960 INFO /home/ijish/.local/bin/bench worker
+2026-05-26 10:20:09,975 INFO /home/ijish/.local/bin/bench schedule
+2026-05-26 10:21:52,008 INFO /home/ijish/.local/bin/bench build
+2026-05-26 10:22:29,386 INFO /home/ijish/.local/bin/bench build
+2026-05-26 10:26:30,541 INFO /home/ijish/.local/bin/bench build
+2026-05-26 10:29:49,828 INFO /home/ijish/.local/bin/bench start
+2026-05-26 10:29:50,075 INFO /home/ijish/.local/bin/bench schedule
+2026-05-26 10:29:50,078 INFO /home/ijish/.local/bin/bench watch
+2026-05-26 10:29:50,082 INFO /home/ijish/.local/bin/bench worker
+2026-05-26 10:29:50,098 INFO /home/ijish/.local/bin/bench serve --port 8000
+2026-05-26 11:27:06,145 INFO /home/ijish/.local/bin/bench --site mysite.local migrate
+2026-05-26 11:27:22,130 INFO /home/ijish/.local/bin/bench build --app erpnext --app hrms --app crm --app helpdesk
+2026-05-26 11:28:36,131 INFO /home/ijish/.local/bin/bench restart
+2026-05-26 12:00:01,660 INFO /home/ijish/.local/bin/bench --verbose --site all backup
