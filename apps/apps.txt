@@ -1,1 +1,6 @@
-mft_integration
+frappe
+erpnext
+hrms
+crm
+telephony
+helpdesk

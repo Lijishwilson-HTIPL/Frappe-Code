@@ -1,13 +1,9 @@
-redis_cache: redis-server config/redis_cache.conf
+web: /usr/local/bin/bench serve --port 8000
 
-redis_queue: redis-server config/redis_queue.conf
+socketio: /usr/bin/node apps/frappe/socketio.js
 
-web: /home/hilton/.local/bin/bench serve --port 8000
+watch: /usr/local/bin/bench watch
 
-socketio: /home/hilton/.nvm/versions/node/v18.20.8/bin/node apps/frappe/socketio.js
+schedule: /usr/local/bin/bench schedule
 
-watch: /home/hilton/.local/bin/bench watch
-
-schedule: /home/hilton/.local/bin/bench schedule
-
-worker: /home/hilton/.local/bin/bench worker 1>> logs/worker.log 2>> logs/worker.error.log
+worker: /usr/local/bin/bench worker 1>> logs/worker.log 2>> logs/worker.error.log

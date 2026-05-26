@@ -172,3 +172,4 @@ git diff apps/
 # Apply JSON changes to a database
 bench --site mysite.local migrate
 ```
+## rules 
