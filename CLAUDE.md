@@ -28,3 +28,25 @@
 **Rule:** Do not regenerate Frappe API keys/secrets unnecessarily. Every time `bench serve` restarts, it does NOT reset keys — but `generate_keys` overwrites them. Only regenerate when explicitly needed and always update the `.env` on the backend server immediately after.
 
 **Backend `.env` location:** `/var/www/html/frappe_backend_staging/.env` on the `185` server.
+
+---
+
+## 3. This is part of the MFT multi-project system
+**Full architecture, rules, and project overview are in the main CLAUDE.md:**
+`C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\CLAUDE.md`
+
+Read that file first for the full picture. All cross-project rules defined there apply here too.
+
+### MFT-Specific Frappe Notes
+- **Custom DocType:** `mft_license` — handles post-payment license generation
+- **Key method:** `process_payment(stripe_session_id, name, org, email, bill_number)`
+  - Returns: `invoice_number`, `license_key`, `purchase_date`, `amount`
+- **Triggered by:** Express backend after Stripe payment confirmed
+- **Other integrations:** Helpdesk HD Tickets, Job Openings (HRMS), Career Inquiries, Job Applicants
+
+### Project Locations (for cross-project edits)
+| Project | Path |
+|---|---|
+| Frontend (Next.js) | `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page` |
+| Backend (Express) | `C:\Users\Paul Sahaya Doss\Downloads\logs` |
+| Work Progress Log | `workprogress.txt` (this bench root)

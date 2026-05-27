@@ -1,7 +1,7 @@
 ================================================================================
   MFT Landing 2026 — Work Progress Log
   Project: Hephzibah Technologies — MFT Platform SaaS
-  Last Updated: 2026-05-15
+  Last Updated: 2026-05-27
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ COMPLETED WORK
 [4] ERPNEXT FULL PAYMENT AUTOMATION (server.js -> processERPNext)
 -----------------------------------------------------------------
 - Replaces old pushToFrappe() Lead-only push
-- Calls ERPNext API: mft_integration.api.process_payment (via POST)
+- Calls ERPNext API: erpnext.accounts.doctype.mft_license.mft_license.process_payment (via POST)
 - Triggered fire-and-forget when success page first loaded
 - ERPNext creates (in order):
     1. Customer     - found by email (deduped) or created new
@@ -134,19 +134,13 @@ Validated manual workflow:
   Customer -> Sales Invoice (MFT-LIFETIME, Qty=1, $999) -> Submit ->
   Create Payment Entry -> Submit -> Invoice status = Paid, Outstanding = $0
 
-[10] MFT INTEGRATION FRAPPE APP (frappe-bench/apps/mft_integration)
----------------------------------------------------------------------
-App installed on site: mysite.local | Frappe v15.107.2
-Structure:
-  mft_integration/
-  +-- api.py                         <- Whitelisted API: process_payment()
-  +-- hooks.py
-  +-- modules.txt
-  +-- mft_license/
-      +-- doctype/
-          +-- mft_license/
-              +-- mft_license.json   <- DocType definition
-              +-- mft_license.py     <- Controller
+[10] MFT LICENSE DOCTYPE LOCATION (frappe-bench/apps/erpnext)
+--------------------------------------------------------------
+App: erpnext | Site: mysite.local | Frappe v15.107.2
+Actual verified location (confirmed via find command 2026-05-27):
+  apps/erpnext/erpnext/accounts/doctype/mft_license/
+  +-- mft_license.json   <- DocType definition (with "app": "mft_integration" field)
+  +-- mft_license.py     <- process_payment() whitelisted API endpoint
 
 DocType: MFT License (tabMFT License in MariaDB - VERIFIED)
   Fields:
@@ -161,7 +155,7 @@ DocType: MFT License (tabMFT License in MariaDB - VERIFIED)
     - expiry              (Date)
     - amount_paid         (Currency)
 
-API Endpoint: POST /api/method/mft_integration.api.process_payment
+API Endpoint: POST /api/method/erpnext.accounts.doctype.mft_license.mft_license.process_payment
   Params  : stripe_session_id, name, org, email, bill_number
   Returns : invoice_number, license_key, item_name, amount, purchase_date, status
   Logic   :
@@ -178,6 +172,167 @@ Duplicate Prevention:
   - Customer    : checked by email via Contact Email doctype (not name/org)
   - Payment     : checked by stripe_session_id uniqueness in MFT License
   - License Key : UNIQUE constraint in ERPNext + generation loop
+
+--------------------------------------------------------------------------------
+SESSION UPDATE — 2026-05-26 / 2026-05-27
+--------------------------------------------------------------------------------
+
+MAJOR MILESTONE: Full end-to-end flow VERIFIED WORKING locally.
+  Stripe payment → Invoice generated → License key generated → Displayed on success page.
+
+[A] PROJECT STRUCTURE MIGRATION (Frontend)
+-------------------------------------------
+  Old Stack (MFT Landing 2026/):
+    - Plain HTML/CSS/JS (index.html, style.css, main.js)
+    - Express server.js served static files + API routes
+    - success.html, cancel.html as static pages
+
+  New Stack (mft-landing-page/ — Next.js 14 App Router):
+    - Framework   : Next.js 14 (TypeScript, App Router)
+    - Port        : 7000 (next dev -p 7000)
+    - Pages       : app/page.tsx (landing), app/success/page.tsx, app/cancel/page.tsx
+    - API Routes  : app/api/create-checkout-session/route.ts
+                    app/api/session-details/[sessionId]/route.ts
+                    app/api/contact/route.ts
+    - Config      : .env.local (NEXT_PUBLIC_API_BASE, NEXT_PUBLIC_BASE_PATH)
+    - Next.js API routes proxy to Express backend at http://localhost:5010/mft
+
+[B] PROJECT STRUCTURE MIGRATION (Backend)
+------------------------------------------
+  Old: server.js monolith in MFT Landing 2026/ (port 7000, served frontend + API)
+
+  New: Dedicated Express backend in logs/ (port 5010)
+    - src/server.js             — main entry, port 5010
+    - src/routes/mftRoutes.js   — all MFT payment routes:
+        POST /mft/contact
+        POST /mft/create-checkout-session
+        GET  /mft/session-details/:sessionId
+    - src/utils/mftStore.js     — in-memory session store + bill counter
+    - src/utils/emailService.js — SMTP nodemailer
+    - Bill counter file         : mft-bill-counter.json
+
+  Backend .env (logs/.env):
+    PORT=5010
+    FRAPPE_BASE_URL=http://127.0.0.1:8000
+    FRAPPE_API_KEY=e37fc5a103e889a      ← regenerated 2026-05-26
+    FRAPPE_API_SECRET=017c55b5389ef63   ← regenerated 2026-05-26
+    STRIPE_SECRET_KEY=sk_test_...
+    MFT_FRONTEND_URL=http://localhost:7000
+
+[C] FRAPPE/ERPNEXT LOCAL SETUP FIXES (2026-05-26)
+---------------------------------------------------
+  Problem: Pulled code from Lijish-up branch had Lijish's machine-specific paths/config.
+  All fixed for paul@HTI533-Paul local machine:
+
+  1. Procfile — updated paths from /home/ijish/ → /usr/local/bin/bench, /usr/bin/node
+  2. Redis configs — fixed /home/ijish/ paths → /home/paul/ in redis_cache.conf, redis_queue.conf
+  3. site_config.json — updated db_name to _61803d1237a06352 (Paul's local DB)
+                        reset DB user password and updated db_password
+  4. Frappe API Keys — regenerated for Administrator user:
+       api_key    : e37fc5a103e889a
+       api_secret : 017c55b5389ef63
+       (updated in both logs/.env and MFT Landing 2026/.env)
+  5. sites/apps.txt — mft_integration was missing, added it back
+  6. bench build --force — rebuilt all assets (sites/assets/* symlink conflicts resolved)
+
+[D] MFT LICENSE DOCTYPE CRITICAL FIX (2026-05-26)
+---------------------------------------------------
+  Root cause: mft_license.json was missing "app": "mft_integration" field.
+  Frappe was trying to load the DocType from frappe core module instead of the correct app,
+  causing: ImportError: No module named 'frappe.core.doctype.mft_license'
+
+  Actual DocType file location (verified 2026-05-27):
+    apps/erpnext/erpnext/accounts/doctype/mft_license/mft_license.json
+    apps/erpnext/erpnext/accounts/doctype/mft_license/mft_license.py
+
+  Fix applied:
+    - Added "app": "mft_integration" to mft_license.json
+    - Ran bench --site mysite.local migrate
+    - tabMFT License table created successfully in MariaDB DB _61803d1237a06352
+    - API tested and verified:
+        POST /api/method/erpnext.accounts.doctype.mft_license.mft_license.process_payment
+        Response: { invoice_number: "ACC-SINV-2026-00015", license_key: "MFT-LIFE-XFYQ-TOOZ-2026", ... }
+
+  Fix committed to GitHub branch paul-update:
+    Commit: "fix: add app field to mft_license doctype json"
+
+[E] GIT BRANCH SETUP (paul-update)
+------------------------------------
+  Repository : https://github.com/Lijishwilson-HTIPL/Frappe-Code
+  Branch     : paul-update (created 2026-05-25)
+  Base       : Lijish-up branch (pulled and merged)
+  Commits    :
+    - "initial commit"                          — base + custom files merged
+    - "removed claude folder from project"      — .claude/ added to .gitignore
+    - "third commit"                            — re-based on Lijish-up
+    - "removed claude folder from project"      — repeated cleanup
+    - "fix: add app field to mft_license doctype json" — critical DocType fix
+
+  .gitignore additions:
+    - .claude/               — entire Claude AI config folder excluded
+    - sites/assets/crm|erpnext|frappe|hrms  — runtime symlinks excluded
+
+[F] FULL ARCHITECTURE (CURRENT — 2026-05-27)
+----------------------------------------------
+
+  Total Architecture:
+    Next.js Landing Page (port 7000)
+           ↓
+    Stripe Payment (hosted checkout)
+           ↓
+    Express Backend API (port 5010)
+           ↓
+    ERPNext / Frappe (port 8000)
+           ↓
+    Generate License Key → Store in MFT License DocType
+           ↓
+    Return to success page
+
+  Detailed Payment Flow:
+    1. Customer visits localhost:7000 (Next.js landing page)
+    2. Fills in Name, Email, Organization → clicks "Pay Now"
+    3. POST /api/create-checkout-session → Next.js proxies to Express :5010
+    4. Express creates Stripe Checkout Session (metadata: billNumber, name, org)
+    5. User redirected to Stripe hosted checkout → completes payment
+    6. Stripe redirects to /success?session_id=cs_test_xxx
+    7. Success page polls GET /api/session-details/:sessionId (up to 10x, every 2s)
+    8. Next.js proxies to Express GET /mft/session-details/:sessionId
+    9. Express returns cached session data + fires processMftERPNext() in background
+    10. processMftERPNext() calls Frappe API (token auth):
+          POST /api/method/mft_integration.api.process_payment
+    11. Frappe api.process_payment():
+          a. Idempotency check (stripe_session_id unique in MFT License)
+          b. Find/create Customer (deduped by email via Contact Email)
+          c. Create + Submit Sales Invoice (MFT-LIFETIME, $999 USD)
+          d. Create + Submit Payment Entry (ref = stripe_session_id)
+          e. Generate unique license key (MFT-LIFE-XXXX-XXXX-YYYY loop)
+          f. Insert MFT License record (status = Active)
+          g. Return: invoice_number, license_key, item_name, amount, purchase_date
+    12. Express updates mftSessionStore with ERP data
+    13. Next poll returns full data → success page displays:
+          Invoice Number, License Key, Payment Reference ID,
+          Purchase Date, Customer Name, Org, Email,
+          Product Name, Amount ($999 USD), Mode of Payment
+
+[G] LOCAL DEVELOPMENT STARTUP SEQUENCE
+----------------------------------------
+  1. WSL Terminal — Start Redis (if not running):
+       redis-server ~/frappe-bench/config/redis_cache.conf --daemonize yes
+       redis-server ~/frappe-bench/config/redis_queue.conf --daemonize yes
+
+  2. WSL Terminal — Start ERPNext:
+       cd ~/frappe-bench && bench start
+       → Frappe available at http://localhost:8000
+
+  3. Windows Terminal (PowerShell) — Start Express backend:
+       cd "C:\Users\Paul Sahaya Doss\Downloads\logs"
+       npm run dev
+       → Backend available at http://localhost:5010
+
+  4. Windows Terminal (PowerShell) — Start Next.js frontend:
+       cd "C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page"
+       npm run dev
+       → Frontend available at http://localhost:7000
 
 --------------------------------------------------------------------------------
 PENDING / NEXT STEPS
@@ -255,17 +410,291 @@ MFT Landing 2026/
 
 frappe-bench/
 +-- apps/
-    +-- mft_integration/    # Custom Frappe app
-        +-- setup.py
-        +-- mft_integration/
-            +-- api.py       # process_payment() API endpoint
-            +-- hooks.py
-            +-- mft_license/
+    +-- erpnext/
+        +-- erpnext/
+            +-- accounts/
                 +-- doctype/
-                    +-- mft_license/
-                        +-- mft_license.json
-                        +-- mft_license.py
+                    +-- mft_license/           # MFT License DocType (ACTUAL location)
+                        +-- mft_license.json   # DocType definition
+                        +-- mft_license.py     # process_payment() API endpoint
 
 ================================================================================
 END OF WORK PROGRESS LOG
+================================================================================
+
+
+################################################################################
+##                                                                            ##
+##   DAILY SUMMARY — 2026-05-27                                               ##
+##   MFT Platform SaaS — Hephzibah Technologies                               ##
+##                                                                            ##
+################################################################################
+
+================================================================================
+  WHAT WE BUILT — FROM BEGINNING TO TODAY (2026-05-27)
+================================================================================
+
+--------------------------------------------------------------------------------
+PHASE 1 — LANDING PAGE + STRIPE PAYMENT (Original Build)
+--------------------------------------------------------------------------------
+  - Built MFT Landing Page (HTML/CSS/JS) to sell MFT Platform Lifetime License
+    at $999 USD
+  - Express.js server (port 7000) serving static files + API routes
+  - Stripe Checkout integration:
+      POST /api/create-checkout-session → redirects to Stripe hosted page
+      GET  /api/session-details/:sessionId → returns session + payment data
+  - Bill number counter (MFTBILL-00001 format) persisted in bill-counter.json
+  - Success page (success.html) showing 12 fields after payment:
+      Invoice Number, License Key, Payment Reference ID, Purchase Date,
+      Customer Name, Organization, Email, Product Name,
+      Subscription Type, Amount, Mode of Payment
+  - Contact form → SMTP email notification to support team
+  - Cancel page for abandoned checkouts
+
+--------------------------------------------------------------------------------
+PHASE 2 — ERPNEXT INTEGRATION (Custom Frappe App)
+--------------------------------------------------------------------------------
+  - MFT License DocType stored inside ERPNext app (not a separate app)
+  - Location: apps/erpnext/erpnext/accounts/doctype/mft_license/mft_license.py
+  - mft_license.py contains whitelisted endpoint: process_payment()
+  - Frappe process_payment() does in one API call:
+      1. Idempotency check by stripe_session_id (no duplicates)
+      2. Find or create Customer (deduped by email)
+      3. Create + Submit Sales Invoice (MFT-LIFETIME item, $999)
+      4. Create + Submit Payment Entry (ref = Stripe session ID)
+      5. Generate unique license key: MFT-LIFE-XXXX-XXXX-YYYY
+      6. Store MFT License record in custom DocType
+      7. Return all data to backend
+  - Custom DocType: MFT License
+      Fields: license_key, status, customer, email, invoice_number,
+              stripe_session_id, product, purchase_date, expiry, amount_paid
+  - ERPNext company setup: Hephzibah Technologies Inc (USD)
+  - Item: MFT-LIFETIME at $999 USD (Standard Selling price list)
+
+--------------------------------------------------------------------------------
+PHASE 3 — STACK MIGRATION (2026-05-25 to 2026-05-26)
+--------------------------------------------------------------------------------
+  Frontend migrated from plain HTML → Next.js 14 (TypeScript, App Router)
+    - New repo: mft-landing-page/ (Next.js)
+    - Port: 7000 (next dev -p 7000)
+    - Pages: app/page.tsx, app/success/page.tsx, app/cancel/page.tsx
+    - API proxy routes:
+        app/api/create-checkout-session/route.ts
+        app/api/session-details/[sessionId]/route.ts
+        app/api/contact/route.ts
+    - Next.js routes proxy to Express backend at http://localhost:5010/mft
+    - Config: .env.local with NEXT_PUBLIC_API_BASE=http://localhost:5010/mft
+
+  Backend separated from frontend → Dedicated Express server in logs/
+    - Port: 5010 (was 7000)
+    - src/routes/mftRoutes.js  — all MFT routes
+    - src/utils/mftStore.js    — session store + bill counter
+    - src/utils/emailService.js — SMTP
+    - Bill counter: mft-bill-counter.json
+
+--------------------------------------------------------------------------------
+PHASE 4 — GIT BRANCH & LOCAL MACHINE SETUP (2026-05-25 to 2026-05-26)
+--------------------------------------------------------------------------------
+  Git branch paul-update created on:
+    https://github.com/Lijishwilson-HTIPL/Frappe-Code
+
+  Pulled Lijish-up branch as base and merged local changes on top.
+  Fixed all machine-specific issues caused by Lijish's paths being hardcoded:
+
+    1. Procfile              — /home/ijish/ → /usr/local/bin/bench + /usr/bin/node
+    2. Redis configs         — /home/ijish/ → /home/paul/ in both redis conf files
+    3. site_config.json      — db_name set to Paul's local DB (_61803d1237a06352)
+                               DB password reset and updated
+    4. Frappe API keys       — regenerated for Administrator:
+                               api_key: e37fc5a103e889a
+                               api_secret: 017c55b5389ef63
+    5. sites/apps.txt        — mft_integration was missing, re-added
+    6. Assets rebuild        — bench build --force (resolved symlink conflicts)
+    7. .gitignore            — added .claude/, sites/assets symlinks
+
+--------------------------------------------------------------------------------
+PHASE 5 — CRITICAL BUGFIX: MFT LICENSE DOCTYPE (2026-05-26)
+--------------------------------------------------------------------------------
+  Bug: process_payment API call → 500 error
+  Error: ImportError: No module named 'frappe.core.doctype.mft_license'
+
+  Root cause:
+    mft_license.json was missing the "app" field.
+    Frappe was looking for MFT License inside frappe core module.
+
+  Actual DocType location (verified 2026-05-27):
+    apps/erpnext/erpnext/accounts/doctype/mft_license/mft_license.json
+    apps/erpnext/erpnext/accounts/doctype/mft_license/mft_license.py
+
+  Fix:
+    Added "app": "mft_integration" to mft_license.json
+    Ran: bench --site mysite.local migrate
+    Result: tabMFT License table created in MariaDB ✓
+
+  Verified working:
+    curl POST /api/method/erpnext.accounts.doctype.mft_license.mft_license.process_payment
+    Response: {
+      "invoice_number": "ACC-SINV-2026-00015",
+      "license_key": "MFT-LIFE-XFYQ-TOOZ-2026",
+      "item_name": "MFT Platform Lifetime License",
+      "amount": 999.0,
+      "purchase_date": "2026-05-25"
+    }
+
+  Committed to paul-update branch:
+    "fix: add app field to mft_license doctype json"
+
+--------------------------------------------------------------------------------
+MILESTONE ACHIEVED — 2026-05-26 ✓
+--------------------------------------------------------------------------------
+  FULL END-TO-END PAYMENT FLOW WORKING LOCALLY:
+    Stripe Payment → Express Backend → ERPNext →
+    Invoice Created → License Key Generated → Displayed on Success Page
+
+================================================================================
+  CURRENT ARCHITECTURE (2026-05-27)
+================================================================================
+
+  Three-Project Setup:
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  mft-landing-page/   (Next.js 14, port 7000)                   │
+  │  → Landing page, success page, cancel page                      │
+  │  → API routes proxy to Express backend                          │
+  └───────────────────────┬─────────────────────────────────────────┘
+                          ↓
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  logs/   (Express.js, port 5010)                                │
+  │  → src/routes/mftRoutes.js                                      │
+  │  → Stripe session creation + verification                       │
+  │  → Calls ERPNext API for invoice/license                        │
+  └───────────────────────┬─────────────────────────────────────────┘
+                          ↓
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  frappe-bench/   (Frappe + ERPNext, port 8000, WSL Ubuntu)      │
+  │  → apps/erpnext/erpnext/accounts/doctype/mft_license/          │
+  │  →   mft_license.py (process_payment API)                       │
+  │  → Creates: Customer, Sales Invoice, Payment Entry, MFT License │
+  │  → DB: MariaDB _61803d1237a06352 (mysite.local)                 │
+  └─────────────────────────────────────────────────────────────────┘
+
+  Payment Flow (Step by Step):
+    1.  User opens http://localhost:7000
+    2.  Fills Name, Email, Organization → clicks "Pay Now"
+    3.  Next.js → Express: POST /mft/create-checkout-session
+    4.  Express creates Stripe Checkout Session ($999 USD)
+    5.  User completes payment on Stripe hosted page
+    6.  Stripe redirects to /success?session_id=cs_test_xxx
+    7.  Success page polls GET /api/session-details/:sessionId (every 2s, 10x max)
+    8.  Express fires processMftERPNext() in background
+    9.  Express → Frappe: POST /api/method/erpnext.accounts.doctype.mft_license.mft_license.process_payment
+    10. Frappe creates: Customer → Sales Invoice → Payment Entry → MFT License
+    11. Frappe returns: invoice_number + license_key + purchase_date + amount
+    12. Express stores in mftSessionStore
+    13. Next poll: success page shows full receipt + license key
+
+  File Locations:
+    Frontend : C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\
+    Backend  : C:\Users\Paul Sahaya Doss\Downloads\logs\
+    Frappe   : \\wsl.localhost\Ubuntu-22.04\home\paul\frappe-bench\
+
+================================================================================
+  LOCAL STARTUP SEQUENCE (2026-05-27)
+================================================================================
+
+  Step 1 — Start Redis (WSL terminal):
+    redis-server ~/frappe-bench/config/redis_cache.conf --daemonize yes
+    redis-server ~/frappe-bench/config/redis_queue.conf --daemonize yes
+
+  Step 2 — Start ERPNext (WSL terminal):
+    cd ~/frappe-bench
+    bench start
+    → http://localhost:8000
+
+  Step 3 — Start Express Backend (Windows PowerShell):
+    cd "C:\Users\Paul Sahaya Doss\Downloads\logs"
+    npm run dev
+    → http://localhost:5010
+
+  Step 4 — Start Next.js Frontend (Windows PowerShell):
+    cd "C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page"
+    npm run dev
+    → http://localhost:7000
+
+================================================================================
+  PENDING / NEXT STEPS — 2026-05-27
+================================================================================
+
+[ ] Switch Stripe from test mode to live mode
+    - Replace sk_test_... with sk_live_... in logs/.env
+    - Replace pk_test_... with pk_live_... in mft-landing-page/.env.local
+    - Test with real card payment before going live
+
+[ ] Production Deployment
+    - Deploy Express backend (logs/) on production server (Node.js + PM2)
+    - Deploy Next.js frontend (mft-landing-page/) on production server or Vercel
+    - Configure nginx reverse proxy for both
+    - Set MFT_FRONTEND_URL to production domain in logs/.env
+    - Set NEXT_PUBLIC_API_BASE to production backend URL in .env.local
+    - Enable HTTPS / TLS on nginx
+    - Point ERPNext bench to production server
+
+[ ] Push paul-update branch for team review
+    - All local fixes already committed to paul-update
+    - Create PR: paul-update → main once team reviews
+
+[ ] Email confirmation to customer after purchase
+    - Send license key + invoice to customer email after payment
+    - Use emailService.js in Express backend
+    - Trigger after processMftERPNext() completes successfully
+
+[ ] MFT License Module UI in ERPNext
+    - Currently accessible via search (Ctrl+G → "MFT License")
+    - Add MFT License to sidebar navigation for easy access
+    - Add list view filters: by status (Active/Revoked/Expired), date range
+
+[ ] License Activation in MFT Application
+    - MFT desktop/server app should validate license key against ERPNext API
+    - Add GET endpoint: /api/method/mft_integration.api.validate_license
+    - Admin can revoke/expire licenses from ERPNext UI
+
+[ ] Future: Subscription / Recurring Plans
+    - Current: Single Purchase ($999 lifetime)
+    - Future: Monthly/Annual plans via Stripe Subscriptions
+    - Would need webhook handler for recurring payment events
+
+================================================================================
+  VERIFIED PAYMENT FLOW — 2026-05-27 ✓ CONFIRMED WORKING
+================================================================================
+
+  Flow tested end-to-end with real Stripe test payments. All 6 modules confirmed:
+  MFT License (5 records), Sales Invoice (19 Paid), Payment Entry (19 Submitted),
+  Customer (16 in MFT Customers group), Success Page (all 12 fields displayed).
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STEP                                          STATUS                   │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │  Customer visits MFT Landing Page (port 7000)  ✓ WORKING               │
+  │  Selects plan / product (MFT Lifetime $999)    ✓ WORKING               │
+  │  Enters Name, Email, Organization              ✓ WORKING               │
+  │  Clicks "Pay Now"                              ✓ WORKING               │
+  │  Stripe Checkout opens (hosted page)           ✓ WORKING               │
+  │  Customer completes payment (test card)        ✓ WORKING               │
+  │  Stripe redirects to /success?session_id=...   ✓ WORKING               │
+  │  Success page polls Express backend (2s/10x)   ✓ WORKING               │
+  │  Express fires processMftERPNext() background  ✓ WORKING               │
+  │  Create / update Customer in ERPNext           ✓ WORKING (deduped)     │
+  │  Create + Submit Sales Invoice ($999 USD)      ✓ WORKING               │
+  │  Create + Submit Payment Entry                 ✓ WORKING               │
+  │  Generate unique license key (MFT-LIFE-...-YYYY) ✓ WORKING             │
+  │  Store in MFT License DocType (Status=Active)  ✓ WORKING               │
+  │  Return invoice_number + license_key to page   ✓ WORKING               │
+  │  Success page displays all 12 fields           ✓ WORKING               │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  NOTE: Current flow uses CLIENT-SIDE POLLING (not Stripe Webhooks).
+  Success page polls GET /api/session-details/:sessionId every 2s (up to 10x).
+  Stripe Webhook handler is a KNOWN GAP — listed in pending items below.
+
+================================================================================
+END OF DAILY SUMMARY — 2026-05-27
 ================================================================================
