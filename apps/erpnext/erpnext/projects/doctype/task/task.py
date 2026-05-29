@@ -6,7 +6,7 @@ import json
 
 import frappe
 from frappe import _, throw
-from frappe.desk.form.assign_to import clear, close_all_assignments
+from frappe.desk.form.assign_to import add as add_assignment, clear, close_all_assignments, remove as remove_assignment
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import add_days, cstr, date_diff, flt, get_link_to_form, getdate, today
 from frappe.utils.data import format_date
@@ -198,6 +198,9 @@ class Task(NestedSet):
 	def update_nsm_model(self):
 		frappe.utils.nestedset.update_nsm(self)
 
+	def after_insert(self):
+		self.share_with_project_members()
+
 	def on_update(self):
 		self.update_nsm_model()
 		self.check_recursion()
@@ -205,6 +208,21 @@ class Task(NestedSet):
 		self.update_project()
 		self.unassign_todo()
 		self.populate_depends_on()
+		self.share_with_project_members()
+
+	def share_with_project_members(self):
+		"""Share this task with every user listed in the project's Users table."""
+		if not self.project:
+			return
+		project_users = frappe.get_all(
+			"Project User", filters={"parent": self.project}, fields=["user"]
+		)
+		for pu in project_users:
+			if frappe.db.exists(
+				"DocShare", {"share_doctype": "Task", "share_name": self.name, "user": pu.user}
+			):
+				continue
+			frappe.share.add("Task", self.name, pu.user, read=1, write=1, notify=0)
 
 	def unassign_todo(self):
 		if self.status == "Completed":
@@ -312,6 +330,32 @@ class Task(NestedSet):
 			if self.exp_end_date < datetime.now().date():
 				self.db_set("status", "Overdue", update_modified=False)
 				self.update_project()
+
+
+@frappe.whitelist()
+def reassign_task(name, employee, note=None):
+	user = frappe.db.get_value("Employee", employee, "user_id")
+	if not user:
+		frappe.throw(
+			_("Employee {0} does not have a linked User account. Please set the User ID on the Employee record.").format(
+				frappe.bold(employee)
+			)
+		)
+
+	previous_assign = frappe.db.get_value("Task", name, "_assign")
+	if previous_assign:
+		for prev_user in json.loads(previous_assign):
+			remove_assignment("Task", name, prev_user)
+
+	add_assignment(
+		{
+			"doctype": "Task",
+			"name": name,
+			"assign_to": [user],
+			"notify": 1,
+			"description": note or _("Task has been reassigned to you."),
+		}
+	)
 
 
 @frappe.whitelist()

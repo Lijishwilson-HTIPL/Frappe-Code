@@ -203,6 +203,24 @@ class HDTicket(Document):
         self.remove_assignment_if_not_in_team()
         self.publish_update()
         self.update_search_index()
+        self._auto_flag_rca()
+
+    def _auto_flag_rca(self):
+        if self.rca_required:
+            return
+        reasons = []
+        if self.priority in ("Critical", "High"):
+            reasons.append(f"Priority is {self.priority}")
+        if self.agreement_status in ("Failed", "Resolution Due"):
+            reasons.append(f"SLA {self.agreement_status}")
+        if reasons:
+            self.db_set("rca_required", 1, update_modified=False)
+            self.db_set("rca_status", "Pending", update_modified=False)
+            self.db_set(
+                "rca_trigger_reason",
+                "; ".join(reasons),
+                update_modified=False,
+            )
 
     def notify_agent(self, agent, notification_type="Assignment"):
         frappe.get_doc(

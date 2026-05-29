@@ -31,22 +31,22 @@ class JobApplicantJourney {
 		.jaj-kpi .value { font-size: 22px; font-weight: 600; color: var(--text-color, #1f272e); }
 		.jaj-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 		.jaj-chip { padding: 6px 14px; border-radius: 999px; background: #f3f3f6; color: #4a5562; font-size: 12px; cursor: pointer; border: 1px solid transparent; user-select: none; }
-		.jaj-chip.active { background: #6e3bff; color: #fff; }
+		.jaj-chip.active { background: var(--uic-primary, #6e3bff); color: #fff; }
 		.jaj-row { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e6ea); border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; }
 		.jaj-row-top { display: flex; align-items: center; gap: 14px; }
-		.jaj-avatar { width: 40px; height: 40px; border-radius: 50%; background: #6e3bff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+		.jaj-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--uic-primary, #6e3bff); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
 		.jaj-name { font-weight: 600; color: var(--text-color); }
 		.jaj-sub { font-size: 12px; color: var(--text-muted, #6c7680); }
 		.jaj-stage-badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 11px; margin-top: 4px; background: #d2f5dc; color: #1f7a3a; }
 		.jaj-steps { flex: 1; display: flex; align-items: center; padding: 0 12px; min-width: 0; }
 		.jaj-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
 		.jaj-step .dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid #c9ccd4; z-index: 2; }
-		.jaj-step.done .dot { background: #6e3bff; border-color: #6e3bff; }
-		.jaj-step.current .dot { background: #6e3bff; border-color: #6e3bff; box-shadow: 0 0 0 4px rgba(110,59,255,0.15); }
+		.jaj-step.done .dot { background: var(--uic-primary, #6e3bff); border-color: var(--uic-primary, #6e3bff); }
+		.jaj-step.current .dot { background: var(--uic-primary, #6e3bff); border-color: var(--uic-primary, #6e3bff); box-shadow: 0 0 0 4px rgba(0,0,0,0.08); }
 		.jaj-step .lbl { font-size: 11px; color: var(--text-muted, #6c7680); margin-top: 6px; white-space: nowrap; }
 		.jaj-step.done .lbl, .jaj-step.current .lbl { color: var(--text-color); }
 		.jaj-step .line { position: absolute; top: 7px; left: 50%; width: 100%; height: 2px; background: #c9ccd4; z-index: 1; }
-		.jaj-step.done .line, .jaj-step.current.has-prev .line { background: #6e3bff; }
+		.jaj-step.done .line, .jaj-step.current.has-prev .line { background: var(--uic-primary, #6e3bff); }
 		.jaj-step:last-child .line { display: none; }
 		.jaj-actions { display: flex; gap: 8px; }
 		.jaj-row-bottom { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
