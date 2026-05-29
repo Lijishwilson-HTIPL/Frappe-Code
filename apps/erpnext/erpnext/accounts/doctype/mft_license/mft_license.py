@@ -13,7 +13,7 @@ class MFTLicense(Document):
 # ── Public API ────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=True)
-def process_payment(stripe_session_id, name, org, email, bill_number):
+def process_payment(stripe_session_id, name, org, email):
 	"""
 	Called by MFT landing page after Stripe payment is verified.
 	Creates: Customer (if new), Sales Invoice, Payment Entry, MFT License.
@@ -67,7 +67,7 @@ def process_payment(stripe_session_id, name, org, email, bill_number):
 			"rate":            amount,
 			"price_list_rate": amount,
 		}],
-		"remarks": f"Stripe | Session: {stripe_session_id} | Bill: {bill_number}",
+		"remarks": f"Stripe | Session: {stripe_session_id}",
 	})
 	si.insert(ignore_permissions=True)
 	si.submit()

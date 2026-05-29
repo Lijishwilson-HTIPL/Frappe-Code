@@ -14,6 +14,10 @@ config/pids/
 # Claude
 .claude/
 
+# Work progress log and internal docs (not for version control)
+workprogress.txt
+web docs/
+
 # Compiled/symlinked assets (generated at runtime)
 sites/assets/crm
 sites/assets/erpnext
