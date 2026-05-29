@@ -83,9 +83,8 @@
   },
   {
    "fieldname": "issue",
-   "fieldtype": "Link",
-   "label": "Issue",
-   "options": "Issue"
+   "fieldtype": "Small Text",
+   "label": "Issue"
   },
   {
    "fieldname": "type",
@@ -98,7 +97,6 @@
    "default": "0",
    "fieldname": "is_group",
    "fieldtype": "Check",
-   "in_list_view": 1,
    "label": "Is Group"
   },
   {
@@ -182,6 +180,7 @@
    "bold": 1,
    "fieldname": "exp_end_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Expected End Date",
    "oldfieldname": "exp_end_date",
    "oldfieldtype": "Date",
@@ -197,7 +196,6 @@
    "default": "0",
    "fieldname": "is_milestone",
    "fieldtype": "Check",
-   "in_list_view": 1,
    "label": "Is Milestone"
   },
   {

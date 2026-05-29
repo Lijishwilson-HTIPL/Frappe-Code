@@ -26,12 +26,7 @@ app_include_js = [
 	"hrms.bundle.js",
 ]
 
-# Bump UI_VERSION to bust the browser cache after editing uichange3.css.
-UI_VERSION = 10
 app_include_css = ["hrms.bundle.css"]
-# Disabled — uichange3.css was a cream/peach theme that overrode the
-# blue theme set in erpnext/public/css/custom_theme.css.
-# To re-enable, restore: f"/assets/hrms/css/uichange3.css?v={UI_VERSION}"
 
 # website
 

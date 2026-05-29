@@ -1,13 +1,13 @@
 [
  {
-  "background_color": "Soft Lilac White",
+  "background_color": "#F8F7FF",
   "button_gradients": 1,
   "button_rounded_corners": 1,
   "button_shadows": 0,
   "custom": 1,
   "custom_overrides": null,
   "custom_scss": null,
-  "dark_color": "Midnight Purple",
+  "dark_color": "#2E1065",
   "docstatus": 0,
   "doctype": "Website Theme",
   "font_properties": "wght@300;400;500;600;700;800",
@@ -15,14 +15,14 @@
   "google_font": "Poppins",
   "ignored_apps": [],
   "js": null,
-  "light_color": "Lavender Mist",
+  "light_color": "#E0D7FA",
   "modified": "2026-05-18 14:20:39.942575",
   "module": "Website",
   "name": "Royal Purple",
-  "primary_color": "Royal Purple",
-  "text_color": "Deep Charcoal",
+  "primary_color": "#6D28D9",
+  "text_color": "#1E1B2E",
   "theme": "Royal Purple",
-  "theme_scss": "\n@import url(\"https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap\");\n// backward compatibility. deprecated in v15\n$font-family-sans-serif: \"Poppins\", \"InterVariable\", \"Inter\", -apple-system, BlinkMacSystemFont,\n\t\"Segoe UI\", \"Roboto\", \"Oxygen\", \"Ubuntu\", \"Cantarell\", \"Fira Sans\",\n\t\"Droid Sans\", \"Helvetica Neue\", sans-serif;\n\n// override font stack if custom font is set in website theme\n:root {\n\t--font-stack: \"Poppins\", \"InterVariable\", \"Inter\", -apple-system, BlinkMacSystemFont,\n\t\"Segoe UI\", \"Roboto\", \"Oxygen\", \"Ubuntu\", \"Cantarell\", \"Fira Sans\",\n\t\"Droid Sans\", \"Helvetica Neue\", sans-serif !important;\n}\n$primary: #6D28D9;$dark: #2E1065;$body-text-color: #1E1B2E;$body-bg: #F8F7FF;$enable-shadows: false;\n$enable-gradients: true;\n$enable-rounded: true;\n\n// Bootstrap Variable Overrides\n\n\n// Import themes from installed apps\n@import \"frappe/public/scss/website.bundle\";\n@import \"erpnext/public/scss/website\";\n\n\n\n// Custom Theme\n\n\n:root {\n\t\n\t--primary: #{$primary};\n\t--primary-color: #{$primary};\n\t\n\t--bg-color: #{$body-bg};\n\t\n\t--text-color: #{$body-text-color};\n\t--text-light: #{$body-text-color};\n\t}\n",
-  "theme_url": "/files/website_theme/royal_purple_89edfc94.css"
+  "theme_scss": null,
+  "theme_url": null
  }
 ]

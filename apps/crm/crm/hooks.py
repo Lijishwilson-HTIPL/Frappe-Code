@@ -30,6 +30,7 @@ require_type_annotated_api_methods = True
 # Fixtures
 # --------
 fixtures = [
+    {"dt": "Color", "filters": [["name", "in", ["#6D28D9", "#F8F7FF", "#2E1065", "#E0D7FA", "#1E1B2E"]]]},
     {"dt": "Website Theme", "filters": [["name", "in", ["Royal Purple"]]]},
 ]
 

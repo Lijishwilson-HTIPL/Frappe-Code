@@ -31,7 +31,27 @@
 
 ---
 
-## 3. This is part of the MFT multi-project system
+## 3. site_config.json must never be committed or merged
+
+**Rule:** `sites/mysite.local/site_config.json` (and any `sites/*/site_config.json`) must never be committed to git, staged, or allowed to be overwritten by a merge. It is listed in `.gitignore` and must stay untracked.
+
+**Why:** `site_config.json` contains the database name, DB password, and encryption key specific to each server. If it gets committed and merged, a pull on another server will overwrite that server's credentials, breaking the DB connection entirely (as happened when paul-update overwrote the local DB name from `_c059e81fe917cb98` to `_61803d1237a06352`).
+
+### Rules:
+- Never run `git add sites/` without explicitly excluding `site_config.json`
+- Never commit `site_config.json` — even temporarily
+- If a merge overwrites it, immediately restore from git history: `git show <pre-merge-commit>:sites/mysite.local/site_config.json > sites/mysite.local/site_config.json`
+- Each server (local, staging, production) has its own `site_config.json` — they are intentionally different and must never be shared via git
+
+### If site_config.json accidentally gets tracked:
+```bash
+git rm --cached sites/mysite.local/site_config.json
+git commit -m "chore: untrack site_config.json"
+```
+
+---
+
+## 4. This is part of the MFT multi-project system
 **Full architecture, rules, and project overview are in the main CLAUDE.md:**
 `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\CLAUDE.md`
 
@@ -39,7 +59,7 @@ Read that file first for the full picture. All cross-project rules defined there
 
 ### MFT-Specific Frappe Notes
 - **Custom DocType:** `mft_license` — handles post-payment license generation
-- **Key method:** `process_payment(stripe_session_id, name, org, email, bill_number)`
+- **Key method:** `process_payment(stripe_session_id, name, org, email)`
   - Returns: `invoice_number`, `license_key`, `purchase_date`, `amount`
 - **Triggered by:** Express backend after Stripe payment confirmed
 - **Other integrations:** Helpdesk HD Tickets, Job Openings (HRMS), Career Inquiries, Job Applicants

@@ -18,6 +18,17 @@ config/pids/
 workprogress.txt
 web docs/
 
+# Gameplan app (not tracked in this repo)
+apps/gameplan/
+
+# Local-only HRMS themes (kept on this machine, not shared)
+apps/hrms/hrms/public/css/uichange1.css
+apps/hrms/hrms/public/css/uichange2.css
+apps/hrms/hrms/public/css/uichange3.css
+apps/hrms/hrms/public/css/uichange4.css
+apps/hrms/hrms/public/css/uichange5.css
+apps/hrms/hrms/public/css/uichange6.css
+
 # Compiled/symlinked assets (generated at runtime)
 sites/assets/crm
 sites/assets/erpnext
@@ -43,6 +54,13 @@ sites/*/.test_log
 
 # Backups with credentials
 sites/*/private/backups/*site_config_backup*
+
+# Machine-specific bench config (generated per server by bench setup procfile/redis)
+Procfile
+config/redis_cache.conf
+config/redis_queue.conf
+config/redis_cache.acl
+config/redis_queue.acl
 
 # Python virtual environment (rebuilt per server with bench setup env)
 env/
