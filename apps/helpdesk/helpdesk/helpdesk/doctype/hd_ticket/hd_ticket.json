@@ -68,7 +68,21 @@
   "feedback_rating",
   "feedback",
   "feedback_extra",
-  "meta_tab"
+  "meta_tab",
+  "rca_tab",
+  "rca_section",
+  "rca_required",
+  "rca_status",
+  "rca_root_cause",
+  "rca_fix_workaround",
+  "rca_prevention",
+  "rca_col_break",
+  "rca_kb_article",
+  "rca_problem_ticket",
+  "rca_completed_by",
+  "rca_completed_on",
+  "rca_escalation_reason",
+  "rca_trigger_reason"
  ],
  "fields": [
   {
@@ -462,6 +476,82 @@
    "fieldname": "status_category",
    "fieldtype": "Data",
    "label": "Status Category",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rca_tab",
+   "fieldtype": "Tab Break",
+   "label": "Root Cause Analysis"
+  },
+  {
+   "fieldname": "rca_section",
+   "fieldtype": "Section Break",
+   "label": "RCA Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "rca_required",
+   "fieldtype": "Check",
+   "label": "RCA Required"
+  },
+  {
+   "fieldname": "rca_status",
+   "fieldtype": "Select",
+   "label": "RCA Status",
+   "options": "\nPending\nIn Progress\nCompleted\nWaived"
+  },
+  {
+   "fieldname": "rca_root_cause",
+   "fieldtype": "Text Editor",
+   "label": "Root Cause"
+  },
+  {
+   "fieldname": "rca_fix_workaround",
+   "fieldtype": "Text Editor",
+   "label": "Fix / Workaround"
+  },
+  {
+   "fieldname": "rca_prevention",
+   "fieldtype": "Text Editor",
+   "label": "Preventive Measures"
+  },
+  {
+   "fieldname": "rca_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rca_kb_article",
+   "fieldtype": "Link",
+   "label": "KB Article",
+   "options": "HD Article"
+  },
+  {
+   "fieldname": "rca_problem_ticket",
+   "fieldtype": "Link",
+   "label": "Problem Ticket",
+   "options": "HD Ticket"
+  },
+  {
+   "fieldname": "rca_completed_by",
+   "fieldtype": "Link",
+   "label": "Completed By",
+   "options": "HD Agent"
+  },
+  {
+   "fieldname": "rca_completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rca_escalation_reason",
+   "fieldtype": "Small Text",
+   "label": "Escalation Reason"
+  },
+  {
+   "fieldname": "rca_trigger_reason",
+   "fieldtype": "Small Text",
+   "label": "RCA Triggered Because",
    "read_only": 1
   }
  ],
