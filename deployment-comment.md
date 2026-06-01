@@ -203,6 +203,24 @@ Generate keys: Frappe Desk → Avatar → My Profile → API Access → Generate
 
 ---
 
+## .env Rules — Never Hardcode in Source Files
+
+**Rule:** Any value that changes between environments (emails, URLs, keys, passwords) must live in `.env` — never hardcoded in `.js`, `.py`, or any source file.
+
+| What | Must be in `.env` | Never hardcode in |
+|------|-------------------|-------------------|
+| Recipient email addresses | `MFT_RECIPIENT_EMAIL`, `NOTIFICATION_EMAIL` | `mftRoutes.js`, `supportRoutes.js` |
+| API keys / secrets | `FRAPPE_API_KEY`, `FRAPPE_API_SECRET`, `STRIPE_SECRET_KEY` | Any `.js` / `.py` file |
+| Base URLs | `FRAPPE_URL`, `FRONTEND_URL`, `MFT_FRONTEND_URL` | Any source file |
+| SMTP credentials | `SMTP_USER`, `SMTP_PASS` | Any source file |
+| Database credentials | `DATABASE_URL` | Any source file |
+
+**Why:** Hardcoded values break silently when deploying to staging or production — the code ships with dev values baked in and there is no way to override without a code change.
+
+**`.env` is never committed to git.** Each server (local, staging, prod) maintains its own `.env` file. If a new variable is added, update `.env` on all servers manually.
+
+---
+
 ## Known Gaps
 
 | Gap | Detail |
