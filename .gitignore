@@ -11,8 +11,10 @@ archived/sites/*/logs/
 # PID files
 config/pids/
 
-# Claude
+# Claude — ignore settings/cache but track shared agent definitions
 .claude/
+!.claude/agents/
+!.claude/agents/*.md
 
 # Gameplan app (not tracked in this repo)
 apps/gameplan/
