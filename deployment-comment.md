@@ -8,6 +8,8 @@
 - **Main branch:** `main` — never push directly to this
 - **Push command (staging):** `git push target stagging-deployment`
 
+> ⚠️ **Push Rule:** Never push to GitHub unless explicitly told **"promote it"**. All work stays local until that instruction is given. This applies to all branches including `Lijish-up` and `stagging-deployment`.
+
 ### Remotes
 
 | Remote | URL | Purpose |
