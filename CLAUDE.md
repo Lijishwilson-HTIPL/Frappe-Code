@@ -31,7 +31,36 @@
 
 ---
 
-## 3. This is part of the MFT multi-project system
+## 3. site_config.json must never be committed, merged, or lost
+
+**Rule:** `sites/mysite.local/site_config.json` must never be committed to git, staged, or overwritten by a merge. It is gitignored and must stay untracked on every machine.
+
+**Why:** This file contains the DB name, DB password, and encryption key specific to each server. If it gets overwritten or lost during a merge/stash, Frappe shows "mysite.local does not exist" and the entire bench stops working. This actually happened on 2026-06-01 after merging Lijish-up — site_config.json went missing and had to be restored from an old git commit.
+
+### Rules:
+- Never run `git add sites/` — always add files explicitly by path
+- Never commit `site_config.json` — even temporarily
+- Before any git merge or stash operation, verify the file exists: `cat sites/mysite.local/site_config.json`
+- Each server (local, staging, production) has its own `site_config.json` — they are intentionally different and must never be shared via git
+
+### If site_config.json goes missing, restore from git history:
+```bash
+git show 25b22572f:sites/mysite.local/site_config.json > sites/mysite.local/site_config.json
+```
+Local site_config.json values (as of 2026-06-01):
+- `db_name`: `_61803d1237a06352`
+- `db_password`: `mysite123`
+- `encryption_key`: `O9zVFd86kAIajafOvsDGHWQAkZQsvBD3CQXm9dkTeLY=`
+
+### If site_config.json accidentally gets tracked:
+```bash
+git rm --cached sites/mysite.local/site_config.json
+git commit -m "chore: untrack site_config.json"
+```
+
+---
+
+## 4. This is part of the MFT multi-project system
 **Full architecture, rules, and project overview are in the main CLAUDE.md:**
 `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\CLAUDE.md`
 
