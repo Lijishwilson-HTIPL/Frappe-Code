@@ -17,6 +17,25 @@
 
 ---
 
+## 0b. On Every Task — Run Agents First
+
+**When any feature, fix, or change request is given, the agent pipeline runs first — always.**
+
+```
+Team Lead → Developer → Tester → Compliance Checker → Release Manager
+```
+
+1. **Never implement directly** — always delegate to the `team-lead` agent first
+2. Team Lead breaks it down and sends to `developer`
+3. Developer implements → `tester` validates → `compliance-checker` approves → `release-manager` commits
+4. Only after the full pipeline passes does the change get promoted
+
+**Why:** Direct edits skip testing and compliance. This is healthcare software — every change must go through the pipeline so nothing ships untested or non-compliant.
+
+**Agents are in:** `.claude/agents/` — `team-lead.md`, `developer.md`, `tester.md`, `compliance-checker.md`, `release-manager.md`
+
+---
+
 ## 1. All Frappe changes must be in JSON, never in the database
 
 **Rule:** Any change to a DocType (fields, field_order, options, labels, layout) must be made by editing the app's JSON file and running `bench migrate`. Never use direct SQL, `frappe.db`, or the Python console to modify schema or layout data.
