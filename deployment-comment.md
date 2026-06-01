@@ -209,7 +209,7 @@ Generate keys: Frappe Desk → Avatar → My Profile → API Access → Generate
 
 | What | Must be in `.env` | Never hardcode in |
 |------|-------------------|-------------------|
-| Recipient email addresses | `MFT_RECIPIENT_EMAIL`, `NOTIFICATION_EMAIL`, `SUPPORT_EMAIL` | `mftRoutes.js`, `supportRoutes.js` |
+| Recipient email addresses | `MFT_RECIPIENT_EMAIL`, `NOTIFICATION_EMAIL` | `mftRoutes.js`, `supportRoutes.js` |
 | API keys / secrets | `FRAPPE_API_KEY`, `FRAPPE_API_SECRET`, `STRIPE_SECRET_KEY` | Any `.js` / `.py` file |
 | Base URLs | `FRAPPE_URL`, `FRONTEND_URL`, `MFT_FRONTEND_URL` | Any source file |
 | SMTP credentials | `SMTP_USER`, `SMTP_PASS` | Any source file |
