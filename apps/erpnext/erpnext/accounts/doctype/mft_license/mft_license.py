@@ -86,6 +86,8 @@ def process_payment(stripe_session_id, name, org, email):
 	# ── Generate license key & store MFT License ─────────────────────────────
 	license_key = _generate_unique_license_key()
 
+	purchase_date = today()
+
 	frappe.get_doc({
 		"doctype":           "MFT License",
 		"license_key":       license_key,
@@ -94,11 +96,21 @@ def process_payment(stripe_session_id, name, org, email):
 		"invoice_number":    si.name,
 		"stripe_session_id": stripe_session_id,
 		"product":           "MFT-LIFETIME",
-		"purchase_date":     today(),
+		"purchase_date":     purchase_date,
 		"status":            "Active",
 		"amount_paid":       amount,
 	}).insert(ignore_permissions=True)
 	frappe.db.commit()
+
+	# ── Send license email via Frappe outgoing email ──────────────────────────
+	_send_license_email(
+		to_name=name,
+		to_email=email,
+		license_key=license_key,
+		invoice_number=si.name,
+		amount=amount,
+		purchase_date=purchase_date,
+	)
 
 	return {
 		"status":         "success",
@@ -106,7 +118,7 @@ def process_payment(stripe_session_id, name, org, email):
 		"license_key":    license_key,
 		"item_name":      item_name,
 		"amount":         float(amount),
-		"purchase_date":  str(today()),
+		"purchase_date":  str(purchase_date),
 	}
 
 
@@ -159,3 +171,118 @@ def _generate_unique_license_key():
 		key   = f"MFT-LIFE-{part1}-{part2}-{year}"
 		if not frappe.db.exists("MFT License", {"license_key": key}):
 			return key
+
+
+def _send_license_email(to_name, to_email, license_key, invoice_number, amount, purchase_date):
+	download_url  = "https://qa.htmft.com/HT/MFTv2.1/#/"
+	year          = datetime.datetime.now().year
+	formatted_date = str(purchase_date)
+	amount_str    = f"${float(amount or 999):.2f} USD"
+	item_name     = "MFT Platform Lifetime License"
+
+	html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0d1117;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;">
+        <tr>
+          <td style="background:linear-gradient(135deg,#1a233a 0%,#0d1117 100%);padding:36px 32px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#4078f2;">Hephzibah Technologies</div>
+            <div style="color:#94a3b8;font-size:14px;margin-top:6px;">MFT Platform — License Delivery</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 32px 0 32px;">
+            <p style="margin:0;font-size:16px;color:#111827;">Dear <strong>{to_name}</strong>,</p>
+            <p style="margin:12px 0 0 0;font-size:15px;color:#374151;line-height:1.6;">
+              Thank you for purchasing <strong>{item_name}</strong>. Your payment has been confirmed and your license is ready to use.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+              <tr><td style="padding:20px 24px;background:#1a233a;">
+                <div style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">License Key</div>
+                <div style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:0.12em;margin-top:6px;font-family:'Courier New',monospace;">{license_key}</div>
+              </td></tr>
+              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
+              <tr><td style="padding:16px 24px;">
+                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Invoice Number</div>
+                <div style="color:#111827;font-size:15px;font-weight:600;">{invoice_number}</div>
+              </td></tr>
+              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
+              <tr><td style="padding:16px 24px;">
+                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Product</div>
+                <div style="color:#111827;font-size:15px;font-weight:600;">{item_name}</div>
+              </td></tr>
+              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
+              <tr><td style="padding:16px 24px;">
+                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Amount Paid</div>
+                <div style="color:#111827;font-size:15px;font-weight:600;">{amount_str}</div>
+              </td></tr>
+              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
+              <tr><td style="padding:16px 24px;">
+                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Purchase Date</div>
+                <div style="color:#111827;font-size:15px;font-weight:600;">{formatted_date}</div>
+              </td></tr>
+              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
+              <tr><td style="padding:16px 24px;">
+                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Validity</div>
+                <div style="color:#16a34a;font-size:15px;font-weight:700;">Lifetime</div>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 32px 32px;text-align:center;">
+            <a href="{download_url}" style="display:inline-block;background:#4078f2;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;">
+              Access MFT Platform
+            </a>
+            <p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">
+              Use your license key above to activate the product after login.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+            <p style="margin:0;font-size:13px;color:#6b7280;">
+              Questions? Reply to this email or contact
+              <a href="mailto:support@hephzibahtech.com" style="color:#4078f2;text-decoration:none;">support@hephzibahtech.com</a>
+            </p>
+            <p style="margin:8px 0 0 0;font-size:12px;color:#9ca3af;">&copy; {year} Hephzibah Technologies. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+	text = f"""Dear {to_name},
+
+Thank you for purchasing {item_name}.
+
+LICENSE KEY   : {license_key}
+INVOICE       : {invoice_number}
+PRODUCT       : {item_name}
+AMOUNT PAID   : {amount_str}
+PURCHASE DATE : {formatted_date}
+VALIDITY      : Lifetime
+
+Access MFT Platform: {download_url}
+
+Use your license key to activate the product after login.
+
+Questions? Contact support@hephzibahtech.com
+
+— Hephzibah Technologies"""
+
+	frappe.sendmail(
+		recipients=[to_email],
+		subject="Your MFT License Key — Hephzibah Technologies",
+		message=html,
+		now=False,
+	)
