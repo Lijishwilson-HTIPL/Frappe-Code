@@ -11,8 +11,11 @@ archived/sites/*/logs/
 # PID files
 config/pids/
 
-# Claude
+# Claude — ignore settings/cache but track shared agent definitions
 .claude/
+!.claude/agents/
+!.claude/agents/*.md
+CLAUDE.md
 
 # Work progress log and internal docs (not for version control)
 workprogress.txt
@@ -85,4 +88,3 @@ apps/erpnext/erpnext/patches/v16_0/*.Identifier
 # Site lock files and uploaded calendar invites
 sites/*/locks/
 sites/*/private/files/*.ics
-.claude/
