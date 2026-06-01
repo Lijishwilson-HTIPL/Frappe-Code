@@ -20,6 +20,7 @@
   "custom_submitter_name",
   "custom_phone",
   "agent_group",
+  "erp_issue",
   "summary",
   "sb_details",
   "description",
@@ -163,6 +164,15 @@
    "fieldtype": "Link",
    "label": "Team",
    "options": "HD Team"
+  },
+  {
+   "fieldname": "erp_issue",
+   "fieldtype": "Link",
+   "label": "ERPNext Issue (L2)",
+   "options": "Issue",
+   "read_only": 1,
+   "in_list_view": 0,
+   "description": "Auto-created when ticket is escalated to L2 (team assigned)"
   },
   {
    "fieldname": "ticket_split_from",

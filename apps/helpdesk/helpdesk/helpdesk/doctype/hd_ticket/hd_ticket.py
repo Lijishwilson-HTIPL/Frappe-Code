@@ -204,6 +204,30 @@ class HDTicket(Document):
         self.publish_update()
         self.update_search_index()
         self._auto_flag_rca()
+        self._create_erp_issue_on_l2()
+
+    def _create_erp_issue_on_l2(self):
+        # Create an ERPNext Issue whenever a team is assigned and no Issue exists yet
+        if not self.agent_group or getattr(self, "erp_issue", None):
+            return
+        try:
+            issue = frappe.new_doc("Issue")
+            issue.subject = self.subject or f"HD Ticket {self.name}"
+            issue.raised_by = self.raised_by or ""
+            if self.customer:
+                issue.customer = self.customer
+            issue.status = "Open"
+            issue.priority = self.priority or "Medium"
+            issue.description = (
+                f"<b>Escalated from Helpdesk Ticket:</b> {self.name}<br>"
+                f"<b>Team:</b> {self.agent_group}<br><br>"
+                f"{self.description or ''}"
+            )
+            issue.flags.ignore_mandatory = True
+            issue.insert(ignore_permissions=True)
+            self.db_set("erp_issue", issue.name, update_modified=False)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "HD Ticket L2 Issue Creation Failed")
 
     def _auto_flag_rca(self):
         if self.rca_required:
