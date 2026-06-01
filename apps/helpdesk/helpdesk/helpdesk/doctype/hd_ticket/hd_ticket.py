@@ -207,17 +207,15 @@ class HDTicket(Document):
         self._create_erp_issue_on_l2()
 
     def _create_erp_issue_on_l2(self):
-        # Create an ERPNext Issue when a team is first assigned (L2 escalation)
-        if not self.agent_group or self.erp_issue:
+        # Create an ERPNext Issue whenever a team is assigned and no Issue exists yet
+        if not self.agent_group or getattr(self, "erp_issue", None):
             return
-        prev = self.get_doc_before_save()
-        if prev and prev.agent_group:
-            return  # team was already assigned before, not a new escalation
         try:
             issue = frappe.new_doc("Issue")
             issue.subject = self.subject or f"HD Ticket {self.name}"
             issue.raised_by = self.raised_by or ""
-            issue.customer = self.customer or ""
+            if self.customer:
+                issue.customer = self.customer
             issue.status = "Open"
             issue.priority = self.priority or "Medium"
             issue.description = (
@@ -225,6 +223,7 @@ class HDTicket(Document):
                 f"<b>Team:</b> {self.agent_group}<br><br>"
                 f"{self.description or ''}"
             )
+            issue.flags.ignore_mandatory = True
             issue.insert(ignore_permissions=True)
             self.db_set("erp_issue", issue.name, update_modified=False)
         except Exception:
