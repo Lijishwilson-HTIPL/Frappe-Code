@@ -1,5 +1,22 @@
 # Frappe Bench — Project Rules
 
+## 0. On Every Session Start — Read Rules & Update Memory
+
+**When you open this project (after a pull or fresh clone), you MUST:**
+
+1. Read `CLAUDE.md` (this file) — all rules apply immediately
+2. Read `deployment-comment.md` — deployment flow, .env rules, Redis fix, push rules
+3. Update your memory with anything new or changed since the last session
+
+**Why:** The team shares rules through git. A `git pull` may bring new rules. If you don't read and save them to memory, you will repeat mistakes the team has already documented and solved.
+
+### What to save to memory after reading:
+- Any new rules added to `CLAUDE.md` or `deployment-comment.md`
+- Any known gaps or fixes documented (Redis paths, site_config.json protection, .env rules)
+- The push rule: **never push to GitHub unless explicitly told "promote it"**
+
+---
+
 ## 1. All Frappe changes must be in JSON, never in the database
 
 **Rule:** Any change to a DocType (fields, field_order, options, labels, layout) must be made by editing the app's JSON file and running `bench migrate`. Never use direct SQL, `frappe.db`, or the Python console to modify schema or layout data.
