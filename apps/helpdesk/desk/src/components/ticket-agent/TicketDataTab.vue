@@ -153,10 +153,13 @@ const contactPhone = computed(
     ""
 );
 
-// Escalation level — L2 as soon as any team is assigned, L1 otherwise
+// Escalation level — detect from team name pattern or default to L2 when assigned
 const currentLevel = computed(() => {
-  const group = ticket.value?.doc?.agent_group || "";
-  return group ? "L2" : "L1";
+  const group = (ticket.value?.doc?.agent_group || "").toLowerCase();
+  if (!group) return "L1";
+  if (group.includes("l3") || group.includes("level 3") || group.includes("tier 3")) return "L3";
+  if (group.includes("l2") || group.includes("level 2") || group.includes("tier 2")) return "L2";
+  return "L2";
 });
 
 // Pipeline stages
@@ -291,7 +294,7 @@ export const EscalationBar = defineComponent({
         h(
           "div",
           { class: "flex gap-1.5" },
-          ["L1", "L2"].map((lvl) =>
+          ["L1", "L2", "L3"].map((lvl) =>
             h(
               "span",
               {

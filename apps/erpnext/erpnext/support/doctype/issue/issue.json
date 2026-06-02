@@ -54,7 +54,13 @@
   "company",
   "via_customer_portal",
   "attachment",
-  "content_type"
+  "content_type",
+  "rca_section",
+  "rca_root_cause",
+  "rca_fix_workaround",
+  "rca_prevention",
+  "rca_column_break",
+  "rca_hd_ticket"
  ],
  "fields": [
   {
@@ -388,6 +394,41 @@
    "oldfieldname": "resolution_date",
    "oldfieldtype": "Date",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "rca_section",
+   "fieldtype": "Section Break",
+   "label": "Root Cause Analysis"
+  },
+  {
+   "fieldname": "rca_root_cause",
+   "fieldtype": "Text Editor",
+   "label": "Root Cause",
+   "description": "What was the underlying cause of this issue?"
+  },
+  {
+   "fieldname": "rca_fix_workaround",
+   "fieldtype": "Text Editor",
+   "label": "Fix / Workaround",
+   "description": "How was this resolved or worked around?"
+  },
+  {
+   "fieldname": "rca_prevention",
+   "fieldtype": "Text Editor",
+   "label": "Preventive Measures",
+   "description": "What steps will prevent this from happening again?"
+  },
+  {
+   "fieldname": "rca_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rca_hd_ticket",
+   "fieldtype": "Data",
+   "label": "Helpdesk Ticket",
+   "read_only": 1,
+   "description": "Linked HD Ticket (auto-set on escalation)"
   }
  ],
  "icon": "fa fa-ticket",
