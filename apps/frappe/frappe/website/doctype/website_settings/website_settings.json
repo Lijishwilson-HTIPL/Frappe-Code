@@ -77,6 +77,11 @@
   "subdomain",
   "head_html",
   "robots_txt",
+  "apps_drawer_tab",
+  "apps_drawer_name_section",
+  "apps_drawer_name",
+  "apps_order_section",
+  "apps_drawer_apps",
   "redirects_tab",
   "route_redirects"
  ],
@@ -476,6 +481,33 @@
    "fieldname": "show_footer_on_login",
    "fieldtype": "Check",
    "label": "Show footer on login"
+  },
+  {
+   "fieldname": "apps_drawer_tab",
+   "fieldtype": "Tab Break",
+   "label": "Apps Drawer"
+  },
+  {
+   "fieldname": "apps_drawer_name_section",
+   "fieldtype": "Section Break",
+   "label": "Display Name"
+  },
+  {
+   "description": "Shown as 'Welcome to [Name]' on the app selection page. Defaults to System Settings app_name if blank.",
+   "fieldname": "apps_drawer_name",
+   "fieldtype": "Data",
+   "label": "Company / App Name"
+  },
+  {
+   "fieldname": "apps_order_section",
+   "fieldtype": "Section Break",
+   "label": "App Order"
+  },
+  {
+   "fieldname": "apps_drawer_apps",
+   "fieldtype": "Table",
+   "label": "App Order",
+   "options": "Website Apps Drawer App"
   }
  ],
  "icon": "fa fa-cog",

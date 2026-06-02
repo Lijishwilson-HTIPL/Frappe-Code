@@ -20,10 +20,31 @@ def get_context():
 	for app in all_apps:
 		app["is_default"] = True if app.get("name") == default_app else False
 
+	# Company name: Website Settings takes priority over System Settings
 	company_name = (
-		frappe.db.get_single_value("System Settings", "app_name")
+		frappe.get_website_settings("apps_drawer_name")
+		or frappe.db.get_single_value("System Settings", "app_name")
 		or frappe.conf.get("app_name")
 		or "Hephzibah Technologies"
 	)
+
+	# Apply ordering/hiding from Apps Drawer config
+	drawer_config = frappe.get_all(
+		"Website Apps Drawer App",
+		filters={"parenttype": "Website Settings", "parentfield": "apps_drawer_apps"},
+		fields=["app_name", "title", "is_hidden"],
+		order_by="idx asc",
+	)
+	if drawer_config:
+		hidden = {r.app_name for r in drawer_config if r.is_hidden}
+		order_map = {r.app_name: i for i, r in enumerate(drawer_config)}
+		title_map = {r.app_name: r.title for r in drawer_config if r.title}
+		# Apply custom titles
+		for app in all_apps:
+			if app.get("name") in title_map:
+				app["title"] = title_map[app["name"]]
+		# Filter hidden apps, sort by configured order (unlisted apps go to end)
+		all_apps = [a for a in all_apps if a.get("name") not in hidden]
+		all_apps.sort(key=lambda a: order_map.get(a.get("name"), 9999))
 
 	return {"apps": all_apps, "company_name": company_name}
