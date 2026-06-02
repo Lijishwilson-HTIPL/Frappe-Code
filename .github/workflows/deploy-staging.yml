@@ -1,0 +1,51 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - stagging-deployment
+
+jobs:
+  deploy:
+    name: Build & Deploy Docker to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          script: |
+            set -e
+            cd /home/deploy/frappe-crm
+
+            echo "=== Pulling latest Docker config ==="
+            git pull origin stagging-deployment
+
+            echo "=== Rebuilding image ==="
+            docker compose down
+            docker compose up -d --build
+
+            echo "=== Waiting for site to be healthy ==="
+            for i in $(seq 1 30); do
+              if docker compose exec -T frappe curl -sf http://localhost:8000/api/method/ping > /dev/null 2>&1; then
+                echo "Site is up!"
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 10
+            done
+
+            echo "=== Running migrations ==="
+            docker compose exec -T frappe bench --site mysite.local migrate
+
+            echo "=== Rebuilding assets ==="
+            docker compose exec -T frappe bench build --app frappe --app erpnext --app crm --app hrms --app helpdesk --app telephony || true
+
+            echo "=== Deployment complete ==="

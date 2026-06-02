@@ -15,7 +15,7 @@
 docker compose up -d --build
 ```
 
-> First build takes **15–20 minutes** — it clones `Lijishwilson-HTIPL/Frappe-Code` (branch `Lijish-up`) and installs all apps. Subsequent starts are fast.
+> First build takes **15–20 minutes** — it clones `Lijishwilson-HTIPL/Frappe-Code` (branch `stagging-deployment`) and installs all apps. Subsequent starts are fast.
 
 ---
 
@@ -41,7 +41,7 @@ bench --site mysite.local install-app helpdesk
 bench --site mysite.local migrate
 bench build --app erpnext --app hrms --app crm --app helpdesk
 
-bench --site mysite.local set-config host_name "http://localhost:8000"
+bench --site mysite.local set-config host_name "${FRAPPE_SITE_URL:-http://localhost:8000}"
 exit
 ```
 
@@ -123,3 +123,72 @@ tail -f logs/worker.error.log
 | Logo not showing after update | Run `bench build --app <appname>` inside container, then hard-refresh browser |
 | MariaDB connection refused | Wait for `db` healthcheck to pass — check with `docker compose ps` |
 | `bench: command not found` in container | Run as the `frappe` user: `docker compose exec --user frappe frappe bash` |
+
+---
+
+## Staging Deployment (34.172.62.72)
+
+### 1. Copy the staging env file
+
+On the staging server, copy `staging.env` to `.env` so Docker Compose picks it up automatically:
+
+```bash
+cp staging.env .env
+```
+
+This sets:
+- `MYSQL_ROOT_PASSWORD=hti_MFT$123`
+- `MYSQL_DATABASE=htdb_staging`
+- `FRAPPE_SITE_URL=http://34.172.62.72:8000`
+
+### 2. Build and start
+
+```bash
+docker compose up -d --build
+```
+
+### 3. Create and configure the site
+
+```bash
+docker compose exec frappe bash
+```
+
+Inside the container:
+
+```bash
+bench new-site mysite.local \
+  --mariadb-root-password hti_MFT$123 \
+  --admin-password admin \
+  --db-host db \
+  --db-name htdb_staging
+
+bench --site mysite.local install-app erpnext
+bench --site mysite.local install-app hrms
+bench --site mysite.local install-app crm
+bench --site mysite.local install-app helpdesk
+
+bench --site mysite.local migrate
+bench build --app erpnext --app hrms --app crm --app helpdesk
+
+bench --site mysite.local set-config host_name "http://34.172.62.72:8000"
+exit
+```
+
+### 4. Access staging
+
+```
+http://34.172.62.72:8000
+Username: Administrator
+Password: admin
+```
+
+---
+
+## Environment Reference
+
+| Variable | Local default | Staging value |
+|----------|--------------|---------------|
+| `MYSQL_ROOT_PASSWORD` | `root` | `hti_MFT$123` |
+| `MYSQL_DATABASE` | `frappe` | `htdb_staging` |
+| `FRAPPE_SITE_NAME` | `mysite.local` | `mysite.local` |
+| `FRAPPE_SITE_URL` | `http://localhost:8000` | `http://34.172.62.72:8000` |
