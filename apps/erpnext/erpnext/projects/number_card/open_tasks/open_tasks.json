@@ -1,0 +1,14 @@
+{
+ "color": "#f59e0b",
+ "document_type": "Task",
+ "doctype": "Number Card",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{\"status\": [\"in\", [\"Open\", \"Working\", \"Pending Review\"]]}",
+ "function": "Count",
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Open Tasks",
+ "module": "Projects",
+ "name": "Open Tasks",
+ "owner": "Administrator"
+}

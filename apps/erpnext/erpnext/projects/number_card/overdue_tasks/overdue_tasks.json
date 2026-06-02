@@ -1,0 +1,14 @@
+{
+ "color": "#ef4444",
+ "document_type": "Task",
+ "doctype": "Number Card",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{\"status\": \"Overdue\"}",
+ "function": "Count",
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Overdue Tasks",
+ "module": "Projects",
+ "name": "Overdue Tasks",
+ "owner": "Administrator"
+}
