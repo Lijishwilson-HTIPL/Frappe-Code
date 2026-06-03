@@ -1,0 +1,41 @@
+// Poppins font baseline correction for desk sidebar and navbar.
+// Poppins has a higher cap-height than Inter (Frappe default), causing text
+// to appear vertically offset in flex-aligned containers.
+
+// Sidebar item text + icon alignment
+.standard-sidebar-item {
+	align-items: center;
+
+	.sidebar-item-label {
+		line-height: 1.2;
+		position: relative;
+		top: 1px;
+	}
+
+	svg {
+		flex-shrink: 0;
+		align-self: center;
+		position: relative;
+		top: 0;
+	}
+}
+
+// Navbar nav-item text alignment
+.navbar .nav-item {
+	line-height: normal;
+	display: flex;
+	align-items: center;
+
+	.nav-link,
+	a {
+		line-height: normal;
+		display: flex;
+		align-items: center;
+	}
+}
+
+// Navbar search bar vertical centering
+.navbar .search-bar {
+	display: flex;
+	align-items: center;
+}

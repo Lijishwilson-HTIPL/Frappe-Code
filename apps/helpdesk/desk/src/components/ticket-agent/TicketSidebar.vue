@@ -7,7 +7,9 @@
     />
     <div class="flex-1 max-h-full">
       <TicketDetailsTab v-if="currentTab === 'details'" />
-      <TicketContactTab v-else />
+      <TicketContactTab v-else-if="currentTab === 'contact'" />
+      <TicketDataTab v-else-if="currentTab === 'data'" />
+      <TicketRCATab v-else-if="currentTab === 'rca'" />
     </div>
   </Resizer>
 </template>
@@ -17,7 +19,9 @@ import { TabButtons } from "frappe-ui";
 import { ref } from "vue";
 import Resizer from "../Resizer.vue";
 import TicketContactTab from "./TicketContactTab.vue";
+import TicketDataTab from "./TicketDataTab.vue";
 import TicketDetailsTab from "./TicketDetailsTab.vue";
+import TicketRCATab from "./TicketRCATab.vue";
 
 const currentTab = ref("details");
 const tabs = [
@@ -28,6 +32,14 @@ const tabs = [
   {
     label: "Contact",
     value: "contact",
+  },
+  {
+    label: "Data",
+    value: "data",
+  },
+  {
+    label: "RCA",
+    value: "rca",
   },
 ];
 </script>

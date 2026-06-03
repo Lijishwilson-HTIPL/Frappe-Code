@@ -1,4 +1,6 @@
 frappe
+telephony
 crm
+helpdesk
 hrms
 erpnext

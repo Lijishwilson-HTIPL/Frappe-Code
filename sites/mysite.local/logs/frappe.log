@@ -58,3 +58,12 @@ Form Dict: {'doctype': 'CRM Lead', 'filters': {}, 'order_by': 'modified desc', '
 2026-04-30 13:00:48,019 ERROR frappe Error while inserting deferred Route History record: Could not find User: lijish.wilson@hephzibahtech.com
 Site: mysite.local
 Form Dict: {}
+2026-05-21 19:59:21,515 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Deal', 'name': 'CRM-DEAL-2026-00001', 'cmd': 'frappe.client.delete'}
+2026-05-21 19:59:21,516 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Deal', 'name': 'CRM-DEAL-2026-00001', 'cmd': 'frappe.client.delete'}
+2026-05-21 19:59:21,519 ERROR frappe New Exception collected in error log
+Site: mysite.local
+Form Dict: {'doctype': 'CRM Deal', 'name': 'CRM-DEAL-2026-00001', 'cmd': 'frappe.client.delete'}

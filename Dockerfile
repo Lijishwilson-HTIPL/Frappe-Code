@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     xvfb xfonts-75dpi xfonts-base \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node 18
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Install Node 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g yarn
 
@@ -24,10 +24,10 @@ RUN useradd -m -s /bin/bash frappe
 WORKDIR /home/frappe
 USER frappe
 
-# Clone Frappe-Code with all submodules (your full bench)
+# Clone Frappe-Code — single repo, all apps included (no submodules)
 RUN git clone \
-    --branch liji-overall-update \
-    --recurse-submodules \
+    --branch stagging-deployment \
+    --depth 1 \
     https://github.com/Lijishwilson-HTIPL/Frappe-Code.git \
     frappe-bench
 
@@ -38,14 +38,30 @@ RUN bench setup env && \
     env/bin/pip install -e apps/frappe && \
     env/bin/pip install -e apps/erpnext && \
     env/bin/pip install -e apps/crm && \
-    env/bin/pip install -e apps/hrms
+    env/bin/pip install -e apps/hrms && \
+    env/bin/pip install -e apps/helpdesk && \
+    env/bin/pip install -e apps/telephony
 
-# Build frontend assets
-RUN cd apps/frappe && yarn install --frozen-lockfile && cd ../.. && \
-    cd apps/erpnext && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
-    cd apps/crm && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
-    cd apps/hrms && yarn install --frozen-lockfile 2>/dev/null || true && cd ../..
+# Install frontend dependencies for all apps
+RUN cd apps/frappe   && yarn install --frozen-lockfile && cd ../.. && \
+    cd apps/erpnext  && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
+    cd apps/crm      && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
+    cd apps/hrms     && yarn install --frozen-lockfile 2>/dev/null || true && cd ../.. && \
+    cd apps/helpdesk && yarn install --frozen-lockfile 2>/dev/null || true && cd ../..
+
+# Build frontend assets — compiles Vue/JS bundles for CRM, Helpdesk, etc.
+RUN bench build --app frappe --app erpnext --app crm --app hrms --app helpdesk --app telephony || true
+
+# Regenerate Procfile with correct container paths; strip local redis entries
+# (Redis runs in separate containers — no redis-server binary needed here)
+RUN echo y | bench setup procfile && sed -i '/^redis_/d' Procfile
 
 EXPOSE 8000 9000
 
-CMD ["bench", "start"]
+# At startup: write Redis + DB connection config into common_site_config.json, then start bench
+CMD bench set-config -g redis_cache "redis://${REDIS_CACHE:-redis-cache:6379}" && \
+    bench set-config -g redis_queue "redis://${REDIS_QUEUE:-redis-queue:6379}" && \
+    bench set-config -g redis_socketio "redis://${REDIS_SOCKETIO:-redis-socketio:6379}" && \
+    bench set-config -g db_host "${DB_HOST:-db}" && \
+    bench set-config -g db_port ${DB_PORT:-3306} && \
+    bench start

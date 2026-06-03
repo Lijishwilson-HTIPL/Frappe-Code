@@ -53,3 +53,34 @@ print('CRM Lead hooks:', de.get('CRM Lead'))
 2026-04-24 15:53:39,838 INFO ipython === bench console session ===
 2026-04-24 15:53:39,838 INFO ipython import frappe
 2026-04-24 15:53:39,838 INFO ipython === session end ===
+2026-05-21 15:57:06,776 INFO ipython === bench console session ===
+2026-05-21 15:57:06,780 INFO ipython import frappe
+2026-05-21 15:57:06,780 INFO ipython # Check for custom themes and desk settings
+2026-05-21 15:57:06,780 INFO ipython themes = frappe.get_all('Website Theme', fields=['name'])
+2026-05-21 15:57:06,780 INFO ipython print('Website Themes:', themes)
+2026-05-21 15:57:06,780 INFO ipython navbar = frappe.get_all('Navbar Settings', fields=['name'])
+2026-05-21 15:57:06,780 INFO ipython print('Navbar Settings:', navbar)
+2026-05-21 15:57:06,780 INFO ipython system = frappe.get_all('System Settings', fields=['name'])
+2026-05-21 15:57:06,780 INFO ipython print('System Settings:', system)
+2026-05-21 15:57:06,780 INFO ipython desk = frappe.get_all('Desk Settings', fields=['name'])
+2026-05-21 15:57:06,780 INFO ipython print('Desk Settings:', desk)
+2026-05-21 15:57:06,780 INFO ipython === session end ===
+2026-05-21 16:23:09,150 INFO ipython === bench console session ===
+2026-05-21 16:23:09,152 INFO ipython import frappe, json
+2026-05-21 16:23:09,153 INFO ipython # Find what table stores desk themes
+2026-05-21 16:23:09,153 INFO ipython tables = frappe.db.sql("SHOW TABLES LIKE '%theme%'", as_list=True)
+2026-05-21 16:23:09,153 INFO ipython print("Tables:", tables)
+2026-05-21 16:23:09,153 INFO ipython === session end ===
+2026-05-21 16:23:15,801 INFO ipython === bench console session ===
+2026-05-21 16:23:15,801 INFO ipython import frappe, json
+2026-05-21 16:23:15,801 INFO ipython tables = frappe.db.sql("SHOW TABLES LIKE '%Theme%'", as_list=True)
+2026-05-21 16:23:15,801 INFO ipython print("Tables:", tables)
+2026-05-21 16:23:15,801 INFO ipython === session end ===
+2026-05-21 16:26:39,947 INFO ipython === bench console session ===
+2026-05-21 16:26:39,947 INFO ipython import frappe
+2026-05-21 16:26:39,947 INFO ipython ws = frappe.db.sql("SELECT name, title, module, label, custom FROM `tabWorkspace` ORDER BY custom DESC", as_dict=True)
+2026-05-21 16:26:39,947 INFO ipython === session end ===
+2026-05-21 16:26:46,943 INFO ipython === bench console session ===
+2026-05-21 16:26:46,944 INFO ipython import frappe
+2026-05-21 16:26:46,944 INFO ipython ws = frappe.db.sql("SELECT name, title, label, is_standard FROM `tabWorkspace`", as_dict=True)
+2026-05-21 16:26:46,944 INFO ipython === session end ===

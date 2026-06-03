@@ -1,16 +1,14 @@
-version: "3.8"
-
 services:
   db:
     image: mariadb:10.6
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: frappe
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-frappe}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
       interval: 10s
       retries: 10
 
@@ -44,6 +42,9 @@ services:
       - REDIS_CACHE=redis-cache:6379
       - REDIS_QUEUE=redis-queue:6379
       - REDIS_SOCKETIO=redis-socketio:6379
+      - DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - FRAPPE_SITE_NAME=${FRAPPE_SITE_NAME:-mysite.local}
+      - FRAPPE_SITE_URL=${FRAPPE_SITE_URL:-http://localhost:8000}
     depends_on:
       db:
         condition: service_healthy
@@ -55,6 +56,12 @@ services:
         condition: service_started
     volumes:
       - frappe_sites:/home/frappe/frappe-bench/sites
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   db_data:

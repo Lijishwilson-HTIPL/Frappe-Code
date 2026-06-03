@@ -58,3 +58,45 @@ Backup Summary for mysite.local at 2026-05-04 12:00:05.097280
 Config  : ./mysite.local/private/backups/20260504_120002-mysite_local-site_config_backup.json 404.0B
 Database: ./mysite.local/private/backups/20260504_120002-mysite_local-database.sql.gz         1.4MiB
 Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260514_120002-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-14 12:00:05.486073
+Config  : ./mysite.local/private/backups/20260514_120002-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260514_120002-mysite_local-database.sql.gz         1.6MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260515_120003-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-15 12:00:08.962011
+Config  : ./mysite.local/private/backups/20260515_120003-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260515_120003-mysite_local-database.sql.gz         1.6MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260518_120002-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-18 12:00:05.317637
+Config  : ./mysite.local/private/backups/20260518_120002-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260518_120002-mysite_local-database.sql.gz         1.7MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260519_120002-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-19 12:00:05.676294
+Config  : ./mysite.local/private/backups/20260519_120002-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260519_120002-mysite_local-database.sql.gz         1.7MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260520_120003-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-20 12:00:06.294819
+Config  : ./mysite.local/private/backups/20260520_120003-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260520_120003-mysite_local-database.sql.gz         1.7MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260522_120002-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-22 12:00:06.075798
+Config  : ./mysite.local/private/backups/20260522_120002-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260522_120002-mysite_local-database.sql.gz         1.7MiB
+Backup for Site mysite.local has been successfully completed
+set -o pipefail; /usr/bin/mariadb-dump --user=_c059e81fe917cb98 --host=127.0.0.1 --port=3306 --password=********** --single-transaction --quick --lock-tables=false _c059e81fe917cb98 | /usr/bin/gzip >> ./mysite.local/private/backups/20260526_120002-mysite_local-database.sql.gz
+
+Backup Summary for mysite.local at 2026-05-26 12:00:04.826650
+Config  : ./mysite.local/private/backups/20260526_120002-mysite_local-site_config_backup.json 404.0B
+Database: ./mysite.local/private/backups/20260526_120002-mysite_local-database.sql.gz         1.7MiB
+Backup for Site mysite.local has been successfully completed

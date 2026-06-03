@@ -77,7 +77,7 @@ class HDTicket(Document):
         self.set_feedback_values()
         self.set_default_status()
         self.set_status_category()
-        # self.apply_escalation_rule()
+        self.apply_escalation_rule()
         self.set_sla()
 
         self.set_contact()
@@ -203,6 +203,63 @@ class HDTicket(Document):
         self.remove_assignment_if_not_in_team()
         self.publish_update()
         self.update_search_index()
+        self._auto_flag_rca()
+        self._create_erp_issue_on_l2()
+
+    def _create_erp_issue_on_l2(self):
+        # Create an ERPNext Issue whenever a team is assigned and no Issue exists yet
+        if not self.agent_group or getattr(self, "erp_issue", None):
+            return
+        try:
+            issue = frappe.new_doc("Issue")
+            issue.subject = self.subject or f"HD Ticket {self.name}"
+            issue.raised_by = self.raised_by or ""
+            if self.customer:
+                issue.customer = self.customer
+            issue.status = "Open"
+            issue.priority = self.priority or "Medium"
+            issue.description = (
+                f"<b>Escalated from Helpdesk Ticket:</b> {self.name}<br>"
+                f"<b>Team:</b> {self.agent_group}<br><br>"
+                f"{self.description or ''}"
+            )
+            issue.rca_hd_ticket = str(self.name)
+            issue.flags.ignore_mandatory = True
+            issue.insert(ignore_permissions=True)
+            self.db_set("erp_issue", issue.name, update_modified=False)
+
+            assignees = set()
+            ticket_agents = get_assignees({"doctype": "HD Ticket", "name": self.name})
+            for a in ticket_agents:
+                assignees.add(a.owner)
+            team_members = frappe.get_all(
+                "HD Team Member", filters={"parent": self.agent_group}, pluck="user"
+            )
+            for m in team_members:
+                assignees.add(m)
+            if assignees:
+                assign(
+                    {"assign_to": list(assignees), "doctype": "Issue", "name": issue.name}
+                )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "HD Ticket L2 Issue Creation Failed")
+
+    def _auto_flag_rca(self):
+        if self.rca_required:
+            return
+        reasons = []
+        if self.priority in ("Critical", "High"):
+            reasons.append(f"Priority is {self.priority}")
+        if self.agreement_status in ("Failed", "Resolution Due"):
+            reasons.append(f"SLA {self.agreement_status}")
+        if reasons:
+            self.db_set("rca_required", 1, update_modified=False)
+            self.db_set("rca_status", "Pending", update_modified=False)
+            self.db_set(
+                "rca_trigger_reason",
+                "; ".join(reasons),
+                update_modified=False,
+            )
 
     def notify_agent(self, agent, notification_type="Assignment"):
         frappe.get_doc(
@@ -304,6 +361,8 @@ class HDTicket(Document):
         )
 
     def validate_feedback(self):
+        if getattr(self.flags, "from_issue_sync", False):
+            return
         is_feedback_mandatory = frappe.get_cached_value(
             "HD Settings", "HD Settings", "is_feedback_mandatory"
         )

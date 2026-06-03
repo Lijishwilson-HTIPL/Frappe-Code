@@ -1,68 +1,71 @@
 <template>
-  <div class="flex h-full flex-col gap-4">
-    <!-- title and desc -->
-    <div
-      role="heading"
-      aria-level="1"
-      class="flex gap-1 justify-between pt-[5px]"
-    >
-      <h5 class="text-lg font-semibold">Edit Email</h5>
-    </div>
-    <div class="w-fit">
-      <EmailProviderIcon
-        :logo="emailIcon[accountData.service]"
-        :service-name="accountData.service"
-      />
-    </div>
-    <!-- banner for setting up email account -->
-    <div class="flex items-center gap-2 rounded-md p-2 ring-1 ring-gray-200">
-      <CircleAlert
-        class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-ink-blue-2"
-      />
-      <div class="text-wrap text-xs text-gray-700">
-        {{ info.description }}
-        <a :href="info.link" target="_blank" class="text-ink-blue-2 underline"
-          >here</a
-        >
-        .
+  <div class="flex h-full flex-col gap-4 min-h-0">
+    <!-- scrollable content -->
+    <div class="flex-1 overflow-y-auto flex flex-col gap-4 min-h-0 pr-1">
+      <!-- title and desc -->
+      <div
+        role="heading"
+        aria-level="1"
+        class="flex gap-1 justify-between pt-[5px]"
+      >
+        <h5 class="text-lg font-semibold">Edit Email</h5>
       </div>
-    </div>
-    <!-- fields -->
-    <div class="flex flex-col gap-4">
-      <div class="grid grid-cols-1 gap-4">
-        <div
-          v-for="field in fields"
-          :key="field.name"
-          class="flex flex-col gap-1"
-        >
-          <FormControl
-            v-model="state[field.name]"
-            :label="field.label"
-            :name="field.name"
-            :type="field.type"
-            :placeholder="field.placeholder"
-          />
+      <div class="w-fit">
+        <EmailProviderIcon
+          :logo="emailIcon[accountData.service]"
+          :service-name="accountData.service"
+        />
+      </div>
+      <!-- banner for setting up email account -->
+      <div class="flex items-center gap-2 rounded-md p-2 ring-1 ring-gray-200">
+        <CircleAlert
+          class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-ink-blue-2"
+        />
+        <div class="text-wrap text-xs text-gray-700">
+          {{ info.description }}
+          <a :href="info.link" target="_blank" class="text-ink-blue-2 underline"
+            >here</a
+          >
+          .
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div
-          v-for="field in incomingOutgoingFields"
-          :key="field.name"
-          class="flex flex-col gap-1"
-        >
-          <FormControl
-            v-model="state[field.name]"
-            :label="field.label"
-            :name="field.name"
-            :type="field.type"
-          />
-          <p class="text-p-sm text-gray-500">{{ field.description }}</p>
+      <!-- fields -->
+      <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-1 gap-4">
+          <div
+            v-for="field in fields"
+            :key="field.name"
+            class="flex flex-col gap-1"
+          >
+            <FormControl
+              v-model="state[field.name]"
+              :label="field.label"
+              :name="field.name"
+              :type="field.type"
+              :placeholder="field.placeholder"
+            />
+          </div>
         </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            v-for="field in incomingOutgoingFields"
+            :key="field.name"
+            class="flex flex-col gap-1"
+          >
+            <FormControl
+              v-model="state[field.name]"
+              :label="field.label"
+              :name="field.name"
+              :type="field.type"
+            />
+            <p class="text-p-sm text-gray-500">{{ field.description }}</p>
+          </div>
+        </div>
+        <ErrorMessage v-if="error" class="ml-1" :message="error" />
       </div>
-      <ErrorMessage v-if="error" class="ml-1" :message="error" />
     </div>
-    <!-- action buttons -->
-    <div class="mt-auto flex justify-between">
+    <!-- action buttons — always visible at bottom -->
+    <div class="flex justify-between shrink-0 pt-2 border-t">
       <Button
         label="Back"
         theme="gray"

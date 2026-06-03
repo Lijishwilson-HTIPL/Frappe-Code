@@ -1,47 +1,69 @@
 <div align="center">
 
-# 🏗️ Hephzibah Technologies — Frappe Bench
+# Hephzibah Technologies — Frappe Bench
 
-**Production-grade Frappe / ERPNext v15 bench powering the Hephzibah Technologies platform**
+**Production Frappe / ERPNext v15 bench — single-repo, all apps tracked directly**
 
 [![Frappe](https://img.shields.io/badge/Frappe-v15-blue?style=flat-square&logo=python)](https://frappeframework.com)
 [![ERPNext](https://img.shields.io/badge/ERPNext-v15-orange?style=flat-square)](https://erpnext.com)
-[![HRMS](https://img.shields.io/badge/HRMS-corporaterulers-green?style=flat-square)](https://github.com/corporaterulers/hrms)
-[![CRM](https://img.shields.io/badge/CRM-corporaterulers-purple?style=flat-square)](https://github.com/corporaterulers/Frappe_Crm)
-[![Helpdesk](https://img.shields.io/badge/Helpdesk-v1.17-blue?style=flat-square)](https://github.com/frappe/helpdesk)
-[![Python](https://img.shields.io/badge/Python-3.10+-yellow?style=flat-square&logo=python)](https://python.org)
-[![MariaDB](https://img.shields.io/badge/MariaDB-10.6+-brown?style=flat-square&logo=mariadb)](https://mariadb.org)
+[![HRMS](https://img.shields.io/badge/HRMS-HR-green?style=flat-square)](https://github.com/Lijishwilson-HTIPL/Frappe-Code)
+[![CRM](https://img.shields.io/badge/CRM-SBIQ-purple?style=flat-square)](https://github.com/Lijishwilson-HTIPL/Frappe-Code)
+[![Helpdesk](https://img.shields.io/badge/Helpdesk-v1.17-blue?style=flat-square)](https://github.com/Lijishwilson-HTIPL/Frappe-Code)
+
+**Repo:** `Lijishwilson-HTIPL/Frappe-Code` · **Branch:** `Lijish-up`
 
 </div>
 
 ---
 
-## 📦 What's Inside
+## What's Inside
 
-| App | Fork / Source | Purpose |
-|-----|--------------|---------|
-| `frappe` | frappe/frappe | Core framework (v15) |
-| `erpnext` | corporaterulers/erpnext | ERP + **Career Inquiry** DocType |
-| `hrms` | corporaterulers/hrms | HR module with native Job Applicant career fields |
-| `crm` | corporaterulers/Frappe_Crm | CRM with Leads Journey, custom status flow, export filters |
-| `helpdesk` | frappe/helpdesk (v1.17.4) | Support ticket management with custom ticket journey & data tab |
+| App | Folder | Purpose |
+|-----|--------|---------|
+| Frappe | `apps/frappe` | Core framework (v15) |
+| ERP | `apps/erpnext` | ERP — renamed "ERP", custom logo, Career Inquiry DocType |
+| HR | `apps/hrms` | HR module — renamed "HR", custom HRv2 logo, Job Applicant extensions |
+| SBIQ CRM | `apps/crm` | CRM — SBIQ workspace, Leads Journey, status flow, auto-email on lead |
+| Helpdesk | `apps/helpdesk` | Support tickets — Ticket Journey, Ticket Data Tab, custom logo |
 
-### ✨ Key Customisations
-
-- **Career Inquiry** — tracks every website job application; `job_applicant_ref` Link field connects speculative and role-specific applications back to HRMS Job Applicant records.
-- **Job Applicant** — extended with native career fields: `role_applying_for`, `years_of_experience`, `linkedin_profile_url`, `portfolio_site`, `how_did_you_hear`, `other_source`.
-- **Website Integration** — the public careers page reads live Job Opening records (title, HTML description, salary range gated by `publish_salary_range`), and form submissions create both a Job Applicant and a Career Inquiry atomically.
-- **CRM — Leads Journey** — bug fix: qualified count now excludes converted leads so stats match the list. Status progression is enforced (New → Contacted → Nurture → Qualified → Converted, one step at a time, with back-navigation and Unqualified/Junk always available).
-- **CRM — Export** — time range filter (Today, Last 7/30 Days, This Month, Last Month, This Year, Custom) with dynamic record count that updates as you change the range.
-- **CRM — Lead Data tab** — renamed from "Data" to "Lead Data" for clarity.
-- **Helpdesk — Ticket Journey** — new `TicketJourney.vue` component visualising ticket stage progression.
-- **Helpdesk — Ticket Data Tab** — new `TicketDataTab.vue` component consolidating ticket detail fields.
+> All apps are **plain tracked directories** in this repo — no git submodules. A `git pull` gets everything in one shot.
 
 ---
 
-## 🖥️ Prerequisites
+## Key Customisations
 
-> Install the following on the server **before** cloning.
+### ERP
+- App renamed from "ERPNext" to **"ERP"** with custom blue logo
+- Career Inquiry DocType — tracks every website job application
+- `job_applicant_ref` links speculative applications to HRMS Job Applicant records
+
+### HR
+- App renamed from "Frappe HR" to **"HR"** with custom HRv2 logo
+- Job Applicant extended with: `role_applying_for`, `years_of_experience`, `linkedin_profile_url`, `portfolio_site`, `how_did_you_hear`, `other_source`
+
+### SBIQ CRM
+- Workspace renamed to **SBIQ CRM**
+- **Leads Journey** — sidebar page with backend API, dashboard component, qualified count excludes converted leads
+- **Status flow** — enforced one-step progression (New → Contacted → Nurture → Qualified → Converted; Unqualified/Junk always available)
+- **Lead Data tab** — renamed from "Data" for clarity
+- **Export filter** — time range (Today, Last 7/30 Days, This Month, etc.) with dynamic record count
+- **Auto-email on lead creation** — when a lead comes in via the website inquiry form (has `website_message` + `email`), a professional follow-up email is automatically sent via `frappe.enqueue` → `send_inquiry_followup()`
+- **Royal Purple website theme** fixture
+
+### Helpdesk
+- Custom Helpdesk logo
+- **Ticket Journey** — `TicketJourney.vue` visualises ticket stage progression
+- **Ticket Data Tab** — `TicketDataTab.vue` consolidates ticket detail fields
+
+### Website Integration
+- Website discovery call form → Node.js backend → Frappe CRM Lead creation
+- Auto-email triggered from `crm_lead.py` `after_insert` — no website backend changes needed
+
+---
+
+## Prerequisites
+
+Install on the server before cloning:
 
 | Dependency | Minimum Version |
 |-----------|----------------|
@@ -53,8 +75,6 @@
 | git | any recent |
 | wkhtmltopdf | 0.12.6+ |
 
-**Ubuntu / Debian — install everything in one shot:**
-
 ```bash
 sudo apt update && sudo apt install -y \
   git python3 python3-pip python3-venv \
@@ -62,30 +82,26 @@ sudo apt update && sudo apt install -y \
   mariadb-server mariadb-client \
   libssl-dev libffi-dev libjpeg-dev \
   libxrender1 libxext6 wkhtmltopdf
-```
 
-**Install the Bench CLI:**
-
-```bash
 pip3 install frappe-bench
 ```
 
 ---
 
-## 🚀 First-Time Setup (Fresh Server)
+## First-Time Setup (Fresh Server)
 
-### Step 1 — Clone with submodules
+### 1. Clone the repo
 
 ```bash
-git clone --recurse-submodules https://github.com/Lijishwilson-HTIPL/Frappe-Code.git frappe-bench
+git clone -b Lijish-up https://github.com/Lijishwilson-HTIPL/Frappe-Code.git frappe-bench
 cd frappe-bench
 ```
 
-> ⚠️ The `--recurse-submodules` flag is **required**. Without it the `apps/` directories will be empty.
+> No `--recurse-submodules` needed — all apps are plain directories.
 
 ---
 
-### Step 2 — Set up the Python environment
+### 2. Set up Python environment
 
 ```bash
 bench setup env
@@ -99,13 +115,13 @@ bench pip install -e apps/helpdesk
 
 ---
 
-### Step 3 — Configure MariaDB
+### 3. Configure MariaDB
 
 ```bash
-sudo mysql_secure_installation   # follow the prompts, set a root password
+sudo mysql_secure_installation
 ```
 
-Append the following to `/etc/mysql/mariadb.conf.d/50-server.cnf`:
+Add to `/etc/mysql/mariadb.conf.d/50-server.cnf`:
 
 ```ini
 [mysqld]
@@ -123,7 +139,7 @@ sudo systemctl restart mariadb
 
 ---
 
-### Step 4 — Create a new site
+### 4. Create a new site
 
 ```bash
 bench new-site mysite.local \
@@ -133,7 +149,7 @@ bench new-site mysite.local \
 
 ---
 
-### Step 5 — Install apps on the site
+### 5. Install apps on the site
 
 ```bash
 bench --site mysite.local install-app erpnext
@@ -144,88 +160,96 @@ bench --site mysite.local install-app helpdesk
 
 ---
 
-### Step 6 — Run migrations
+### 6. Run migrations & build assets
 
 ```bash
 bench --site mysite.local migrate
+bench build --app erpnext --app hrms --app crm --app helpdesk
 ```
 
 ---
 
-### Step 7 — Start the development server
+### 7. Start the server
 
 ```bash
+# Development
 bench start
 ```
 
-🌐 Open **http://localhost:8000** in your browser.
+Open **http://localhost:8000**
 
----
-
-## 🔄 Updating an Existing Bench
-
-When changes are pushed to this repo, pull and migrate:
-
+**Production:**
 ```bash
-# 1. Pull latest commits AND update all submodule code
-git pull
-git submodule update --init --recursive
-
-# 2. Apply schema changes to the database
-bench --site mysite.local migrate
-
-# 3. Restart all services
-bench restart
-```
-
-> 🔴 **Never skip `git submodule update`.**
-> A plain `git pull` only moves the submodule pointer — the actual app code inside `apps/` stays at the old commit until you run the submodule update.
-
----
-
-## ▶️ Starting & Stopping
-
-```bash
-# Development — starts web, workers, Redis and scheduler together
-bench start
-
-# Stop
-Ctrl + C
-```
-
-**Production (supervisor-managed):**
-
-```bash
-sudo bench setup production <your-linux-username>
+sudo bench setup production <linux-username>
 sudo supervisorctl restart all
 ```
 
 ---
 
-## 🛠️ Useful Commands
+## Deploying Updates (Existing Server)
 
-| Task | Command |
-|------|---------|
-| Open Python console | `bench --site mysite.local console` |
-| Clear cache | `bench --site mysite.local clear-cache` |
-| Backup database | `bench --site mysite.local backup` |
-| Export DocType to JSON | `bench --site mysite.local export-doc "DocType" "<Name>"` |
-| View scheduler logs | `bench --site mysite.local scheduler-log` |
-| Run a specific patch | `bench --site mysite.local run-patch <patch.path>` |
-| Rebuild assets | `bench build` |
+This is the standard deploy sequence every time changes are pushed:
+
+```bash
+# 1. Pull latest — gets ALL app code in one pull (no submodule commands needed)
+git pull origin Lijish-up
+
+# 2. Apply DocType schema changes
+bench --site mysite.local migrate
+
+# 3. Rebuild frontend assets (always run after logo/JS/Vue changes)
+bench build --app erpnext --app hrms --app crm --app helpdesk
+
+# 4. Restart services
+bench restart
+```
+
+> No `git submodule update` needed — apps are plain directories. `git pull` is all you need.
 
 ---
 
-## 🔑 Environment / Site Config
+## Starting & Stopping
 
-`sites/mysite.local/site_config.json` is **never committed** (it contains DB credentials and encryption keys). It is created automatically by `bench new-site`. To add mail settings, edit it directly:
+```bash
+# Start (development)
+bench start
+
+# Stop
+Ctrl + C
+
+# Production restart
+sudo supervisorctl restart all
+```
+
+---
+
+## Useful Admin Commands
+
+| Task | Command |
+|------|---------|
+| Clear cache | `bench --site mysite.local clear-cache` |
+| Backup database | `bench --site mysite.local backup` |
+| Open Python console | `bench --site mysite.local console` |
+| Run migrations | `bench --site mysite.local migrate` |
+| Rebuild all assets | `bench build` |
+| Rebuild single app assets | `bench build --app <appname>` |
+| Export fixtures | `bench --site mysite.local export-fixtures` |
+| List installed apps | `bench --site mysite.local list-apps` |
+| View scheduler logs | `tail -f logs/scheduler.log` |
+| View error logs | `tail -f logs/worker.error.log` |
+
+---
+
+## Environment / Site Config
+
+`sites/mysite.local/site_config.json` is **never committed** (contains DB credentials). Created automatically by `bench new-site`. To add mail settings:
 
 ```json
 {
   "db_name": "...",
   "db_password": "...",
   "encryption_key": "...",
-  "mail_login": "your@email.com",
+  "mail_login": "contact@hephzibahtech.in",
   "mail_password": "...",
   "mail_server": "smtp.example.com",
   "mail_port": 587,
@@ -233,74 +257,68 @@ sudo supervisorctl restart all
 }
 ```
 
----
-
-## 🌐 Website Backend Integration
-
-The Hephzibah Technologies website (`Website/Backend`) connects to this bench via the Frappe REST API.
-
-Set the following in the website backend `.env`:
-
+**Website backend `.env`** (`/var/www/html/frappe_backend_staging/.env`):
 ```env
 FRAPPE_URL=http://localhost:8000
 FRAPPE_API_KEY=<api-key-from-frappe>
 FRAPPE_API_SECRET=<api-secret-from-frappe>
 ```
 
-**To generate API keys:**
-Frappe Desk → top-right avatar → **My Profile** → **API Access** → **Generate Keys**
+To generate API keys: Frappe Desk → Avatar → **My Profile** → **API Access** → **Generate Keys**
+
+> Never regenerate keys unless explicitly needed — always update the website backend `.env` immediately after.
 
 ---
 
-## 📐 Developer Rules
+## Developer Rules
 
-> See [`rules.md`](./rules.md) — read before making any DocType changes.
+See [`CLAUDE.md`](./CLAUDE.md) for the full rules. Key points:
 
-**The golden rule:** always export a DocType to JSON after editing it in the Frappe UI. Changes made only in the UI live in the database and will be **lost** on the next server deploy.
-
-```bash
-# After editing a DocType in the desk UI:
-bench --site mysite.local export-doc "DocType" "<Name>"
-
-# Then commit the updated JSON:
-git add apps/<app>/path/to/doctype/<name>.json
-git commit -m "feat: update <DocType> — <what changed>"
-git push
-```
+1. **All DocType changes go in JSON files** — never edit the database directly
+2. After editing a DocType in the Frappe UI, always export:
+   ```bash
+   bench --site mysite.local export-fixtures   # for CRM layout/fixture changes
+   bench --site mysite.local migrate           # after editing JSON files directly
+   ```
+3. Commit the JSON, then push to `Lijish-up`
+4. **Never push directly to `main`**
+5. **Always push to** `git push target Lijish-up` (remote: `Lijishwilson-HTIPL/Frappe-Code`)
 
 ---
 
-## 🔧 Troubleshooting
-
-| Symptom | Fix |
-|---------|-----|
-| `bench: command not found` | Use `~/.local/bin/bench` or add `~/.local/bin` to `$PATH` |
-| Redis connection refused | `redis-server --port 13000 --daemonize yes` (cache) and `redis-server --port 11000 --daemonize yes` (queue) |
-| `ModuleNotFoundError` for an app | `bench pip install -e apps/<app>` |
-| Migrate fails — lock error | `rm -f sites/mysite.local/locks/*.lock` then retry |
-| Site not found in browser | `bench --site mysite.local set-config host_name http://localhost:8000` |
-| MariaDB `Access denied` | Check `sites/mysite.local/site_config.json` for correct `db_password` |
-| Submodule directory is empty | `git submodule update --init --recursive` |
-| Python venv broken after copy | `bench setup env` then re-install all apps with `bench pip install -e` |
-
----
-
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 frappe-bench/
 ├── apps/
-│   ├── frappe/          # Core framework (submodule)
-│   ├── erpnext/         # ERP + Career Inquiry (submodule — corporaterulers fork)
-│   ├── hrms/            # HR module (submodule — corporaterulers fork)
-│   ├── crm/             # CRM module with custom status flow & export (submodule)
-│   └── helpdesk/        # Helpdesk module with Ticket Journey & Data Tab
+│   ├── frappe/           # Core framework
+│   ├── erpnext/          # ERP — custom logo, Career Inquiry DocType
+│   ├── hrms/             # HR — custom logo, Job Applicant extensions
+│   ├── crm/              # SBIQ CRM — Leads Journey, auto-email, SBIQ workspace
+│   └── helpdesk/         # Helpdesk — Ticket Journey, Ticket Data Tab
 ├── sites/
-│   └── mysite.local/    # Site data, uploads, private files (not fully committed)
-├── config/              # Procfile, Redis configs
-├── rules.md             # Developer DocType change rules
+│   └── mysite.local/     # Site data, uploads (not fully committed)
+├── .claude/agents/       # AI agent pipeline (team-lead, developer, tester, release-manager)
+├── CLAUDE.md             # Developer rules
+├── CHANGELOG_DRAFT.md    # Release changelog
 └── README.md
 ```
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `bench: command not found` | Add `~/.local/bin` to `$PATH` or use `~/.local/bin/bench` |
+| Redis connection refused | `redis-server --port 13000 --daemonize yes` (cache) · `redis-server --port 11000 --daemonize yes` (queue) |
+| `ModuleNotFoundError` for an app | `bench pip install -e apps/<appname>` |
+| Migrate fails — lock error | `rm -f sites/mysite.local/locks/*.lock` then retry |
+| Site not found in browser | `bench --site mysite.local set-config host_name http://localhost:8000` |
+| MariaDB access denied | Check `sites/mysite.local/site_config.json` for correct `db_password` |
+| Logo not updating after pull | Run `bench build --app <appname>` then hard-refresh browser (Ctrl+Shift+R) |
+| Auto-email not sending | Check outgoing email account is configured in Frappe → Email Settings and `enable_outgoing` is checked |
+| Assets out of date after deploy | Always run `bench build` after every pull |
 
 ---
 
