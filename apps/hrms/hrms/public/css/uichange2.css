@@ -1,0 +1,24 @@
+/* Theme 2 — Teal. Palette-only overrides on top of custom_theme.css base. */
+:root {
+  --uic-primary: #14B8A6 !important;
+  --uic-primary-hover: #0F766E !important;
+  --uic-primary-light: #CCFBF1 !important;
+  --uic-card: #F0FDFA !important;
+  --uic-text: #134E4A !important;
+  --uic-link: #0F766E !important;
+  --uic-border: #CFE6E2 !important;
+  --uic-surface: #FFFFFF !important;
+}
+
+html, html body, html body[class] {
+  background: linear-gradient(135deg, #CFF6EE 0%, #E0F7F2 50%, #F0FDFA 100%) !important;
+  background-attachment: fixed !important;
+}
+
+.layout-side-section,
+.desk-sidebar,
+.body-sidebar-container,
+.workspace-sidebar {
+  background: #BFEFE4 !important;
+  background-color: #BFEFE4 !important;
+}

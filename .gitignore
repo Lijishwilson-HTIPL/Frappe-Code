@@ -89,3 +89,6 @@ apps/erpnext/erpnext/patches/v16_0/*.Identifier
 # Site lock files and uploaded calendar invites
 sites/*/locks/
 sites/*/private/files/*.ics
+
+# Separate git repos — tracked independently (from hilton-update)
+env/

@@ -1,0 +1,24 @@
+/* Theme 4 — Violet. Palette-only overrides on top of custom_theme.css base. */
+:root {
+  --uic-primary: #8B5CF6 !important;
+  --uic-primary-hover: #6D28D9 !important;
+  --uic-primary-light: #EDE9FE !important;
+  --uic-card: #F5F3FF !important;
+  --uic-text: #2E1065 !important;
+  --uic-link: #6D28D9 !important;
+  --uic-border: #DDD6F4 !important;
+  --uic-surface: #FFFFFF !important;
+}
+
+html, html body, html body[class] {
+  background: linear-gradient(135deg, #E0D6FA 0%, #ECE5FB 50%, #F5F3FF 100%) !important;
+  background-attachment: fixed !important;
+}
+
+.layout-side-section,
+.desk-sidebar,
+.body-sidebar-container,
+.workspace-sidebar {
+  background: #D6C9F7 !important;
+  background-color: #D6C9F7 !important;
+}
