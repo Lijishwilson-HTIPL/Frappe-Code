@@ -136,7 +136,11 @@ class TaskAssignmentBoard {
 
 			// drag-drop
 			$body[0].addEventListener("dragover", e => { e.preventDefault(); $body.addClass("tab-drop-target"); });
-			$body[0].addEventListener("dragleave", () => $body.removeClass("tab-drop-target"));
+			$body[0].addEventListener("dragleave", (e) => {
+				if (!$body[0].contains(e.relatedTarget)) {
+					$body.removeClass("tab-drop-target");
+				}
+			});
 			$body[0].addEventListener("drop", e => {
 				e.preventDefault();
 				$body.removeClass("tab-drop-target");
@@ -291,7 +295,7 @@ class TaskAssignmentBoard {
 				? (this._user_map[t.assignees[0]] ? this._user_map[t.assignees[0]].full_name : t.assignees[0])
 				: "Unassigned";
 			return [
-				t.name,
+				`"${(t.name || "").replace(/"/g, '""')}"`,
 				`"${(t.subject || "").replace(/"/g, '""')}"`,
 				`"${(t.project || "").replace(/"/g, '""')}"`,
 				t.status || "",

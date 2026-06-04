@@ -9,6 +9,8 @@
  "field_order": [
   "subject",
   "project",
+  "sb_assignees",
+  "task_assignees",
   "issue",
   "type",
   "color",
@@ -80,6 +82,19 @@
    "options": "Project",
    "remember_last_selected_value": 1,
    "search_index": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sb_assignees",
+   "fieldtype": "Section Break",
+   "label": "Assignees"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "task_assignees",
+   "fieldtype": "Table",
+   "label": "Assignees",
+   "options": "Task Assignee"
   },
   {
    "fieldname": "issue",

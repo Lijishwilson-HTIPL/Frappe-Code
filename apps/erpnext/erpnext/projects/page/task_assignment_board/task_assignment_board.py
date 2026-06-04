@@ -1,20 +1,21 @@
+import json
+
 import frappe
+
+VALID_STATUSES = {"Open", "Working", "Pending Review", "Overdue", "Completed", "Cancelled", "Template"}
 
 
 @frappe.whitelist()
 def get_board_data(project=None, status=None, show_completed=0):
 	filters = {}
-	if not int(show_completed or 0):
-		filters["status"] = ["not in", ["Cancelled"]]
-	else:
-		filters["status"] = ["not in", ["Cancelled"]]
-
 	if project:
 		filters["project"] = project
 	if status:
 		filters["status"] = status
 	elif not int(show_completed or 0):
 		filters["status"] = ["not in", ["Completed", "Cancelled"]]
+	else:
+		filters["status"] = ["not in", ["Cancelled"]]
 
 	tasks = frappe.get_all(
 		"Task",
@@ -35,6 +36,24 @@ def get_board_data(project=None, status=None, show_completed=0):
 		for row in rows:
 			assignees_map.setdefault(row["parent"], []).append(row["user"])
 
+		# Fall back to Frappe's built-in _assign field for tasks not in task_assignees.
+		# This covers tasks assigned via the Task form or task list view.
+		unassigned_names = [t for t in task_names if not assignees_map.get(t)]
+		if unassigned_names:
+			fallback_rows = frappe.get_all(
+				"Task",
+				filters={"name": ["in", unassigned_names]},
+				fields=["name", "_assign"],
+			)
+			for row in fallback_rows:
+				if row.get("_assign"):
+					try:
+						users = json.loads(row["_assign"])
+						if users:
+							assignees_map[row["name"]] = users
+					except Exception:
+						pass
+
 	for task in tasks:
 		task["assignees"] = assignees_map.get(task["name"], [])
 
@@ -50,13 +69,40 @@ def get_board_data(project=None, status=None, show_completed=0):
 
 @frappe.whitelist()
 def reassign_task(task_name, new_user):
-	doc = frappe.get_doc("Task", task_name)
-	doc.task_assignees = []
+	from frappe.desk.form.assign_to import add as add_assignment, clear as clear_assignments
+
+	# M-2: permission check
+	frappe.has_permission("Task", "write", task_name, throw=True)
+
+	# M-3/M-7: validate user exists before touching anything
 	if new_user and new_user != "__unassigned__":
-		doc.append("task_assignees", {"user": new_user})
-	doc.save(ignore_permissions=False)
+		if not frappe.db.exists("User", new_user):
+			frappe.throw(frappe._("User {0} does not exist").format(new_user))
+
+	# C-4: direct child table manipulation — no full Task validation triggered
+	frappe.db.delete("Task Assignee", {"parent": task_name})
+	if new_user and new_user != "__unassigned__":
+		frappe.db.insert({
+			"doctype": "Task Assignee",
+			"parent": task_name,
+			"parenttype": "Task",
+			"parentfield": "task_assignees",
+			"user": new_user,
+		})
+
+	# M-3: only update _assign after child table write succeeds
+	# Keep Frappe's built-in _assign in sync so the Task form reflects the same assignment
+	clear_assignments("Task", task_name)
+	if new_user and new_user != "__unassigned__":
+		add_assignment({
+			"doctype": "Task",
+			"name": task_name,
+			"assign_to": [new_user],
+			"notify": 0,
+		})
 
 	if new_user and new_user != "__unassigned__" and new_user != frappe.session.user:
+		doc = frappe.get_doc("Task", task_name)
 		_send_assignment_notifications(doc, new_user)
 
 	frappe.db.commit()
@@ -65,7 +111,15 @@ def reassign_task(task_name, new_user):
 
 @frappe.whitelist()
 def update_task_status(task_name, status):
+	# M-2: permission check
+	frappe.has_permission("Task", "write", task_name, throw=True)
+	# M-1: validate status against known values
+	if status not in VALID_STATUSES:
+		frappe.throw(frappe._("Invalid status: {0}").format(status))
 	frappe.db.set_value("Task", task_name, "status", status)
+	if status == "Completed":
+		from frappe.desk.form.assign_to import close_all_assignments
+		close_all_assignments("Task", task_name)
 	frappe.db.commit()
 	return {"success": True}
 
@@ -111,7 +165,7 @@ def _send_assignment_notifications(task, new_user):
 		frappe.publish_realtime(
 			"notification",
 			{
-				"title": __("Task Assigned"),
+				"title": frappe._("Task Assigned"),
 				"message": f"{task.subject} was assigned to you by {assigner.full_name}",
 				"indicator": "blue",
 			},
@@ -119,7 +173,3 @@ def _send_assignment_notifications(task, new_user):
 		)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Task Assignment Notification Error")
-
-
-def __(msg):
-	return msg

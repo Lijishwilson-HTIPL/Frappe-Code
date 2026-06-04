@@ -96,7 +96,128 @@ git commit -m "chore: untrack site_config.json"
 
 ---
 
-## 4. This is part of the MFT multi-project system
+## 4. DocType Export Rule — JSON is the Source of Truth
+
+**Any time a DocType is created or modified, export it to JSON immediately.**
+
+The database is not the source of truth — the JSON file is. Changes saved only to the DB:
+- Will not survive a fresh `bench restore`
+- Will not appear in `git diff`
+- Will not apply on another machine via `bench migrate`
+
+### Export workflow
+
+```bash
+# Export a single DocType
+bench --site mysite.local export-doc "DocType" "<DocType Name>"
+
+# Export all fixtures for an app
+bench --site mysite.local export-fixtures --app <app_name>
+
+# Confirm what changed
+git diff apps/
+```
+
+### Checklist before every commit
+- [ ] Every modified DocType has been exported to JSON
+- [ ] `git diff` shows only intentional JSON changes
+- [ ] No DocType was changed only in the database without a JSON update
+
+### Custom Fields and Property Setters
+
+Custom Fields/Property Setters added via **Customize Form** also live in the database. Export them as fixtures by adding to `hooks.py`:
+
+```python
+fixtures = [
+    {"dt": "Custom Field", "filters": [["module", "=", "Your Module"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "Your Module"]]},
+]
+```
+
+### Backup mysite.local
+
+```bash
+bench --site mysite.local backup --with-files
+# Saved to: ~/frappe-bench/sites/mysite.local/private/backups/
+```
+
+---
+
+## 5. Frappe HR Theme & CSS Rules
+
+### Use CSS variables — never hardcode colors
+
+```css
+--primary            /* Primary brand color */
+--text-color         /* Main text */
+--bg-color           /* Page background */
+--card-bg            /* Card/widget background */
+--border-color       /* Borders */
+--navbar-bg          /* Navbar background */
+--input-bg           /* Form inputs */
+```
+
+### Specificity hierarchy
+
+```css
+/* Try low first */
+.btn-primary { color: red; }
+/* Escalate only if needed */
+body[data-theme="light"] .btn-primary { color: red !important; }
+```
+
+### Always provide dark + light mode variants
+
+```css
+body[data-theme="light"] .my-element { background: var(--bg-color); }
+body[data-theme="dark"]  .my-element { background: var(--bg-color); }
+```
+
+### Where to place custom CSS
+
+- **Recommended:** `Setup > Website > Website Theme` → Custom CSS field
+- **App-level:** `apps/your_app/your_app/public/css/custom.css` + include in `hooks.py`
+- **Never:** edit core Frappe files
+
+### After every CSS change
+
+```bash
+bench --site mysite.local clear-cache
+bench build --app hrms      # or whichever app
+bench restart
+```
+Browser: hard-refresh with `Ctrl+Shift+R`
+
+### Wrap all custom CSS fixes with comments
+
+```css
+/* FIX: [Description] - [Date] */
+.selector { property: value; }
+/* END FIX */
+```
+
+### Common glitch fixes
+
+**Primary color not applying to buttons:**
+```css
+:root { --primary: #YOUR_COLOR; --btn-primary-bg: #YOUR_COLOR; }
+.btn-primary { background: var(--primary) !important; background-image: none !important; }
+```
+
+**Form tabs misaligned:**
+```css
+.form-tabs-list { display: flex !important; overflow-x: auto; border-bottom: 1px solid var(--border-color); }
+```
+
+**Modals behind sidebar:**
+```css
+.modal-backdrop { z-index: 1040 !important; }
+.modal          { z-index: 1050 !important; }
+```
+
+---
+
+## 6. This is part of the MFT multi-project system
 **Full architecture, rules, and project overview are in the main CLAUDE.md:**
 `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\CLAUDE.md`
 

@@ -545,8 +545,12 @@ frappe.listview_settings["Task"] = {
 		if (task.project) html += `<p class="mb-1">${__("Project")}: <a class="text-white" href="/app/project/${task.project}">${task.project}</a></p>`;
 		html += `<p class="mb-1">${__("Progress")}: <span class="text-white">${ganttobj.progress}%</span></p>`;
 		if (task._assign) {
-			const users = JSON.parse(task._assign);
-			html += `<span>Assigned to: </span><span class="text-white">${users.map(u => frappe.user_info(u).fullname).join(", ")}</span>`;
+			try {
+				const users = JSON.parse(task._assign);
+				if (Array.isArray(users) && users.length) {
+					html += `<br><small>Assigned: ${users.map(u => (frappe.user_info(u) || {}).fullname || u).join(", ")}</small>`;
+				}
+			} catch(e) {}
 		}
 		return `<div class="p-3" style="min-width:220px">${html}</div>`;
 	},
