@@ -318,6 +318,7 @@ class Task(NestedSet):
 		if check_if_child_exists(self.name):
 			throw(_("Child Task exists for this Task. You can not delete this Task."))
 
+		clear(self.doctype, self.name, ignore_permissions=True)
 		self.update_nsm_model()
 
 	def after_delete(self):

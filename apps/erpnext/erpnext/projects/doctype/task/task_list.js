@@ -11,6 +11,12 @@ frappe.listview_settings["Task"] = {
 		listview.page.set_primary_action = function () {};
 		setTimeout(() => listview.page.btn_primary && listview.page.btn_primary.hide(), 100);
 
+		// Shortcut button — navigates to Task Assignment Board, carrying active project filter
+		listview.page.add_button(__("Assignment Board"), () => {
+			const project = get_active_project_id();
+			frappe.set_route("task-assignment-board" + (project ? "?project=" + encodeURIComponent(project) : ""));
+		}, { icon: "arrow-right" });
+
 		// ── Jira CSS ───────────────────────────────────────────────────
 		{
 			let s = document.getElementById("jira-task-list-css");
@@ -136,6 +142,47 @@ frappe.listview_settings["Task"] = {
 				}
 				.jira-filter-chip:hover { background:#ebecf0; border-color:#b3bac5; }
 				.jira-filter-chip.active { background:#deebff; border-color:#4c9aff; color:#0052cc; }
+
+				/* Multi-assignee select */
+				.jira-multi-select-wrap { position:relative; display:inline-block; }
+				.jira-multi-select-trigger {
+					height:32px; border:1px solid #dfe1e6; border-radius:3px;
+					padding:0 10px; font-size:13px; color:#97a0af;
+					background:#fff; display:flex; align-items:center; gap:6px;
+					cursor:pointer; min-width:150px; white-space:nowrap;
+					transition:border-color 0.15s, box-shadow 0.15s; user-select:none;
+				}
+				.jira-multi-select-trigger:hover { border-color:#4c9aff; }
+				.jira-multi-select-trigger.has-value { color:#172b4d; }
+				.jira-multi-select-arrow { margin-left:auto; font-size:10px; color:#97a0af; }
+				.jira-multi-select-menu {
+					position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
+					background:#fff; border:1px solid #dfe1e6; border-radius:4px;
+					box-shadow:0 4px 16px rgba(0,0,0,0.15); min-width:220px; max-width:280px;
+				}
+				.jira-multi-select-search { padding:8px 8px 4px; border-bottom:1px solid #f0f0f0; }
+				.jira-multi-select-search input {
+					width:100%; height:28px; border:1px solid #dfe1e6; border-radius:3px;
+					padding:0 8px; font-size:12px; outline:none; box-sizing:border-box;
+				}
+				.jira-multi-select-search input:focus { border-color:#4c9aff; }
+				.jira-multi-select-list { max-height:200px; overflow-y:auto; padding:4px 0; }
+				.jira-multi-select-item {
+					display:flex; align-items:center; gap:8px; padding:6px 12px;
+					font-size:13px; color:#172b4d; cursor:pointer; transition:background 0.1s;
+				}
+				.jira-multi-select-item:hover { background:#f4f5f7; }
+				.jira-multi-select-item input[type="checkbox"] { cursor:pointer; }
+
+				/* Assignment board shortcut button */
+				[data-doctype="Task"] .page-actions .btn:has(.icon-arrow-right) {
+					border-color: #0052cc;
+					color: #0052cc;
+					font-weight: 600;
+				}
+				[data-doctype="Task"] .page-actions .btn:has(.icon-arrow-right):hover {
+					background: #deebff;
+				}
 			`;
 		}
 
@@ -164,9 +211,18 @@ frappe.listview_settings["Task"] = {
 		const $bar = $(`
 			<div class="jira-quick-bar" id="jira-quick-bar">
 				<input type="text" id="jira-task-subject"  placeholder="+ What needs to be done?" />
-				<select id="jira-task-assignee">
-					<option value="">👤 Assign To *</option>
-				</select>
+				<div class="jira-multi-select-wrap" id="jira-assignee-wrap">
+					<div class="jira-multi-select-trigger" id="jira-task-assignee">
+						<span id="jira-assignee-label">👤 Assign To *</span>
+						<span class="jira-multi-select-arrow">▾</span>
+					</div>
+					<div class="jira-multi-select-menu" id="jira-assignee-menu" style="display:none;">
+						<div class="jira-multi-select-search">
+							<input type="text" placeholder="🔍 Search members..." id="jira-assignee-search" />
+						</div>
+						<div class="jira-multi-select-list" id="jira-assignee-list"></div>
+					</div>
+				</div>
 				<select id="jira-task-priority">
 					<option value="">⚡ Priority</option>
 					<option value="Low">↓ Low</option>
@@ -212,23 +268,72 @@ frappe.listview_settings["Task"] = {
 			return null;
 		}
 
-		// Populate assignee dropdown
+		// Populate assignee checkbox list
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: { doctype: "User", filters: { enabled: 1, user_type: "System User" }, fields: ["name", "full_name"], limit_page_length: 100 },
 			callback: function (r) {
 				if (!r.message) return;
 				r.message.forEach(u => {
-					$("#jira-task-assignee").append(`<option value="${u.name}">${u.full_name || u.name}</option>`);
+					const label = frappe.utils.escape_html(u.full_name || u.name);
+					const val = frappe.utils.escape_html(u.name);
+					$("#jira-assignee-list").append(
+						`<label class="jira-multi-select-item">
+							<input type="checkbox" value="${val}" />
+							<span>${label}</span>
+						</label>`
+					);
 				});
 			},
+		});
+
+		// Toggle dropdown
+		$("#jira-task-assignee").on("click", function (e) {
+			e.stopPropagation();
+			const $menu = $("#jira-assignee-menu");
+			const open = $menu.is(":visible");
+			$menu.toggle(!open);
+			if (!open) { $("#jira-assignee-search").val("").trigger("input").focus(); }
+		});
+
+		// Search filter
+		$(document).on("input", "#jira-assignee-search", function () {
+			const q = $(this).val().toLowerCase();
+			$("#jira-assignee-list .jira-multi-select-item").each(function () {
+				$(this).toggle($(this).text().toLowerCase().includes(q));
+			});
+		});
+
+		// Update trigger label when selection changes
+		$(document).on("change", "#jira-assignee-list input[type='checkbox']", function () {
+			const checked = $("#jira-assignee-list input:checked");
+			const $trigger = $("#jira-task-assignee");
+			$trigger.removeClass("jira-field-required");
+			if (!checked.length) {
+				$("#jira-assignee-label").text("👤 Assign To *");
+				$trigger.removeClass("has-value");
+			} else if (checked.length === 1) {
+				const name = checked.first().closest("label").find("span").text();
+				$("#jira-assignee-label").text("👤 " + name);
+				$trigger.addClass("has-value");
+			} else {
+				$("#jira-assignee-label").text("👤 " + checked.length + " members");
+				$trigger.addClass("has-value");
+			}
+		});
+
+		// Close on click outside
+		$(document).off("click.jira-assignee").on("click.jira-assignee", function (e) {
+			if (!$(e.target).closest("#jira-assignee-wrap").length) {
+				$("#jira-assignee-menu").hide();
+			}
 		});
 
 		// ── Submit handler ────────────────────────────────────────────
 		function create_task() {
 			const subject  = $("#jira-task-subject").val().trim();
 			const projectId = get_active_project_id();
-			const assignee  = $("#jira-task-assignee").val();
+			const assignees = $("#jira-assignee-list input:checked").map((_, el) => el.value).get();
 			const priority  = $("#jira-task-priority").val();
 			const due_date  = $("#jira-task-due").val();
 
@@ -244,7 +349,7 @@ frappe.listview_settings["Task"] = {
 				frappe.show_alert({ message: __("Please open a project and view its tasks before adding a task"), indicator: "red" }, 4);
 				valid = false;
 			}
-			if (!assignee) {
+			if (!assignees.length) {
 				$("#jira-task-assignee").addClass("jira-field-required");
 				frappe.show_alert({ message: __("Please select who to assign this task to"), indicator: "red" }, 3);
 				valid = false;
@@ -281,7 +386,7 @@ frappe.listview_settings["Task"] = {
 				args: { doc },
 				callback: function (res) {
 					if (res.message) {
-						if (assignee) {
+						if (assignees.length) {
 							const emailBody = [
 								__("Task: {0}", [subject]),
 								__("Project: {0}", [projectLabel]),
@@ -295,7 +400,7 @@ frappe.listview_settings["Task"] = {
 								args: {
 									doctype: "Task",
 									name: res.message.name,
-									assign_to: [assignee],
+									assign_to: assignees,
 									notify: 1,
 									description: emailBody,
 								},
@@ -303,7 +408,10 @@ frappe.listview_settings["Task"] = {
 						}
 						frappe.show_alert({ message: __("Task <b>{0}</b> created", [subject]), indicator: "green" }, 3);
 						$("#jira-task-subject").val("").attr("placeholder", "+ What needs to be done?");
-						$("#jira-task-assignee,#jira-task-priority").val("");
+						$("#jira-assignee-list input[type='checkbox']").prop("checked", false);
+						$("#jira-assignee-label").text("👤 Assign To *");
+						$("#jira-task-assignee").removeClass("has-value");
+						$("#jira-task-priority").val("");
 						$("#jira-task-due").val("");
 						listview.refresh();
 					}

@@ -217,6 +217,59 @@ Browser: hard-refresh with `Ctrl+Shift+R`
 
 ---
 
+## 7. HRMS Theme Switcher Rules (uichange1–9)
+
+**Files (local-only, gitignored):**
+- `apps/hrms/hrms/public/css/uichange1–9.css` — one file per theme
+- `apps/hrms/hrms/public/js/theme_switcher.js` — registers all 9 themes
+
+**These files must NEVER be committed.** They are in `.gitignore` via `uichange*.css` glob. To restore them after a `git rm --cached` or fresh clone, run:
+```bash
+git checkout <commit-hash> -- apps/hrms/hrms/public/css/uichange1.css ... uichange9.css apps/hrms/hrms/public/js/theme_switcher.js
+git rm --cached apps/hrms/hrms/public/css/uichange*.css apps/hrms/hrms/public/js/theme_switcher.js
+```
+The commit with all 9 themes is: `e7fa8e6ccc0` ("feat: add themes 7–9 and restore all 9 in switcher")
+
+### Known CSS bugs and fixes (2026-06-05)
+
+**Bug 1 — Field text invisible in themes 5–9:**
+- Root cause: `-webkit-text-fill-color: transparent` from gradient page-title CSS leaks into `.frappe-control span` via CSS inheritance.
+- Fix: add `-webkit-text-fill-color` explicitly on ALL `.frappe-control` input/value selectors at the END of each theme file.
+
+**Bug 2 — Theme 7 & 9 (dark): transparent field wrapper backgrounds:**
+- Root cause: broad `background-color: transparent` rules on `span` expose the dark body behind field wrappers.
+- Fix: lock `.frappe-control .control-input, .control-input-wrapper, .awesomplete, .input-area` to `background: rgba(255,255,255,0.06)`.
+
+**Bug 3 — Theme 9 workspace link text invisible (DEFINITIVE FIX via JS 2026-06-05):**
+- Root cause chain: (1) original theme injects `html body *{color:#EDE9FE!important}` as body `<style>`. (2) CSS overrides partially work but workspace section cards render inside `.form-section` context. (3) Our own form-restore step (`form-section * { color:#EDE9FE }`) then makes those link items light on white = invisible. No CSS `!important` chain can break this circular override.
+- **Definitive fix:** JavaScript `element.style.setProperty('color', value, 'important')` — inline `!important` beats ALL CSS rules (highest priority in author origin).
+- `theme_switcher.js` now has `hrms.theme._fix_t9()` which directly sets inline `!important` color on all DOM elements. It: (a) sets all main content to dark `#2E1065`, (b) restores dark-bg contexts (shortcut boxes, forms, lists, modals) to light, (c) fixes sidebar/navbar/icon letters.
+- The fix is re-run on `$(document).on("page-change")` (SPA navigation) and via `MutationObserver` on `.layout-main-section` (lazy-loaded content).
+- **Rule: When CSS specificity battles fail for a Frappe custom theme, use JS `el.style.setProperty('color', val, 'important')`. This is the only approach that definitively wins over all CSS including Frappe's dynamically injected styles.**
+
+**Bug 4 — Theme 5: list-view column headers invisible (fixed 2026-06-05):**
+- Root cause 1: `--subtle-fg` not set in `:root` → Frappe core picks whatever the current value is (can be dark in certain modes), making the header row background dark.
+- Root cause 2: the global `span, div { color: #111827 !important }` rule in Theme 5 explicitly overrides the *inherited* teal color from `.list-row-head .list-row-col` on child spans. Explicit beats inherited even with `!important`.
+- Fix applied in `uichange5.css`:
+  1. Add `--subtle-fg: #CCFBF1 !important` to `:root` so Frappe's core header-row background variable is always light teal.
+  2. Add explicit background on `.list-row-head, .list-row.list-row-head { background: #CCFBF1 !important }`.
+  3. Add `.list-row-head span, .list-row-head div, .list-row-head .list-row-col *` selector with `color: #0D9488 !important; -webkit-text-fill-color: #0D9488 !important` to beat the global element selector.
+- **Pattern:** Whenever a theme uses a broad `div, span { color: X !important }` global rule, every list/datatable header fix must target the child elements (`*`) directly — relying on inheritance from the parent row selector is NOT enough.
+- **Same fix applied to Theme 6** (uichange6.css) — identical root cause, uses `--subtle-fg: #E0F2FE` and `color: #0369A1`.
+
+**Bug 5 — Theme 7: white backgrounds on module/workspace pages (fixed 2026-06-05):**
+- Root cause: glassmorphism cards use `rgba(255,255,255,0.035)` as background. This looks dark on `#0D0B1E`, but appears near-white when ANY ancestor container has a white background. The missing ancestor was `.layout-main-section-wrapper` and inner module page wrappers (`.modules-page`, `.workspace-section`, `.standard-page-container`, `.frappe-list-area`).
+- Fix: added all missing page-level ancestors to the dark background rule set in uichange7.css (alongside the existing `.frappe-desk, .desk-body, .page-wrapper` block).
+- **Rule:** For glassmorphism dark themes, EVERY ancestor of a glass card (all the way up to `body`) must explicitly have a dark background. A single white ancestor anywhere in the DOM tree makes all descendant glass cards appear white.
+
+**Bug 4 — Sidebar selected module letter invisible:**
+- Root cause: Frappe renders module icons as `<div class="app-icon" style="background-color:[module-color]"><span class="inner">A</span></div>`. The `.inner` letter inherits our sidebar `color: #7C6FAA` (muted violet), which doesn't contrast against the module's colored background (e.g. orange for Accounting). Result: letter invisible.
+- Fix: `html[data-hrms-theme="uichange9"] .app-icon .inner { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }` — always white for the module letter regardless of background.
+- Also fix SVG icons inside `.app-icon` with `fill: #FFFFFF; stroke: #FFFFFF`.
+- **Rule:** Always explicitly set `.app-icon .inner` to `#FFFFFF` in any custom Frappe theme that overrides sidebar text color.
+
+---
+
 ## 6. This is part of the MFT multi-project system
 **Full architecture, rules, and project overview are in the main CLAUDE.md:**
 `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page\CLAUDE.md`

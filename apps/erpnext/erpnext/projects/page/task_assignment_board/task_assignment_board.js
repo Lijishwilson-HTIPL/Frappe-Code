@@ -98,9 +98,14 @@ class TaskAssignmentBoard {
 			if (!t.assignees || t.assignees.length === 0) {
 				byUser["__unassigned__"].push(t);
 			} else {
-				const uid = t.assignees[0];
-				if (!byUser[uid]) byUser[uid] = [];
-				byUser[uid].push(t);
+				let placed = false;
+				t.assignees.forEach(uid => {
+					if (byUser[uid] !== undefined) {
+						byUser[uid].push(t);
+						placed = true;
+					}
+				});
+				if (!placed) byUser["__unassigned__"].push(t);
 			}
 		});
 
@@ -173,9 +178,9 @@ class TaskAssignmentBoard {
 		const progress = task.progress || 0;
 		const progress_color = progress >= 100 ? "#38a169" : progress >= 50 ? "#d69e2e" : "#4490f1";
 
-		// assignee avatar on card
+		// assignee avatars on card (all assignees)
 		const assigneeAvatar = task.assignees && task.assignees.length
-			? this._mini_avatar(task.assignees[0])
+			? task.assignees.map(uid => this._mini_avatar(uid)).join("")
 			: "";
 
 		// status dropdown
