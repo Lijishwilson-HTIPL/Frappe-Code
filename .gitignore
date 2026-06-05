@@ -88,3 +88,7 @@ sites/*/private/files/*.ics
 
 # Separate git repos — tracked independently (from hilton-update)
 env/
+
+# Windows Zone.Identifier ADS metadata files (created when files downloaded on Windows)
+*Zone.Identifier
+*:Zone.Identifier
