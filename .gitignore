@@ -25,12 +25,8 @@ web docs/
 apps/gameplan/
 
 # Local-only HRMS themes (kept on this machine, not shared)
-apps/hrms/hrms/public/css/uichange1.css
-apps/hrms/hrms/public/css/uichange2.css
-apps/hrms/hrms/public/css/uichange3.css
-apps/hrms/hrms/public/css/uichange4.css
-apps/hrms/hrms/public/css/uichange5.css
-apps/hrms/hrms/public/css/uichange6.css
+apps/hrms/hrms/public/css/uichange*.css
+apps/hrms/hrms/public/js/theme_switcher.js
 
 # Compiled/symlinked assets (generated at runtime)
 sites/assets/crm
