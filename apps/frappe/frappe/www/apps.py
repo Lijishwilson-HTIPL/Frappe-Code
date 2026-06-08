@@ -36,7 +36,7 @@ def get_context():
 		order_by="idx asc",
 	)
 	if drawer_config:
-		hidden = {r.app_name for r in drawer_config if r.is_hidden}
+		hidden = {r.app_name for r in drawer_config if r.is_hidden or not r.title}
 		order_map = {r.app_name: i for i, r in enumerate(drawer_config)}
 		title_map = {r.app_name: r.title for r in drawer_config if r.title}
 		logo_map = {r.app_name: r.logo for r in drawer_config if r.logo}
