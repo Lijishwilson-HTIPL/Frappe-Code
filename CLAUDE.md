@@ -67,6 +67,21 @@ Team Lead → Developer → Tester → Compliance Checker → Release Manager
 
 ---
 
+## 3b. Machine-specific config files must never be committed
+
+**Rule:** Never stage or commit these files — they contain machine-specific paths and will break other developers' environments:
+- `Procfile`
+- `config/redis_cache.conf`
+- `config/redis_queue.conf`
+- `config/redis_cache.acl`
+- `config/redis_queue.acl`
+
+**Why:** These files embed the local Linux username (e.g. `/home/ijish/`) in paths. Committing them overwrites another machine's working paths and causes Redis/bench to fail on startup.
+
+**After editing these files locally:** do NOT run `git add Procfile` or `git add config/redis_*.conf`. Always add files explicitly by path and skip these.
+
+---
+
 ## 3. site_config.json must never be committed, merged, or lost
 
 **Rule:** `sites/mysite.local/site_config.json` must never be committed to git, staged, or overwritten by a merge. It is gitignored and must stay untracked on every machine.
@@ -228,7 +243,10 @@ Browser: hard-refresh with `Ctrl+Shift+R`
 git checkout <commit-hash> -- apps/hrms/hrms/public/css/uichange1.css ... uichange9.css apps/hrms/hrms/public/js/theme_switcher.js
 git rm --cached apps/hrms/hrms/public/css/uichange*.css apps/hrms/hrms/public/js/theme_switcher.js
 ```
-The commit with all 9 themes is: `e7fa8e6ccc0` ("feat: add themes 7–9 and restore all 9 in switcher")
+The commit with all 9 themes is: `3db603798^` (parent of "chore: gitignore uichange1-9 themes and theme_switcher.js"). Restore with:
+```bash
+git show 3db603798^:apps/hrms/hrms/public/js/theme_switcher.js > apps/hrms/hrms/public/js/theme_switcher.js
+```
 
 ### Known CSS bugs and fixes (2026-06-05)
 
