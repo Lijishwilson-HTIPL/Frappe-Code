@@ -66,6 +66,9 @@ doc_events = {
     "Issue": {
         "on_update": "helpdesk.overrides.issue.on_update",
     },
+    "HD Ticket": {
+        "after_insert": "helpdesk.overrides.hd_ticket_hooks.send_ticket_acknowledgment",
+    },
 }
 
 has_permission = {
