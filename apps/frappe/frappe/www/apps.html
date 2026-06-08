@@ -39,7 +39,7 @@ endblock -%} {%- block footer -%} {%- endblock -%} {% block content %}
 						</svg>
 					</div>
 				</div>
-				<div class="app-title">{{ app.title }}</div>
+				{% if app.title %}<div class="app-title">{{ app.title }}</div>{% endif %}
 			</a>
 			{% endfor %}
 		</div>
