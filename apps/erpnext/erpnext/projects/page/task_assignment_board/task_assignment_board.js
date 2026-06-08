@@ -8,7 +8,14 @@ frappe.pages["task-assignment-board"].on_page_load = function (wrapper) {
 };
 
 frappe.pages["task-assignment-board"].on_page_show = function (wrapper) {
-	if (wrapper._tab) wrapper._tab.refresh();
+	if (!wrapper._tab) return;
+	const opts = frappe.route_options || {};
+	if (opts.project) {
+		wrapper._tab._project_field.set_value(opts.project);
+		wrapper._tab.project = opts.project;
+		frappe.route_options = {};
+	}
+	wrapper._tab.refresh();
 };
 
 const TASK_STATUSES = ["Open", "Working", "Pending Review", "Overdue", "Completed", "Cancelled"];

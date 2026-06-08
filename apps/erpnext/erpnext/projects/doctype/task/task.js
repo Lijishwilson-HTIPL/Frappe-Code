@@ -189,7 +189,7 @@ erpnext.projects.render_subtasks = function (frm) {
 
 	frappe.db.get_list("Task", {
 		filters: { parent_task: frm.doc.name },
-		fields: ["name", "subject", "status", "priority", "assigned_to", "progress", "exp_end_date"],
+		fields: ["name", "subject", "status", "priority", "progress", "exp_end_date"],
 		limit: 100,
 		order_by: "creation asc",
 	}).then(tasks => {

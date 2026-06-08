@@ -3,6 +3,7 @@ frappe.listview_settings["Task"] = {
 	add_fields: [
 		"project", "status", "priority", "subject",
 		"exp_end_date", "progress", "_assign", "owner",
+		"is_group", "parent_task",
 	],
 	filters: [["status", "=", "Open"]],
 
@@ -14,7 +15,8 @@ frappe.listview_settings["Task"] = {
 		// Shortcut button — navigates to Task Assignment Board, carrying active project filter
 		listview.page.add_button(__("Assignment Board"), () => {
 			const project = get_active_project_id();
-			frappe.set_route("task-assignment-board" + (project ? "?project=" + encodeURIComponent(project) : ""));
+			if (project) frappe.route_options = { project: project };
+			frappe.set_route("task-assignment-board");
 		}, { icon: "arrow-right" });
 
 		// ── Jira CSS ───────────────────────────────────────────────────
@@ -504,6 +506,29 @@ frappe.listview_settings["Task"] = {
 				const rowName = $container.find('.list-row-checkbox').data('name');
 				const task = rowName ? (listview.data || []).find(d => d.name === rowName) : null;
 				if (!task) return;
+
+				// ── Subject type badge (parent / subtask) ──────────────────
+				const $subjectLink = $container.find('.list-subject a, .level-item.bold a').first();
+				if ($subjectLink.length && !$container.find('.jira-task-badge').length) {
+					if (task.is_group) {
+						$subjectLink.before(
+							'<svg viewBox="0 0 16 16" width="13" height="13" fill="#0052cc" style="flex-shrink:0;margin-right:4px;vertical-align:middle;">' +
+							'<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.764c.415 0 .813.165 1.107.46l.647.646A1.5 1.5 0 0 0 9.125 3.5H13.5A1.5 1.5 0 0 1 15 5v7.5A1.5 1.5 0 0 1 13.5 14h-11A1.5 1.5 0 0 1 1 12.5z"/></svg>'
+						);
+						$subjectLink.after(
+							'<span class="jira-task-badge" style="font-size:10px;font-weight:700;background:#deebff;color:#0052cc;' +
+							'border-radius:3px;padding:1px 5px;letter-spacing:0.04em;margin-left:6px;vertical-align:middle;">PARENT</span>'
+						);
+					} else if (task.parent_task) {
+						$subjectLink.before(
+							'<span style="color:#97a0af;font-size:14px;margin-right:4px;vertical-align:middle;line-height:1;">↳</span>'
+						);
+						$subjectLink.after(
+							'<span class="jira-task-badge" style="font-size:10px;font-weight:700;background:#f4f5f7;color:#5e6c84;' +
+							'border-radius:3px;padding:1px 5px;letter-spacing:0.04em;margin-left:6px;vertical-align:middle;">SUBTASK</span>'
+						);
+					}
+				}
 
 				// Assigner — task owner
 				let assigner = "—";
