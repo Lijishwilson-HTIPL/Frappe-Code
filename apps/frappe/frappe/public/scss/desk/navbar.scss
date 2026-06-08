@@ -115,8 +115,7 @@
 }
 
 // Vibrant but Calm — white text on orange-red navbar
-[data-theme="vibrant-calm"] .navbar > .container,
-[data-theme="vibrant-calm-night"] .navbar > .container {
+[data-theme="vibrant-calm"] .navbar > .container {
 	.nav-item:not(.dropdown.show),
 	.nav-link:not(.show),
 	.navbar-home,
