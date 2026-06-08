@@ -40,10 +40,13 @@ def get_context():
 		order_map = {r.app_name: i for i, r in enumerate(drawer_config)}
 		title_map = {r.app_name: r.title for r in drawer_config if r.title}
 		logo_map = {r.app_name: r.logo for r in drawer_config if r.logo}
-		# Apply custom titles
+		# Apply custom titles — clear title if drawer row has no Display Title set
+		drawer_apps = {r.app_name for r in drawer_config}
 		for app in all_apps:
 			if app.get("name") in title_map:
 				app["title"] = title_map[app["name"]]
+			elif app.get("name") in drawer_apps:
+				app["title"] = ""
 		# Filter hidden apps, sort by configured order (unlisted apps go to end)
 		all_apps = [a for a in all_apps if a.get("name") not in hidden]
 		all_apps.sort(key=lambda a: order_map.get(a.get("name"), 9999))
