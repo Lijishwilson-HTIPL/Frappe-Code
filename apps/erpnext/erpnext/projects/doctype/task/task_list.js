@@ -78,6 +78,30 @@ frappe.listview_settings["Task"] = {
 					text-overflow:ellipsis !important;
 				}
 
+				/* ── Subject column: wider + wraps on hover ── */
+				[data-doctype="Task"] .list-row .list-subject,
+				[data-doctype="Task"] .list-row-head .list-subject {
+					min-width:260px !important;
+					flex:3 !important;
+				}
+				[data-doctype="Task"] .list-row .level-item.bold {
+					white-space:nowrap !important;
+					overflow:hidden !important;
+					text-overflow:ellipsis !important;
+					max-width:420px !important;
+					cursor:pointer;
+					transition:max-width 0.2s ease;
+				}
+				[data-doctype="Task"] .list-row:hover .level-item.bold {
+					white-space:normal !important;
+					overflow:visible !important;
+					text-overflow:unset !important;
+					max-width:none !important;
+					background:#fff;
+					position:relative;
+					z-index:2;
+				}
+
 				/* ── Quick-create bar ── */
 				.jira-quick-bar {
 					display:flex; align-items:center; gap:8px;
@@ -103,6 +127,26 @@ frappe.listview_settings["Task"] = {
 				/* required field highlight */
 				.jira-field-required { border-color:#DE350B !important; box-shadow:0 0 0 2px #ffebe6 !important; }
 				.jira-field-required::placeholder { color:#DE350B !important; }
+
+				/* ── Task type badges — solid colors that survive any theme ── */
+				[data-doctype="Task"] .jira-task-badge {
+					display:inline-block !important;
+					font-size:10px !important; font-weight:700 !important;
+					border-radius:3px !important; padding:2px 6px !important;
+					letter-spacing:0.05em !important; vertical-align:middle !important;
+					flex-shrink:0 !important; margin-left:6px !important;
+					line-height:1.4 !important;
+				}
+				[data-doctype="Task"] .jira-task-badge.jira-badge-parent {
+					background:#0052cc !important;
+					color:#ffffff !important;
+					-webkit-text-fill-color:#ffffff !important;
+				}
+				[data-doctype="Task"] .jira-task-badge.jira-badge-subtask {
+					background:#505f79 !important;
+					color:#ffffff !important;
+					-webkit-text-fill-color:#ffffff !important;
+				}
 
 				.jira-quick-add-btn {
 					height:32px; padding:0 16px; background:#0052cc; color:#fff;
@@ -510,22 +554,22 @@ frappe.listview_settings["Task"] = {
 				// ── Subject type badge (parent / subtask) ──────────────────
 				const $subjectLink = $container.find('.list-subject a, .level-item.bold a').first();
 				if ($subjectLink.length && !$container.find('.jira-task-badge').length) {
+					const subjectText = $subjectLink.text().trim();
+					$subjectLink.attr("title", subjectText);
 					if (task.is_group) {
 						$subjectLink.before(
-							'<svg viewBox="0 0 16 16" width="13" height="13" fill="#0052cc" style="flex-shrink:0;margin-right:4px;vertical-align:middle;">' +
+							'<svg viewBox="0 0 16 16" width="13" height="13" fill="#0052cc" style="flex-shrink:0;margin-right:4px;vertical-align:middle;" title="Parent Task">' +
 							'<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.764c.415 0 .813.165 1.107.46l.647.646A1.5 1.5 0 0 0 9.125 3.5H13.5A1.5 1.5 0 0 1 15 5v7.5A1.5 1.5 0 0 1 13.5 14h-11A1.5 1.5 0 0 1 1 12.5z"/></svg>'
 						);
 						$subjectLink.after(
-							'<span class="jira-task-badge" style="font-size:10px;font-weight:700;background:#deebff;color:#0052cc;' +
-							'border-radius:3px;padding:1px 5px;letter-spacing:0.04em;margin-left:6px;vertical-align:middle;">PARENT</span>'
+							'<span class="jira-task-badge jira-badge-parent" title="This is a parent task">PARENT</span>'
 						);
 					} else if (task.parent_task) {
 						$subjectLink.before(
-							'<span style="color:#97a0af;font-size:14px;margin-right:4px;vertical-align:middle;line-height:1;">↳</span>'
+							'<span style="color:#97a0af;font-size:14px;margin-right:4px;vertical-align:middle;line-height:1;" title="Subtask of ' + frappe.utils.escape_html(task.parent_task) + '">↳</span>'
 						);
 						$subjectLink.after(
-							'<span class="jira-task-badge" style="font-size:10px;font-weight:700;background:#f4f5f7;color:#5e6c84;' +
-							'border-radius:3px;padding:1px 5px;letter-spacing:0.04em;margin-left:6px;vertical-align:middle;">SUBTASK</span>'
+							'<span class="jira-task-badge jira-badge-subtask" title="Subtask of ' + frappe.utils.escape_html(task.parent_task) + '">SUBTASK</span>'
 						);
 					}
 				}
@@ -565,10 +609,75 @@ frappe.listview_settings["Task"] = {
 		// Fire inject immediately on every list re-render using MutationObserver.
 		// This replaces the old 400ms poll, which left a window where Frappe could
 		// re-render after our inject and undo all changes before the next poll fired.
-		setTimeout(inject_assignment_cols, 150);
+		setTimeout(() => { inject_assignment_cols(); inject_col_resizer(); }, 150);
 		if (listview.$result && listview.$result[0]) {
-			new MutationObserver(frappe.utils.debounce(inject_assignment_cols, 80))
-				.observe(listview.$result[0], { childList: true });
+			new MutationObserver(frappe.utils.debounce(() => {
+				inject_assignment_cols();
+				inject_col_resizer();
+			}, 80)).observe(listview.$result[0], { childList: true });
+		}
+
+		// ── Subject column drag-to-resize ────────────────────────────────
+		const COL_W_KEY = "jira_task_subject_col_width";
+
+		function apply_subject_width(px) {
+			if (!listview.$result) return;
+			// .list-subject class is on BOTH header and data-row subject cells
+			listview.$result.find(".list-subject").each(function () {
+				this.style.setProperty("min-width", px + "px", "important");
+				this.style.setProperty("max-width", px + "px", "important");
+				this.style.setProperty("flex", "none", "important");
+			});
+			let s = document.getElementById("jira-subject-col-style");
+			if (!s) { s = document.createElement("style"); s.id = "jira-subject-col-style"; document.head.appendChild(s); }
+			s.textContent = `[data-doctype="Task"] .list-subject{min-width:${px}px!important;max-width:${px}px!important;flex:none!important;}`;
+		}
+
+		function inject_col_resizer() {
+			if (!listview.$result || !listview.$result.length) return;
+			const $head = listview.$result.find(".list-row-head");
+			if (!$head.length) return;
+
+			// The header subject cell carries the same .list-subject class as data rows
+			const col = $head.find(".list-subject")[0];
+			if (!col || col.__jira_resizer) return;
+			col.__jira_resizer = true;
+
+			// Hover near the right edge → blue border + col-resize cursor (16px hot zone)
+			col.addEventListener("mousemove", function (e) {
+				const near = e.clientX > col.getBoundingClientRect().right - 16;
+				col.style.cursor = near ? "col-resize" : "";
+				col.style.borderRight = near ? "2px solid #4c9aff" : "";
+			});
+			col.addEventListener("mouseleave", () => {
+				col.style.cursor = "";
+				col.style.borderRight = "";
+			});
+
+			// Mousedown near right edge → start drag via full-screen overlay
+			col.addEventListener("mousedown", function (e) {
+				if (e.clientX < col.getBoundingClientRect().right - 16) return;
+				e.preventDefault();
+				e.stopPropagation();
+				col.style.borderRight = "2px solid #0052cc";
+				const startX = e.clientX;
+				const startW = col.getBoundingClientRect().width;
+				const overlay = document.createElement("div");
+				overlay.style.cssText = "position:fixed;inset:0;z-index:99999;cursor:col-resize;";
+				document.body.appendChild(overlay);
+				overlay.addEventListener("mousemove", ev => apply_subject_width(Math.max(120, startW + ev.clientX - startX)));
+				overlay.addEventListener("mouseup", ev => {
+					const w = Math.max(120, startW + ev.clientX - startX);
+					apply_subject_width(w);
+					localStorage.setItem(COL_W_KEY, w);
+					document.body.removeChild(overlay);
+					col.style.borderRight = "";
+					col.style.cursor = "";
+				});
+			});
+
+			const saved = localStorage.getItem(COL_W_KEY);
+			if (saved) apply_subject_width(parseInt(saved, 10));
 		}
 
 		// Bulk status actions
