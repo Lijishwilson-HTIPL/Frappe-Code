@@ -248,6 +248,34 @@ The commit with all 9 themes is: `3db603798^` (parent of "chore: gitignore uicha
 git show 3db603798^:apps/hrms/hrms/public/js/theme_switcher.js > apps/hrms/hrms/public/js/theme_switcher.js
 ```
 
+### Backup & Restore (Windows zip — primary method)
+
+**Backup location:** `C:\Users\Hilton\hrms-themes.zip` (last updated 2026-06-08)
+
+Contains all 10 files with folder structure preserved:
+```
+css/uichange1.css … css/uichange9.css
+js/theme_switcher.js
+```
+
+**To restore after a `git pull` wipes the files**, run in PowerShell:
+```powershell
+$zip  = "C:\Users\Hilton\hrms-themes.zip"
+$dest = "\\wsl.localhost\Ubuntu-22.04\home\hilton\frappe-bench\apps\hrms\hrms\public"
+Expand-Archive -Path $zip -DestinationPath $dest -Force
+```
+
+**To update the zip after editing any theme file**, say "update theme backup" — Claude will re-zip automatically. Or run:
+```powershell
+$src   = "\\wsl.localhost\Ubuntu-22.04\home\hilton\frappe-bench\apps\hrms\hrms\public"
+$tmp   = "$env:TEMP\hrms-themes"
+New-Item -ItemType Directory -Force "$tmp\css","$tmp\js" | Out-Null
+Copy-Item "$src\css\uichange*.css" "$tmp\css\"
+Copy-Item "$src\js\theme_switcher.js" "$tmp\js\"
+Compress-Archive -Path "$tmp\*" -DestinationPath "C:\Users\Hilton\hrms-themes.zip" -Force
+Remove-Item $tmp -Recurse -Force
+```
+
 ### Known CSS bugs and fixes (2026-06-05)
 
 **Bug 1 — Field text invisible in themes 5–9:**
@@ -285,6 +313,12 @@ git show 3db603798^:apps/hrms/hrms/public/js/theme_switcher.js > apps/hrms/hrms/
 - Fix: `html[data-hrms-theme="uichange9"] .app-icon .inner { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }` — always white for the module letter regardless of background.
 - Also fix SVG icons inside `.app-icon` with `fill: #FFFFFF; stroke: #FFFFFF`.
 - **Rule:** Always explicitly set `.app-icon .inner` to `#FFFFFF` in any custom Frappe theme that overrides sidebar text color.
+
+**Bug 6 — Themes 7 & 9: Task list / board view text not clearly visible (fixed 2026-06-08):**
+- Root cause: List row sub-elements (`.list-subject`, `.level-item`, `.dt-cell` and their children) lacked explicit `-webkit-text-fill-color` overrides. Two cascading problems: (1) Theme 9's STEP 1 nuclear rule sets `color: #2E1065; -webkit-text-fill-color: #2E1065` globally, and STEP 6's `.frappe-list *` restore rule doesn't cover all render paths (task board, grouped lists, toolbar area). (2) Theme 7 broad rules set `color: #E2E8F0` but not `-webkit-text-fill-color`; if any Frappe-default or prior theme CSS set `-webkit-text-fill-color` on a parent element, browser uses that value instead of `color`, making text invisible.
+- Fix (uichange9.css — STEP 11): Added `html[data-hrms-theme="uichange9"] .list-row *, .list-row-container *, .list-subject *, .level-item *, .dt-cell *, .dt-row *, .list-toolbar-wrapper *, .filter-area *, .standard-filter-section *` → `color: #EDE9FE; -webkit-text-fill-color: #EDE9FE`. Column headers restored to `#C4B5FD`. Kanban/board cards to `#EDE9FE`.
+- Fix (uichange7.css — end of file): Same selectors (no html prefix needed — Theme 7 applies via injected `<link>` not a body attribute) → `color: #E2E8F0; -webkit-text-fill-color: #E2E8F0`. Column headers to `#A78BFA`. Kanban cards to `#E2E8F0`.
+- **Rule:** When adding a list/board view to a custom Frappe theme, ALWAYS set BOTH `color` AND `-webkit-text-fill-color` on `.list-row *`, `.list-subject *`, `.level-item *`, `.dt-cell *`. Setting only `color` is not enough — `-webkit-text-fill-color` from any ancestor or prior stylesheet overrides `color` silently.
 
 ---
 
