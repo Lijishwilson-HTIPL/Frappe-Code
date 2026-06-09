@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  {% set _app_name = frappe.db.get_single_value('Website Settings', 'app_name') or frappe.db.get_single_value('System Settings', 'app_name') or 'Support Portal' %}
+  {% set _company = frappe.db.get_default('company') or _app_name %}
+  <title>{{ _app_name }} · Support Tracker</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    /* ── DESIGN SYSTEM: Nova Support Portal ────────────────────────── */
+    :root {
+      --bg:          #EBF0FA;
+      --surface:     #FFFFFF;
+      --surface2:    #F5F8FE;
+      --border:      #D8E1EF;
+      --border-lt:   #E8EEFA;
+      --primary:     #1847B0;
+      --primary2:    #2563EB;
+      --primary-bg:  #EFF6FF;
+      --accent:      #0891B2;
+      --success:     #059669;  --success-bg: #ECFDF5;
+      --warning:     #D97706;  --warning-bg: #FFFBEB;
+      --danger:      #DC2626;  --danger-bg:  #FEF2F2;
+      --t1:          #0A1628;
+      --t2:          #2D3D5C;
+      --t3:          #6B7A99;
+      --t4:          #9DAEC8;
+      --font:        'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+      --mono:        'JetBrains Mono', 'Fira Code', monospace;
+      --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+      --sh-sm: 0 1px 3px rgba(10,22,40,.06),0 1px 2px rgba(10,22,40,.04);
+      --sh-md: 0 4px 12px rgba(10,22,40,.08),0 2px 6px rgba(10,22,40,.04);
+      --sh-lg: 0 8px 28px rgba(10,22,40,.12),0 4px 12px rgba(10,22,40,.06);
+      --sh-xl: 0 20px 60px rgba(10,22,40,.18),0 8px 24px rgba(10,22,40,.10);
+      --sidebar-w: 248px;
+      --header-h: 56px;
+      --tr: .16s cubic-bezier(.4,0,.2,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{
+      height:100%;font-family:var(--font)!important;
+      background:var(--bg)!important;background-color:var(--bg)!important;
+      color:var(--t1)!important;-webkit-text-fill-color:initial!important;
+      font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+    }
+    #app *{-webkit-text-fill-color:inherit!important}
+    .navbar,.page-head,.sidebar-toggle-btn,#navbar,.frappe-navbar,
+    body>nav,body>header,body>.page-container{display:none!important}
+    [v-cloak]{display:none}
+
+    /* ── Layout ── */
+    .portal-layout{display:flex;min-height:100vh}
+    .main-col{flex:1;min-width:0;overflow-x:hidden;display:flex;flex-direction:column}
+
+    /* ── Sidebar ── */
+    .sidebar{
+      width:var(--sidebar-w);min-width:var(--sidebar-w);
+      background:#fff;border-right:1px solid var(--border);
+      display:flex;flex-direction:column;
+      position:sticky;top:0;height:100vh;overflow-y:auto;
+    }
+    .sb-logo{
+      display:flex;align-items:center;gap:10px;
+      padding:0 18px;height:var(--header-h);
+      border-bottom:1px solid var(--border-lt);flex-shrink:0;
+    }
+    .sb-logo-icon{
+      width:32px;height:32px;border-radius:8px;
+      background:var(--primary);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:15px;flex-shrink:0;
+    }
+    .sb-logo-text{font-weight:800;font-size:14px;color:var(--t1);letter-spacing:-.02em}
+    .sb-nav{flex:1;padding:10px 8px}
+    .sb-label{
+      font-size:10px;font-weight:700;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--t4);padding:12px 10px 5px;
+    }
+    .sb-btn{
+      display:flex;align-items:center;gap:9px;width:100%;
+      padding:8px 10px;border-radius:var(--r-md);border:none;
+      background:none;color:var(--t2);font-family:var(--font);
+      font-size:13.5px;font-weight:500;cursor:pointer;transition:all var(--tr);text-align:left;
+    }
+    .sb-btn:hover{background:var(--surface2);color:var(--primary)}
+    .sb-btn.active{background:var(--primary-bg);color:var(--primary)!important;-webkit-text-fill-color:var(--primary)!important;font-weight:600}
+    .sb-btn i{font-size:17px;flex-shrink:0}
+    .sb-footer{margin-top:auto;padding:10px 8px;border-top:1px solid var(--border-lt)}
+    .sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-md)}
+    .sb-avatar{
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,var(--primary),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:11px;font-weight:700;flex-shrink:0;
+    }
+    .sb-email{font-size:12px;color:var(--t3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ── View header ── */
+    .view-header{
+      height:var(--header-h);padding:0 24px;
+      display:flex;align-items:center;justify-content:space-between;
+      background:#fff;border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:10;flex-shrink:0;
+    }
+    .view-title{font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.03em}
+    .view-body{padding:22px;flex:1}
+
+    /* ── Cards ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+
+    /* ── KPI ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+    .kpi-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--sh-sm);
+    }
+    .kpi-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:10px}
+    .kpi-value{font-size:32px;font-weight:800;letter-spacing:-.04em;color:var(--t1);line-height:1}
+    .kpi-icon{font-size:22px;opacity:.7}
+
+    /* ── Badges ── */
+    .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+    .bd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+    .b-open{background:#EFF6FF;color:#1D4ED8}.b-open .bd{background:#2563EB}
+    .b-replied{background:#F0FDF4;color:#15803D}.b-replied .bd{background:#16A34A}
+    .b-resolved{background:#ECFDF5;color:#059669}.b-resolved .bd{background:#10B981}
+    .b-closed{background:#F3F4F6;color:#4B5563}.b-closed .bd{background:#9CA3AF}
+    .b-hold{background:#FFFBEB;color:#D97706}.b-hold .bd{background:#F59E0B}
+    .b-p-low{background:#F0FDF4;color:#15803D}
+    .b-p-medium{background:#FFFBEB;color:#D97706}
+    .b-p-high{background:#FFF7ED;color:#C2410C}
+    .b-p-urgent{background:#FEF2F2;color:#DC2626}
+
+    /* ── Table ── */
+    .dt{width:100%;border-collapse:collapse}
+    .dt thead th{
+      text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--t3)!important;-webkit-text-fill-color:var(--t3)!important;
+      padding:9px 16px;background:var(--surface2)!important;
+      border-bottom:1px solid var(--border);white-space:nowrap;
+    }
+    .dt tbody tr{border-bottom:1px solid var(--border-lt);cursor:pointer;transition:background var(--tr)}
+    .dt tbody tr:hover{background:var(--surface2)}
+    .dt tbody tr:last-child{border-bottom:none}
+    .dt td{padding:11px 16px;vertical-align:middle;color:var(--t2)!important;-webkit-text-fill-color:var(--t2)!important}
+    .tid{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--primary)!important;-webkit-text-fill-color:var(--primary)!important}
+    .tsubj{font-weight:600;font-size:13.5px;color:var(--t1)!important;-webkit-text-fill-color:var(--t1)!important;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .tdate{font-size:12px;color:var(--t3)!important;-webkit-text-fill-color:var(--t3)!important}
+
+    /* ── Filters ── */
+    .filter-bar{padding:12px 16px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--border-lt)}
+    .fpill{
+      display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+      border-radius:20px;font-size:12.5px;font-weight:500;
+      border:1px solid var(--border);background:#fff;color:var(--t3);
+      cursor:pointer;transition:all var(--tr);white-space:nowrap;
+    }
+    .fpill:hover{border-color:var(--primary2);color:var(--primary)}
+    .fpill.active{background:var(--primary);border-color:var(--primary);color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:600}
+    .fcount{font-size:10.5px;font-weight:700;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:10px}
+    .fpill:not(.active) .fcount{background:var(--border-lt);color:var(--t3)}
+    .fsel{
+      font-family:var(--font);font-size:12.5px;font-weight:500;color:var(--t2);
+      background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);
+      padding:5px 28px 5px 10px;cursor:pointer;outline:none;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='%236B7A99' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 6px center;background-size:14px;
+      transition:border-color var(--tr);
+    }
+    .fsel:hover{border-color:var(--primary2)}
+
+    /* ── Pagination ── */
+    .pager{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;font-size:12.5px;color:var(--t3);border-top:1px solid var(--border-lt)}
+    .pager-btns{display:flex;gap:4px}
+    .pbtn{
+      width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+      border-radius:6px;border:1px solid var(--border);background:#fff;
+      font-size:12.5px;font-weight:500;color:var(--t2);cursor:pointer;transition:all var(--tr);
+    }
+    .pbtn:hover:not(:disabled){border-color:var(--primary2);color:var(--primary)}
+    .pbtn.active{background:var(--primary);border-color:var(--primary);color:#fff!important}
+    .pbtn:disabled{opacity:.4;cursor:not-allowed}
+
+    /* ── Buttons ── */
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:var(--r-md);font-family:var(--font);font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;transition:all var(--tr);white-space:nowrap}
+    .btn-primary{background:var(--primary);color:#fff!important;-webkit-text-fill-color:#fff!important;border-color:var(--primary)}
+    .btn-primary:hover{background:var(--primary2);border-color:var(--primary2)}
+    .btn-outline{background:#fff;color:var(--t2);border-color:var(--border)}
+    .btn-outline:hover{border-color:var(--primary2);color:var(--primary)}
+    .btn-ghost{background:none;border:none;color:var(--t3);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:color var(--tr);padding:4px 8px;border-radius:var(--r-sm)}
+    .btn-ghost:hover{color:var(--primary)}
+    .btn-sm{padding:5px 11px;font-size:12px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    /* ── Inputs ── */
+    .fi{display:block;width:100%;font-family:var(--font);font-size:13.5px;color:var(--t1)!important;-webkit-text-fill-color:var(--t1)!important;background:#fff!important;border:1px solid var(--border);border-radius:var(--r-md);padding:9px 13px;outline:none;transition:border-color var(--tr),box-shadow var(--tr)}
+    .fi:focus{border-color:var(--primary2);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .fi.has-err{border-color:var(--danger)}
+    .fl{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px;letter-spacing:.01em}
+    .fe{font-size:11.5px;color:var(--danger);margin-top:4px}
+    .fh{font-size:11.5px;color:var(--t4);margin-top:4px}
+    textarea.fi{resize:vertical;min-height:90px}
+
+    /* ── Slide-over ── */
+    .so-overlay{position:fixed;inset:0;background:rgba(10,22,40,.32);z-index:100;opacity:0;transition:opacity .2s;pointer-events:none}
+    .so-overlay.vis{opacity:1;pointer-events:auto}
+    .so-panel{
+      position:fixed;top:0;right:0;height:100%;width:100%;max-width:560px;
+      background:#fff;box-shadow:var(--sh-xl);z-index:101;
+      display:flex;flex-direction:column;
+      transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .so-panel.open{transform:translateX(0)}
+
+    /* ── Ticket Detail inner ── */
+    .td-hdr{padding:16px 20px;border-bottom:1px solid var(--border-lt);flex-shrink:0}
+    .td-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .td-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .td-subj{font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.03em;line-height:1.35}
+    .td-close-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--t3);font-size:18px;line-height:1;transition:all var(--tr);flex-shrink:0}
+    .td-close-btn:hover{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+    .td-body{flex:1;overflow-y:auto;padding:18px 20px}
+    .td-sec{margin-bottom:20px}
+    .td-sec-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t4);margin-bottom:9px}
+    .td-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+    .td-meta-card{background:var(--surface2);border:1px solid var(--border-lt);border-radius:var(--r-md);padding:11px 13px}
+    .td-ml{font-size:10.5px;font-weight:600;color:var(--t4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .td-mv{font-size:13.5px;font-weight:600;color:var(--t1)}
+    .td-desc{background:var(--surface2);border:1px solid var(--border-lt);border-radius:var(--r-md);padding:13px;font-size:13.5px;color:var(--t2);line-height:1.65;word-break:break-word}
+    .td-desc p{margin-bottom:6px}.td-desc p:last-child{margin-bottom:0}
+    .td-desc ul,.td-desc ol{padding-left:20px;margin-bottom:6px}
+    .td-desc strong,.td-desc b{font-weight:700;color:var(--t1)}
+    .td-desc code{font-family:var(--mono);font-size:12px;background:var(--border-lt);padding:1px 5px;border-radius:4px}
+
+    /* ── Timeline ── */
+    .tl-item{display:flex;gap:11px;position:relative;padding-bottom:14px}
+    .tl-item:last-child{padding-bottom:0}
+    .tl-item:not(:last-child)::before{content:'';position:absolute;left:13px;top:26px;bottom:0;width:1px;background:var(--border)}
+    .tl-dot{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--t3);flex-shrink:0}
+    .tl-text{flex:1;padding-top:3px;font-size:12.5px;color:var(--t2)}
+    .tl-meta{font-size:11px;color:var(--t4);margin-top:2px}
+
+    /* ── Chat bubbles ── */
+    .chat-list{display:flex;flex-direction:column;gap:12px}
+    .chat-wrap{display:flex;gap:8px;align-items:flex-start}
+    .chat-wrap.cust{flex-direction:row-reverse}
+    .chat-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+    .chat-av.agent{background:var(--success-bg);color:var(--success)}
+    .chat-av.cust{background:var(--primary-bg);color:var(--primary)}
+    .chat-col{max-width:78%}
+    .chat-meta{font-size:10.5px;color:var(--t4);margin-bottom:4px}
+    .chat-wrap.cust .chat-meta{text-align:right}
+    .chat-txt{font-size:13px;line-height:1.55;padding:10px 13px;border-radius:12px;word-break:break-word}
+    .agent .chat-txt{background:var(--surface2);border:1px solid var(--border-lt);color:var(--t1);border-radius:2px 12px 12px 12px}
+    .cust .chat-txt{background:var(--primary);color:#fff!important;-webkit-text-fill-color:#fff!important;border-radius:12px 2px 12px 12px}
+
+    /* ── Reply box ── */
+    .reply-box{border-top:1px solid var(--border-lt);padding:14px 20px;flex-shrink:0;background:#fff}
+    .reply-ta{width:100%;min-height:76px;resize:vertical;font-family:var(--font);font-size:13.5px;color:var(--t1)!important;-webkit-text-fill-color:var(--t1)!important;background:#fff!important;border:1px solid var(--border);border-radius:var(--r-md);padding:9px 13px;outline:none;transition:border-color var(--tr),box-shadow var(--tr);margin-bottom:10px}
+    .reply-ta:focus{border-color:var(--primary2);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+
+    /* ── Auth ── */
+    .auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#E0EBFC 0%,var(--bg) 55%,#E9F4FF 100%);padding:20px}
+    .auth-card{width:100%;max-width:376px;background:#fff;border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:30px 32px}
+    .auth-brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:24px}
+    .auth-brand-icon{width:36px;height:36px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px}
+    .auth-brand-name{font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.03em}
+    .auth-h{font-size:19px;font-weight:800;color:var(--t1);letter-spacing:-.03em;margin-bottom:4px}
+    .auth-sub{font-size:13px;color:var(--t3);margin-bottom:22px}
+    .auth-form{display:flex;flex-direction:column;gap:14px}
+    .auth-btn{width:100%;padding:10px 16px;background:var(--primary);color:#fff!important;-webkit-text-fill-color:#fff!important;border:none;border-radius:var(--r-md);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;justify-content:center;gap:8px}
+    .auth-btn:hover:not(:disabled){background:var(--primary2)}
+    .auth-btn:disabled{opacity:.5;cursor:not-allowed}
+    .auth-link{background:none;border:none;font-family:var(--font);font-size:13px;color:var(--primary);cursor:pointer;font-weight:600;padding:0}
+    .auth-link:hover{text-decoration:underline}
+    .auth-foot{text-align:center;margin-top:14px;font-size:11.5px;color:var(--t4)}
+    .otp-fi{width:100%;text-align:center;letter-spacing:.4em;font-size:26px;font-weight:700;font-family:var(--mono);background:#fff!important;border:1.5px solid var(--border);border-radius:var(--r-md);padding:12px;outline:none;transition:border-color var(--tr);color:var(--t1)!important;-webkit-text-fill-color:var(--t1)!important}
+    .otp-fi:focus{border-color:var(--primary2);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .pw-wrap{position:relative}
+    .pw-wrap .fi{padding-right:46px}
+    .pw-toggle{position:absolute;right:0;top:0;height:100%;padding:0 13px;background:none;border:none;color:var(--t3);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;transition:color var(--tr)}
+    .pw-toggle:hover{color:var(--primary)}
+
+    /* ── Modal ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(10,22,40,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-card{width:100%;max-width:520px;background:#fff;border-radius:var(--r-xl);box-shadow:var(--sh-xl)}
+    .modal-hdr{padding:18px 22px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;justify-content:space-between}
+    .modal-title{font-size:16px;font-weight:700;color:var(--t1)}
+    .modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+    .modal-foot{padding:14px 22px;border-top:1px solid var(--border-lt);display:flex;align-items:center;justify-content:flex-end;gap:10px}
+    .succ-banner{background:var(--success-bg);border:1px solid #A7F3D0;border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:flex-start;gap:10px}
+    .succ-banner i{color:var(--success);font-size:18px;flex-shrink:0;margin-top:1px}
+
+    /* ── Toast ── */
+    .toast-wrap{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .toast-item{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;min-width:260px;max-width:360px;padding:12px 14px;border-radius:var(--r-lg);border:1px solid;box-shadow:var(--sh-lg);font-size:13px}
+    .ti-success{background:#ECFDF5;border-color:#A7F3D0;color:#065F46}
+    .ti-error{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+    .ti-info{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF}
+    .t-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+    .t-dis{margin-left:auto;cursor:pointer;opacity:.6;background:none;border:none;font-size:15px;line-height:1;color:inherit}
+    .t-dis:hover{opacity:1}
+    .toast-item-enter-active{animation:t-in .22s ease}
+    .toast-item-leave-active{animation:t-out .18s ease forwards}
+    @keyframes t-in{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes t-out{to{opacity:0;transform:translateX(16px)}}
+
+    /* ── Skeleton ── */
+    @keyframes shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
+    .skel{background:linear-gradient(90deg,#edf0f7 25%,#e3e8f2 50%,#edf0f7 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+
+    /* ── Auth step transitions ── */
+    .astep-enter-active,.astep-leave-active{transition:all .22s ease;position:absolute;width:100%}
+    .astep-enter-from{opacity:0;transform:translateX(16px)}
+    .astep-leave-to{opacity:0;transform:translateX(-16px)}
+    .astep-wrap{position:relative}
+
+    /* ── Misc ── */
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+    .spinner-sm{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+    .empty-state{text-align:center;padding:44px 20px}
+    .empty-icon{font-size:34px;color:var(--t4);margin-bottom:10px}
+    .empty-title{font-size:14.5px;font-weight:700;color:var(--t2)}
+    .empty-body{font-size:13px;color:var(--t4);margin-top:4px}
+    .err-alert{background:var(--danger-bg);border:1px solid #FECACA;border-radius:var(--r-md);padding:10px 13px;font-size:13px;color:var(--danger)}
+
+    /* ── ANIMATIONS ── */
+
+    /* View switch (Dashboard ↔ Tickets) */
+    .view-enter-active{animation:view-in .28s cubic-bezier(.4,0,.2,1)}
+    .view-leave-active{animation:view-out .18s cubic-bezier(.4,0,.2,1) forwards}
+    @keyframes view-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes view-out{to{opacity:0;transform:translateY(-8px)}}
+
+    /* KPI cards staggered entrance */
+    @keyframes kpi-in{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .kpi-card{animation:kpi-in .36s cubic-bezier(.34,1.3,.64,1) both}
+    .kpi-card:nth-child(1){animation-delay:.04s}
+    .kpi-card:nth-child(2){animation-delay:.10s}
+    .kpi-card:nth-child(3){animation-delay:.16s}
+    .kpi-card:nth-child(4){animation-delay:.22s}
+    .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s}
+
+    /* Table row stagger */
+    @keyframes row-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+    .dt tbody tr{animation:row-in .24s ease both}
+    .dt tbody tr:nth-child(1){animation-delay:.02s}
+    .dt tbody tr:nth-child(2){animation-delay:.05s}
+    .dt tbody tr:nth-child(3){animation-delay:.08s}
+    .dt tbody tr:nth-child(4){animation-delay:.11s}
+    .dt tbody tr:nth-child(5){animation-delay:.14s}
+    .dt tbody tr:nth-child(6){animation-delay:.17s}
+    .dt tbody tr:nth-child(7){animation-delay:.20s}
+    .dt tbody tr:nth-child(8){animation-delay:.23s}
+
+    /* Button press */
+    .btn:active:not(:disabled){transform:scale(.97)}
+    .btn{transition:all var(--tr),transform .08s}
+    .auth-btn:active:not(:disabled){transform:scale(.98)}
+
+    /* Badge pulse on status "Open" */
+    @keyframes bd-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .b-open .bd{animation:bd-pulse 2s ease-in-out infinite}
+
+    /* Auth card entrance */
+    @keyframes auth-card-in{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .auth-card{animation:auth-card-in .38s cubic-bezier(.34,1.2,.64,1) both}
+
+    /* Sidebar nav hover bar */
+    .sb-btn{position:relative;overflow:hidden}
+    .sb-btn::before{content:'';position:absolute;left:0;top:20%;height:60%;width:3px;border-radius:0 3px 3px 0;background:var(--primary);transform:scaleY(0);transition:transform .16s cubic-bezier(.4,0,.2,1)}
+    .sb-btn.active::before{transform:scaleY(1)}
+
+    /* Chat bubbles stagger */
+    @keyframes bubble-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .chat-wrap{animation:bubble-in .22s ease both}
+
+    /* ── Status Stepper ── */
+    .stepper-wrap{padding:18px 20px 14px;background:var(--surface2);border-bottom:1px solid var(--border-lt)}
+    .stepper-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t4);margin-bottom:14px}
+    .stepper{display:flex;align-items:flex-start}
+    .step-item{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;z-index:1}
+    .step-item:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;z-index:0;background:var(--border)}
+    .step-item.done:not(:last-child)::after{background:var(--success)}
+    .step-item.active:not(:last-child)::after{background:linear-gradient(90deg,var(--success) 0%,var(--border) 100%)}
+    .step-node{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--border);background:#fff;color:var(--t4);position:relative;z-index:2;transition:all .3s;flex-shrink:0}
+    .step-item.done .step-node{background:var(--success);border-color:var(--success);color:#fff}
+    .step-item.active .step-node{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.18)}
+    .step-name{font-size:9.5px;font-weight:600;color:var(--t4);margin-top:5px;text-align:center;white-space:nowrap;line-height:1.3}
+    .step-item.done .step-name{color:var(--success)}
+    .step-item.active .step-name{color:var(--primary);font-weight:700}
+
+    /* ── Escalation ── */
+    .esc-wrap{display:flex;align-items:center;gap:7px;margin-top:12px}
+    .esc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t4)}
+    .esc-pill{display:inline-flex;align-items:center;justify-content:center;width:36px;height:26px;border-radius:7px;font-size:11.5px;font-weight:700;border:1.5px solid var(--border);background:#fff;color:var(--t3);transition:all .22s}
+    .esc-pill.active{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(24,71,176,.28)}
+
+    /* ── Meta chips ── */
+    .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .meta-chip{background:#fff;border:1px solid var(--border-lt);border-radius:var(--r-md);padding:9px 12px;animation:meta-in .22s ease both}
+    .meta-chip-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-bottom:4px}
+    .meta-chip-v{font-size:13px;font-weight:600;color:var(--t1)}
+
+    /* ── SLA row ── */
+    .sla-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border:1px solid var(--border-lt);border-radius:var(--r-md);margin-top:8px}
+    .sla-icon{font-size:15px;color:var(--accent);flex-shrink:0}
+    .sla-text{font-size:12px;color:var(--t3)}
+    .sla-val{font-weight:600;color:var(--t2)}
+
+    /* Slide-over body scroll fade */
+    .td-body{background:linear-gradient(#fff 0,#fff calc(100% - 40px),transparent 100%)}
+
+    /* Meta cards */
+    @keyframes meta-in{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+    .td-meta-card{animation:meta-in .22s ease both}
+    .td-meta-card:nth-child(1){animation-delay:.04s}
+    .td-meta-card:nth-child(2){animation-delay:.08s}
+    .td-meta-card:nth-child(3){animation-delay:.12s}
+    .td-meta-card:nth-child(4){animation-delay:.16s}
+
+    /* Filter pill transition */
+    .fpill{position:relative;overflow:hidden}
+    .fpill::after{content:'';position:absolute;inset:0;background:var(--primary);border-radius:20px;opacity:0;transition:opacity .16s}
+    .fpill.active::after{opacity:1;z-index:-1}
+
+    /* Modal entrance */
+    @keyframes modal-in{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .modal-card{animation:modal-in .24s cubic-bezier(.34,1.2,.64,1) both}
+
+    /* Success banner */
+    @keyframes succ-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+    .succ-banner{animation:succ-in .28s cubic-bezier(.4,0,.2,1)}
+
+    /* Timeline item stagger */
+    @keyframes tl-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+    .tl-item{animation:tl-in .2s ease both}
+
+    @media(max-width:768px){
+      .sidebar{display:none}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .td-meta-grid{grid-template-columns:1fr}
+      .so-panel{max-width:100%}
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" v-cloak></div>
+
+  <script>
+    /* Jinja-processed constants — resolved before JS runs */
+    const APP_NAME     = "{{ _app_name }}";
+    const COMPANY_NAME = "{{ _company }}";
+    window.APP_NAME    = APP_NAME;
+    window.frappe      = window.frappe || {};
+    {% raw %}
+
+    /* ================================================================
+       UTILITIES
+    ================================================================ */
+    const API_BASE    = "/api/method/helpdesk.helpdesk.portal_api.";
+    const SESSION_KEY = "hd_portal_session";
+
+    function getCSRFToken() {
+      if (window.frappe && window.frappe.csrf_token &&
+          window.frappe.csrf_token !== "None" && window.frappe.csrf_token !== "")
+        return window.frappe.csrf_token;
+      const m = document.querySelector('meta[name="csrf-token"]');
+      if (m && m.content && m.content !== "None" && m.content !== "") return m.content;
+      const c = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+      return c ? decodeURIComponent(c[1]) : "";
+    }
+
+    async function apiCall(method, params) {
+      const url = method.startsWith("/") ? method : API_BASE + method;
+      let res;
+      try {
+        res = await fetch(url, {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "X-Frappe-CSRF-Token": getCSRFToken(), "Accept": "application/json" },
+          body: JSON.stringify(params || {}),
+        });
+      } catch { throw new Error("Network error — check your connection."); }
+      let data;
+      try { data = await res.json(); } catch { throw new Error("Unexpected server response."); }
+      if (!res.ok) throw new Error((data && (data.exception || data.message)) || `Error ${res.status}`);
+      return data && data.message !== undefined ? data.message : data;
+    }
+
+    const sess = {
+      get() { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch { return null; } },
+      save(s) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); },
+      clear() { sessionStorage.removeItem(SESSION_KEY); },
+    };
+
+    function fmtDate(d) {
+      if (!d) return "—";
+      try { return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
+      catch { return d; }
+    }
+
+    /* ================================================================
+       TOAST
+    ================================================================ */
+    const _ts = Vue.reactive({ list: [] });
+    let _tid = 0;
+    function pushToast(type, msg, dur) {
+      const id = ++_tid;
+      _ts.list.push({ id, type, msg });
+      if (dur !== 0) setTimeout(() => { const i = _ts.list.findIndex(t => t.id === id); if (i !== -1) _ts.list.splice(i, 1); }, dur || 4200);
+    }
+    const toast = {
+      success: (m) => pushToast("success", m),
+      error:   (m) => pushToast("error", m, 6000),
+      info:    (m) => pushToast("info", m),
+      dismiss: (id) => { const i = _ts.list.findIndex(t => t.id === id); if (i !== -1) _ts.list.splice(i, 1); },
+    };
+
+    const ToastContainer = {
+      name: "ToastContainer",
+      setup() { return { list: Vue.computed(() => _ts.list), dismiss: toast.dismiss }; },
+      template: `
+        <div class="toast-wrap">
+          <transition-group name="toast-item">
+            <div v-for="t in list" :key="t.id" :class="['toast-item', 'ti-' + t.type]">
+              <span class="t-icon">
+                <i v-if="t.type==='success'" class="ph ph-check-circle"></i>
+                <i v-else-if="t.type==='error'" class="ph ph-x-circle"></i>
+                <i v-else class="ph ph-info"></i>
+              </span>
+              <span style="flex:1">{{ t.msg }}</span>
+              <button class="t-dis" @click="dismiss(t.id)">&times;</button>
+            </div>
+          </transition-group>
+        </div>
+      `,
+    };
+    const ToastPlugin = {
+      install(app) {
+        app.config.globalProperties.$toast = toast;
+        app.provide("toast", toast);
+        const el = document.createElement("div");
+        document.body.appendChild(el);
+        Vue.createApp(ToastContainer).mount(el);
+      },
+    };
+
+    /* ================================================================
+       SHARED: StatusBadge, PriorityBadge, LoadingSkeleton
+    ================================================================ */
+    const StatusBadge = {
+      name: "StatusBadge",
+      props: { status: { type: String, default: "" } },
+      computed: {
+        cls() {
+          return { Open:"b-open", Replied:"b-replied", Resolved:"b-resolved", Closed:"b-closed", "On Hold":"b-hold", Hold:"b-hold" }[this.status] || "b-closed";
+        }
+      },
+      template: `<span :class="['badge', cls]"><span class="bd"></span>{{ status || '—' }}</span>`,
+    };
+
+    const PriorityBadge = {
+      name: "PriorityBadge",
+      props: { priority: { type: String, default: "" } },
+      computed: {
+        cls() {
+          return { Low:"b-p-low", Medium:"b-p-medium", High:"b-p-high", Urgent:"b-p-urgent" }[this.priority] || "b-p-medium";
+        }
+      },
+      template: `<span :class="['badge', cls]">{{ priority || 'Medium' }}</span>`,
+    };
+
+    const LoadingSkeleton = {
+      name: "LoadingSkeleton",
+      props: { rows: { type: Number, default: 5 } },
+      template: `
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div v-for="n in rows" :key="n" style="display:flex;gap:12px;align-items:center">
+            <div class="skel" style="width:80px;height:13px"></div>
+            <div class="skel" style="flex:1;height:13px"></div>
+            <div class="skel" style="width:68px;height:21px;border-radius:20px"></div>
+            <div class="skel" style="width:58px;height:21px;border-radius:20px"></div>
+            <div class="skel" style="width:76px;height:13px"></div>
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       SIDEBAR: SidebarUser, AppSidebar
+    ================================================================ */
+    const SidebarUser = {
+      name: "SidebarUser",
+      props: { email: String },
+      emits: ["logout"],
+      computed: { initial() { return this.email ? this.email[0].toUpperCase() : "U"; } },
+      template: `
+        <div class="sb-footer">
+          <div class="sb-user">
+            <div class="sb-avatar">{{ initial }}</div>
+            <span class="sb-email" :title="email">{{ email }}</span>
+          </div>
+          <button class="sb-btn" style="color:var(--danger)" @click="$emit('logout')">
+            <i class="ph ph-sign-out"></i> Sign out
+          </button>
+        </div>
+      `,
+    };
+
+    const AppSidebar = {
+      name: "AppSidebar",
+      props: { email: String, activeView: String },
+      emits: ["navigate", "raise-ticket", "logout"],
+      components: { SidebarUser },
+      template: `
+        <aside class="sidebar">
+          <div class="sb-logo">
+            <div class="sb-logo-icon"><i class="ph-bold ph-shield-check"></i></div>
+            <span class="sb-logo-text">${APP_NAME}</span>
+          </div>
+          <nav class="sb-nav">
+            <p class="sb-label">Main</p>
+            <button :class="['sb-btn', activeView==='dashboard' && 'active']" @click="$emit('navigate','dashboard')">
+              <i class="ph ph-squares-four"></i> Dashboard
+            </button>
+            <button :class="['sb-btn', activeView==='tickets' && 'active']" @click="$emit('navigate','tickets')">
+              <i class="ph ph-ticket"></i> My Tickets
+            </button>
+            <p class="sb-label">Support</p>
+            <button class="sb-btn" @click="$emit('raise-ticket')">
+              <i class="ph ph-plus-circle"></i> Raise Ticket
+            </button>
+          </nav>
+          <sidebar-user :email="email" @logout="$emit('logout')" />
+        </aside>
+      `,
+    };
+
+    /* ================================================================
+       DASHBOARD: KpiCard, DashboardView
+    ================================================================ */
+    const KpiCard = {
+      name: "KpiCard",
+      props: { label: String, value: [Number, String], icon: { type: String, default: "ph-chart-bar" }, color: { type: String, default: "var(--primary)" } },
+      template: `
+        <div class="kpi-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <p class="kpi-label">{{ label }}</p>
+            <span class="kpi-icon" :style="{color}"><i :class="'ph ' + icon"></i></span>
+          </div>
+          <p class="kpi-value" :style="{color}">{{ value }}</p>
+        </div>
+      `,
+    };
+
+    const DashboardView = {
+      name: "DashboardView",
+      emits: ["open-ticket", "raise-ticket", "navigate"],
+      components: { KpiCard, StatusBadge, LoadingSkeleton },
+      data() {
+        return { stats: { total:0, awaiting_reply:0, in_progress:0, resolved:0 }, recent: [], loading: false, err: "" };
+      },
+      async mounted() { await this.load(); },
+      methods: {
+        fmtDate,
+        async load() {
+          this.loading = true; this.err = "";
+          try {
+            const s = sess.get();
+            const r = await apiCall("get_my_tickets", { email: s.email, token: s.token });
+            const list = r.tickets || (Array.isArray(r) ? r : []);
+            const st = r.stats;
+            if (st) {
+              this.stats = { total: st.total||0, awaiting_reply: st.awaiting_reply||0, in_progress: st.in_progress||0, resolved: st.resolved||0 };
+            } else {
+              this.stats.total = list.length;
+              this.stats.awaiting_reply = list.filter(t => t.status === "Open").length;
+              this.stats.in_progress = list.filter(t => ["Replied","On Hold"].includes(t.status)).length;
+              this.stats.resolved = list.filter(t => ["Resolved","Closed"].includes(t.status)).length;
+            }
+            this.recent = list.slice(0, 6);
+          } catch (e) { this.err = e.message; }
+          finally { this.loading = false; }
+        },
+      },
+      template: `
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div class="view-header">
+            <h1 class="view-title">Dashboard</h1>
+            <button class="btn btn-primary btn-sm" @click="$emit('raise-ticket')">
+              <i class="ph ph-plus"></i> New Ticket
+            </button>
+          </div>
+          <div class="view-body">
+            <div class="kpi-grid">
+              <kpi-card label="Total Tickets"   :value="stats.total"         icon="ph-ticket"           />
+              <kpi-card label="Awaiting Reply"  :value="stats.awaiting_reply" icon="ph-clock"           color="var(--warning)" />
+              <kpi-card label="In Progress"     :value="stats.in_progress"    icon="ph-arrows-clockwise" color="var(--accent)"  />
+              <kpi-card label="Resolved"        :value="stats.resolved"       icon="ph-check-circle"     color="var(--success)" />
+            </div>
+
+            <div class="card">
+              <div style="padding:13px 18px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;justify-content:space-between">
+                <p style="font-size:14px;font-weight:700;color:var(--t1)">Recent Tickets</p>
+                <button class="btn btn-outline btn-sm" @click="$emit('navigate','tickets')">View all →</button>
+              </div>
+
+              <loading-skeleton v-if="loading" :rows="4" />
+              <div v-else-if="err" class="err-alert" style="margin:14px">{{ err }}</div>
+              <div v-else-if="!recent.length" class="empty-state">
+                <p class="empty-icon"><i class="ph ph-ticket"></i></p>
+                <p class="empty-title">No tickets yet</p>
+                <p class="empty-body">Raise a support ticket and we'll help you out.</p>
+              </div>
+              <table v-else class="dt">
+                <thead><tr>
+                  <th>Ticket ID</th><th>Subject</th><th>Status</th><th>Priority</th><th>Updated</th><th></th>
+                </tr></thead>
+                <tbody>
+                  <tr v-for="t in recent" :key="t.name" @click="$emit('open-ticket', t.name)">
+                    <td><span class="tid">#{{ t.name }}</span></td>
+                    <td><span class="tsubj">{{ t.subject }}</span></td>
+                    <td><status-badge :status="t.status" /></td>
+                    <td><span class="tdate">{{ t.priority || 'Medium' }}</span></td>
+                    <td><span class="tdate">{{ fmtDate(t.modified) }}</span></td>
+                    <td><button class="btn btn-outline btn-sm" style="font-size:11.5px" @click.stop="$emit('open-ticket', t.name)">View</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       TICKET LIST: TicketFilters, TicketRow, TablePagination, TicketListView
+    ================================================================ */
+    const TicketFilters = {
+      name: "TicketFilters",
+      props: { activeStatus: String, dateRange: String, priority: String, counts: Object },
+      emits: ["update:activeStatus", "update:dateRange", "update:priority"],
+      data() {
+        return {
+          statuses: ["All", "Open", "Replied", "Resolved", "Closed", "On Hold"],
+          dateRanges: ["All time", "Today", "Last 7 days", "Last 30 days"],
+          priorities: ["All", "Low", "Medium", "High", "Urgent"],
+        };
+      },
+      methods: {
+        count(s) { return (this.counts && this.counts[s]) || 0; },
+      },
+      template: `
+        <div class="filter-bar">
+          <button v-for="s in statuses" :key="s" :class="['fpill', activeStatus===s && 'active']" @click="$emit('update:activeStatus', s)">
+            {{ s }}<span v-if="s!=='All' && count(s)" class="fcount">{{ count(s) }}</span>
+          </button>
+          <div style="flex:1"></div>
+          <select class="fsel" :value="dateRange" @change="$emit('update:dateRange', $event.target.value)">
+            <option v-for="d in dateRanges" :key="d" :value="d">{{ d }}</option>
+          </select>
+          <select class="fsel" :value="priority" @change="$emit('update:priority', $event.target.value)">
+            <option v-for="p in priorities" :key="p" :value="p">{{ p === 'All' ? 'All Priorities' : p }}</option>
+          </select>
+        </div>
+      `,
+    };
+
+    const TicketRow = {
+      name: "TicketRow",
+      props: { ticket: Object },
+      emits: ["open"],
+      components: { StatusBadge, PriorityBadge },
+      methods: { fmtDate },
+      template: `
+        <tr @click="$emit('open', ticket.name)">
+          <td><span class="tid">#{{ ticket.name }}</span></td>
+          <td><span class="tsubj">{{ ticket.subject }}</span></td>
+          <td><status-badge :status="ticket.status" /></td>
+          <td><priority-badge :priority="ticket.priority" /></td>
+          <td><span class="tdate">{{ fmtDate(ticket.creation) }}</span></td>
+          <td><span class="tdate">{{ fmtDate(ticket.modified) }}</span></td>
+          <td>
+            <button class="btn btn-outline btn-sm" style="font-size:11.5px" @click.stop="$emit('open', ticket.name)">
+              View Details
+            </button>
+          </td>
+        </tr>
+      `,
+    };
+
+    const TablePagination = {
+      name: "TablePagination",
+      props: { current: Number, total: Number, perPage: Number, totalCount: Number },
+      emits: ["update:current"],
+      computed: {
+        pages() {
+          const pages = [];
+          for (let i = 1; i <= this.total; i++) pages.push(i);
+          return pages;
+        },
+        start() { return (this.current - 1) * this.perPage + 1; },
+        end() { return Math.min(this.current * this.perPage, this.totalCount); },
+      },
+      template: `
+        <div class="pager">
+          <span>Showing {{ start }}–{{ end }} of {{ totalCount }}</span>
+          <div class="pager-btns">
+            <button class="pbtn" :disabled="current<=1" @click="$emit('update:current',current-1)">‹</button>
+            <button v-for="p in pages" :key="p" :class="['pbtn', p===current && 'active']" @click="$emit('update:current',p)">{{ p }}</button>
+            <button class="pbtn" :disabled="current>=total" @click="$emit('update:current',current+1)">›</button>
+          </div>
+        </div>
+      `,
+    };
+
+    const TicketListView = {
+      name: "TicketListView",
+      emits: ["open-ticket", "raise-ticket"],
+      components: { TicketFilters, TicketRow, TablePagination, LoadingSkeleton },
+      data() {
+        return {
+          tickets: [], loading: false, err: "",
+          activeStatus: "All", dateRange: "All time", priority: "All",
+          page: 1, perPage: 10,
+        };
+      },
+      async mounted() { await this.load(); },
+      computed: {
+        filtered() {
+          let t = this.tickets;
+          if (this.activeStatus !== "All") t = t.filter(x => x.status === this.activeStatus);
+          if (this.priority !== "All") t = t.filter(x => (x.priority || "Medium") === this.priority);
+          if (this.dateRange !== "All time") {
+            const now = Date.now(), d = { "Today": 1, "Last 7 days": 7, "Last 30 days": 30 }[this.dateRange];
+            if (d) t = t.filter(x => (now - new Date(x.modified).getTime()) < d * 86400000);
+          }
+          return t;
+        },
+        paged() { return this.filtered.slice((this.page - 1) * this.perPage, this.page * this.perPage); },
+        totalPages() { return Math.max(1, Math.ceil(this.filtered.length / this.perPage)); },
+        statusCounts() {
+          const c = {};
+          for (const t of this.tickets) c[t.status] = (c[t.status] || 0) + 1;
+          return c;
+        },
+      },
+      watch: {
+        activeStatus() { this.page = 1; },
+        dateRange()    { this.page = 1; },
+        priority()     { this.page = 1; },
+      },
+      methods: {
+        async load() {
+          this.loading = true; this.err = "";
+          try {
+            const s = sess.get();
+            const r = await apiCall("get_my_tickets", { email: s.email, token: s.token });
+            this.tickets = r.tickets || (Array.isArray(r) ? r : []);
+          } catch (e) { this.err = e.message; }
+          finally { this.loading = false; }
+        },
+      },
+      template: `
+        <div style="display:flex;flex-direction:column;height:100%">
+          <div class="view-header">
+            <h1 class="view-title">My Tickets</h1>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" @click="load"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
+              <button class="btn btn-primary btn-sm" @click="$emit('raise-ticket')"><i class="ph ph-plus"></i> New Ticket</button>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="card">
+              <ticket-filters
+                v-model:activeStatus="activeStatus"
+                v-model:dateRange="dateRange"
+                v-model:priority="priority"
+                :counts="statusCounts"
+              />
+
+              <loading-skeleton v-if="loading" :rows="6" />
+              <div v-else-if="err" class="err-alert" style="margin:14px">{{ err }}</div>
+              <div v-else-if="!paged.length" class="empty-state">
+                <p class="empty-icon"><i class="ph ph-funnel"></i></p>
+                <p class="empty-title">No tickets match your filters</p>
+                <p class="empty-body">Try adjusting the status or date range.</p>
+              </div>
+              <table v-else class="dt">
+                <thead><tr>
+                  <th>ID</th><th>Subject</th><th>Status</th><th>Priority</th><th>Submitted</th><th>Updated</th><th></th>
+                </tr></thead>
+                <tbody>
+                  <ticket-row v-for="t in paged" :key="t.name" :ticket="t" @open="$emit('open-ticket', $event)" />
+                </tbody>
+              </table>
+
+              <table-pagination
+                v-if="filtered.length > perPage"
+                :current="page"
+                :total="totalPages"
+                :per-page="perPage"
+                :total-count="filtered.length"
+                @update:current="page = $event"
+              />
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       TICKET DETAIL: TicketStatusStepper, TicketMetaPanel,
+                      TimelineItem, ChatBubble, TicketReplyBox, TicketDetail
+    ================================================================ */
+
+    /* Maps ticket status → step index (1-based) */
+    function statusToStep(status) {
+      return { "Open":1, "Replied":2, "In Progress":2, "On Hold":3, "Awaiting":3, "Resolved":4, "Closed":5 }[status] || 1;
+    }
+
+    /* Maps priority → escalation level (L1 or L2 only — no L3) */
+    function priorityToEsc(priority) {
+      return { "Low":"L1", "Medium":"L1", "High":"L2", "Urgent":"L2" }[priority] || "L1";
+    }
+
+    const TicketStatusStepper = {
+      name: "TicketStatusStepper",
+      props: { ticket: Object },
+      data() {
+        return {
+          steps: [
+            { n: 1, label: "Open" },
+            { n: 2, label: "In\nProgress" },
+            { n: 3, label: "Awaiting" },
+            { n: 4, label: "Resolved" },
+            { n: 5, label: "Closed" },
+          ],
+        };
+      },
+      computed: {
+        currentStep() { return statusToStep(this.ticket.status); },
+        escLevel()    { return priorityToEsc(this.ticket.priority); },
+      },
+      methods: {
+        stepClass(n) {
+          if (n < this.currentStep)  return "step-item done";
+          if (n === this.currentStep) return "step-item active";
+          return "step-item";
+        },
+      },
+      template: `
+        <div class="stepper-wrap">
+          <p class="stepper-label">Status &amp; Escalation</p>
+          <div class="stepper">
+            <div v-for="s in steps" :key="s.n" :class="stepClass(s.n)">
+              <div class="step-node">
+                <i v-if="s.n < currentStep" class="ph-bold ph-check" style="font-size:11px"></i>
+                <span v-else>{{ s.n }}</span>
+              </div>
+              <span class="step-name" style="white-space:pre-line">{{ s.label }}</span>
+            </div>
+          </div>
+          <div class="esc-wrap">
+            <span class="esc-label">Escalation:</span>
+            <span :class="['esc-pill', escLevel==='L1' && 'active']">L1</span>
+            <span :class="['esc-pill', escLevel==='L2' && 'active']">L2</span>
+          </div>
+        </div>
+      `,
+    };
+
+    const TicketMetaPanel = {
+      name: "TicketMetaPanel",
+      props: { ticket: Object },
+      components: { StatusBadge, PriorityBadge },
+      methods: { fmtDate },
+      computed: {
+        responseDue() {
+          if (!this.ticket.response_by) return null;
+          const d = new Date(this.ticket.response_by);
+          return isNaN(d) ? null : d;
+        },
+        resolutionDue() {
+          if (!this.ticket.resolution_by) return null;
+          const d = new Date(this.ticket.resolution_by);
+          return isNaN(d) ? null : d;
+        },
+        fmtResponse() { return this.responseDue ? this.fmtDate(this.responseDue) : null; },
+        fmtResolution() { return this.resolutionDue ? this.fmtDate(this.resolutionDue) : null; },
+      },
+      template: `
+        <div>
+          <div class="meta-row" style="margin-bottom:8px">
+            <div class="meta-chip" style="animation-delay:.03s">
+              <p class="meta-chip-l">Priority</p>
+              <priority-badge :priority="ticket.priority" />
+            </div>
+            <div class="meta-chip" style="animation-delay:.07s">
+              <p class="meta-chip-l">Status</p>
+              <status-badge :status="ticket.status" />
+            </div>
+            <div class="meta-chip" style="animation-delay:.11s">
+              <p class="meta-chip-l">Submitted</p>
+              <p class="meta-chip-v">{{ fmtDate(ticket.creation) }}</p>
+            </div>
+            <div class="meta-chip" style="animation-delay:.15s">
+              <p class="meta-chip-l">Last Updated</p>
+              <p class="meta-chip-v">{{ fmtDate(ticket.modified) }}</p>
+            </div>
+          </div>
+          <div v-if="fmtResolution" class="sla-row">
+            <i class="ph ph-clock sla-icon"></i>
+            <span class="sla-text">Resolution due: <span class="sla-val">{{ fmtResolution }}</span></span>
+          </div>
+        </div>
+      `,
+    };
+
+    const TimelineItem = {
+      name: "TimelineItem",
+      props: { item: Object },
+      methods: { fmtDate },
+      computed: {
+        icon() {
+          const a = (this.item.action || "").toLowerCase();
+          if (a.includes("creat") || a.includes("open")) return "ph ph-ticket";
+          if (a.includes("resolv") || a.includes("clos")) return "ph ph-check";
+          if (a.includes("comment") || a.includes("repl")) return "ph ph-chat";
+          if (a.includes("assign")) return "ph ph-user";
+          return "ph ph-clock";
+        }
+      },
+      template: `
+        <div class="tl-item">
+          <div class="tl-dot"><i :class="icon"></i></div>
+          <div style="flex:1;padding-top:3px">
+            <p class="tl-text">{{ item.action }}</p>
+            <p class="tl-meta">{{ item.owner }} · {{ fmtDate(item.creation) }}</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const ChatBubble = {
+      name: "ChatBubble",
+      props: { comment: Object, email: String },
+      methods: { fmtDate },
+      computed: {
+        isCustomer() {
+          const c = this.comment.commented_by || "";
+          return c === "Administrator" && this.comment.content.startsWith("[Customer:");
+        },
+        senderName() {
+          const c = this.comment;
+          const raw = c.commented_by === "Administrator" && c.content.startsWith("[Customer:")
+            ? c.content.match(/^\[Customer:\s*([^\]]+)\]/)?.[1] || "You"
+            : (c.commented_by || "Support");
+          return raw;
+        },
+        displayContent() {
+          const s = this.comment.content || "";
+          return s.replace(/^\[Customer:[^\]]+\]\s*\n?\n?/, "");
+        },
+        initial() { return (this.senderName || "A")[0].toUpperCase(); },
+      },
+      template: `
+        <div :class="['chat-wrap', isCustomer ? 'cust' : 'agent']">
+          <div :class="['chat-av', isCustomer ? 'cust' : 'agent']">{{ initial }}</div>
+          <div class="chat-col">
+            <p class="chat-meta">{{ senderName }} · {{ fmtDate(comment.creation) }}</p>
+            <div class="chat-txt" v-html="displayContent"></div>
+          </div>
+        </div>
+      `,
+    };
+
+    const TicketReplyBox = {
+      name: "TicketReplyBox",
+      props: { ticketName: String, email: String, token: String, isClosed: Boolean },
+      emits: ["reply-sent"],
+      inject: ["toast"],
+      data() { return { message: "", sending: false, err: "" }; },
+      methods: {
+        async send() {
+          if (!this.message.trim()) return;
+          this.sending = true; this.err = "";
+          try {
+            await apiCall("submit_reply", { email: this.email, token: this.token, ticket_name: this.ticketName, message: this.message });
+            this.toast.success("Reply sent successfully.");
+            this.message = "";
+            this.$emit("reply-sent");
+          } catch (e) { this.err = e.message; this.toast.error(e.message); }
+          finally { this.sending = false; }
+        },
+      },
+      template: `
+        <div class="reply-box">
+          <template v-if="!isClosed">
+            <textarea class="reply-ta" v-model="message" placeholder="Type your reply…" :disabled="sending"></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span v-if="err" style="font-size:12px;color:var(--danger)">{{ err }}</span>
+              <span v-else></span>
+              <button class="btn btn-primary btn-sm" :disabled="sending || !message.trim()" @click="send">
+                <span v-if="sending" class="spinner"></span>
+                <i v-else class="ph ph-paper-plane-tilt"></i>
+                {{ sending ? 'Sending…' : 'Send Reply' }}
+              </button>
+            </div>
+          </template>
+          <div v-else style="text-align:center;padding:10px;font-size:13px;color:var(--t3)">
+            <i class="ph ph-lock-simple"></i> This ticket is {{ isClosed ? 'closed' : '' }}. Replies are disabled.
+          </div>
+        </div>
+      `,
+    };
+
+    const TicketDetail = {
+      name: "TicketDetail",
+      props: { ticketName: String, email: String, token: String, show: Boolean },
+      emits: ["close", "refreshed"],
+      components: { TicketStatusStepper, TicketMetaPanel, TimelineItem, ChatBubble, TicketReplyBox, StatusBadge, PriorityBadge },
+      data() {
+        return { ticket: null, comments: [], activity: [], loading: false, err: "", activeTab: "conversation" };
+      },
+      computed: {
+        isClosed() { return this.ticket && ["Resolved", "Closed"].includes(this.ticket.status); },
+        tabs()     { return [{ k:"conversation", l:"Conversation", ic:"ph-chat-circle-dots" }, { k:"timeline", l:"Activity", ic:"ph-list-bullets" }]; },
+      },
+      watch: {
+        ticketName: { immediate: true, async handler(n) { if (n && this.show) await this.fetch(); } },
+        show:       { async handler(v) { if (v && this.ticketName) await this.fetch(); } },
+      },
+      methods: {
+        fmtDate,
+        async fetch() {
+          this.loading = true; this.err = ""; this.ticket = null; this.comments = []; this.activity = [];
+          try {
+            const r = await apiCall("get_ticket_detail", { email: this.email, token: this.token, ticket_name: this.ticketName });
+            this.ticket = r.ticket || null;
+            this.comments = r.comments || [];
+            this.activity = r.activity || [];
+          } catch (e) { this.err = e.message; }
+          finally { this.loading = false; }
+        },
+        async onReplySent() { await this.fetch(); this.$emit("refreshed"); },
+      },
+      template: `
+        <div>
+          <div :class="['so-overlay', show && 'vis']" @click="$emit('close')"></div>
+          <div :class="['so-panel', show && 'open']" style="max-width:600px">
+
+            <!-- ── Header ── -->
+            <div style="border-bottom:1px solid var(--border-lt);padding:14px 20px;flex-shrink:0">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+                <div>
+                  <span style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--primary);display:block;margin-bottom:4px">
+                    <i class="ph ph-ticket"></i> #{{ ticket ? ticket.name : '—' }}
+                  </span>
+                  <p style="font-size:15px;font-weight:800;color:var(--t1);letter-spacing:-.03em;line-height:1.35">
+                    <template v-if="ticket">{{ ticket.subject }}</template>
+                    <template v-else-if="loading"><span class="skel" style="width:240px;height:18px;display:block;border-radius:4px"></span></template>
+                    <template v-else>Ticket Detail</template>
+                  </p>
+                </div>
+                <button class="td-close-btn" @click="$emit('close')" style="flex-shrink:0">&times;</button>
+              </div>
+              <div v-if="ticket" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <status-badge :status="ticket.status" />
+                <priority-badge :priority="ticket.priority" />
+                <span style="font-size:11.5px;color:var(--t4);margin-left:4px">{{ fmtDate(ticket.modified) }}</span>
+              </div>
+            </div>
+
+            <!-- ── Loading skeleton ── -->
+            <div v-if="loading" style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+              <div class="skel" style="height:130px;border-radius:12px"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div v-for="n in 4" :key="n" class="skel" style="height:58px;border-radius:10px"></div>
+              </div>
+              <div class="skel" style="height:80px;border-radius:10px"></div>
+              <div v-for="n in 3" :key="'b'+n" style="display:flex;gap:10px">
+                <div class="skel" style="width:26px;height:26px;border-radius:50%;flex-shrink:0"></div>
+                <div class="skel" style="flex:1;height:64px;border-radius:10px"></div>
+              </div>
+            </div>
+
+            <!-- ── Error ── -->
+            <div v-else-if="err" style="flex:1;padding:20px">
+              <div class="err-alert">{{ err }}</div>
+              <button class="btn btn-outline btn-sm" style="margin-top:12px" @click="fetch">Retry</button>
+            </div>
+
+            <!-- ── Content ── -->
+            <template v-else-if="ticket">
+
+              <!-- Status stepper + escalation -->
+              <ticket-status-stepper :ticket="ticket" />
+
+              <div class="td-body">
+
+                <!-- Details grid -->
+                <div class="td-sec">
+                  <p class="td-sec-title">Details</p>
+                  <ticket-meta-panel :ticket="ticket" />
+                </div>
+
+                <!-- Description -->
+                <div class="td-sec">
+                  <p class="td-sec-title">Description</p>
+                  <div v-if="ticket.description" class="td-desc" v-html="ticket.description"></div>
+                  <div v-else class="td-desc" style="color:var(--t4);font-style:italic">No description provided.</div>
+                </div>
+
+                <!-- Resolution details if resolved -->
+                <div v-if="ticket.resolution_details" class="td-sec">
+                  <p class="td-sec-title" style="color:var(--success)"><i class="ph ph-check-circle"></i> Resolution</p>
+                  <div class="td-desc" style="border-color:#A7F3D0;background:#F0FDF4" v-html="ticket.resolution_details"></div>
+                </div>
+
+                <!-- Tabs -->
+                <div style="display:flex;border-bottom:2px solid var(--border-lt);margin-bottom:16px">
+                  <button v-for="tab in tabs" :key="tab.k"
+                    :style="{
+                      display:'flex',alignItems:'center',gap:'6px',
+                      padding:'8px 14px',fontFamily:'var(--font)',fontSize:'12.5px',fontWeight:600,
+                      border:'none',cursor:'pointer',background:'none',
+                      color: activeTab===tab.k ? 'var(--primary)' : 'var(--t3)',
+                      borderBottom: activeTab===tab.k ? '2px solid var(--primary)' : '2px solid transparent',
+                      marginBottom:'-2px',transition:'all var(--tr)'
+                    }"
+                    @click="activeTab=tab.k">
+                    <i :class="'ph ' + tab.ic"></i> {{ tab.l }}
+                    <span v-if="tab.k==='conversation' && comments.length"
+                      style="background:var(--primary-bg);color:var(--primary);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">
+                      {{ comments.length }}
+                    </span>
+                  </button>
+                </div>
+
+                <!-- Conversation tab -->
+                <div v-if="activeTab==='conversation'">
+                  <div v-if="!comments.length" class="empty-state" style="padding:28px 0">
+                    <p class="empty-icon"><i class="ph ph-chat-circle"></i></p>
+                    <p class="empty-title">No messages yet</p>
+                    <p class="empty-body">Send a reply below to start the conversation.</p>
+                  </div>
+                  <div v-else class="chat-list">
+                    <chat-bubble v-for="(c,i) in comments" :key="i" :comment="c" :email="email" :style="{animationDelay: (i*0.055)+'s'}" />
+                  </div>
+                </div>
+
+                <!-- Activity tab -->
+                <div v-else-if="activeTab==='timeline'">
+                  <div v-if="!activity.length" class="empty-state" style="padding:28px 0">
+                    <p class="empty-icon"><i class="ph ph-list-bullets"></i></p>
+                    <p class="empty-title">No activity recorded</p>
+                  </div>
+                  <div v-else>
+                    <timeline-item v-for="(a,i) in activity" :key="i" :item="a" :style="{animationDelay: (i*0.06)+'s'}" />
+                  </div>
+                </div>
+
+              </div><!-- end td-body -->
+
+              <!-- Reply box -->
+              <ticket-reply-box
+                :ticket-name="ticket.name"
+                :email="email"
+                :token="token"
+                :is-closed="isClosed"
+                @reply-sent="onReplySent"
+              />
+            </template>
+
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       RAISE TICKET: RaiseTicket
+    ================================================================ */
+    const RaiseTicket = {
+      name: "RaiseTicket",
+      props: { email: String, token: String, show: Boolean },
+      emits: ["close", "created"],
+      inject: ["toast"],
+      data() {
+        return {
+          subject: "", description: "", priority: "Medium",
+          loading: false, err: "", created: false, newName: "",
+          priorities: ["Low", "Medium", "High", "Urgent"],
+          subjErr: "", descErr: "",
+        };
+      },
+      computed: {
+        descLen() { return this.description.length; },
+        descRemaining() { return Math.max(0, 20 - this.descLen); },
+      },
+      watch: {
+        show(v) { if (v) this.reset(); }
+      },
+      methods: {
+        reset() { this.subject=""; this.description=""; this.priority="Medium"; this.err=""; this.created=false; this.newName=""; this.subjErr=""; this.descErr=""; },
+        validate() {
+          this.subjErr = this.subject.trim().length < 5 ? "Subject must be at least 5 characters." : "";
+          this.descErr = this.description.trim().length < 20 ? "Please describe your issue (min 20 chars)." : "";
+          return !this.subjErr && !this.descErr;
+        },
+        async submit() {
+          if (!this.validate()) return;
+          this.loading = true; this.err = "";
+          try {
+            const r = await apiCall("raise_ticket", { email: this.email, token: this.token, subject: this.subject, description: this.description, priority: this.priority });
+            if (r && r.success) {
+              this.newName = r.ticket_name || "";
+              this.created = true;
+              this.toast.success("Ticket raised successfully!");
+              this.$emit("created", this.newName);
+            } else { this.err = (r && r.message) || "Failed to raise ticket."; }
+          } catch (e) { this.err = e.message; }
+          finally { this.loading = false; }
+        },
+      },
+      template: `
+        <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+          <div class="modal-card">
+            <div class="modal-hdr">
+              <p class="modal-title"><i class="ph ph-ticket" style="margin-right:6px"></i>Raise a Support Ticket</p>
+              <button class="td-close-btn" @click="$emit('close')">&times;</button>
+            </div>
+
+            <div v-if="created" class="modal-body">
+              <div class="succ-banner">
+                <i class="ph ph-check-circle"></i>
+                <div>
+                  <p style="font-weight:700;color:var(--success)">Ticket raised!</p>
+                  <p style="font-size:13px;color:var(--success);margin-top:2px">Your ticket <strong>#{{ newName }}</strong> has been created. Our team will respond shortly.</p>
+                </div>
+              </div>
+            </div>
+            <div v-else class="modal-body">
+              <div v-if="err" class="err-alert">{{ err }}</div>
+              <div>
+                <label class="fl">Subject <span style="color:var(--danger)">*</span></label>
+                <input :class="['fi', subjErr && 'has-err']" v-model="subject" placeholder="Brief summary of your issue" :disabled="loading" />
+                <p v-if="subjErr" class="fe">{{ subjErr }}</p>
+              </div>
+              <div>
+                <label class="fl">Priority</label>
+                <select class="fi" v-model="priority" :disabled="loading">
+                  <option v-for="p in priorities" :key="p" :value="p">{{ p }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="fl">Description <span style="color:var(--danger)">*</span></label>
+                <textarea :class="['fi', descErr && 'has-err']" v-model="description" rows="5" placeholder="Describe your issue in detail…" :disabled="loading"></textarea>
+                <p v-if="descErr" class="fe">{{ descErr }}</p>
+                <p v-else class="fh">{{ descLen }} characters{{ descRemaining > 0 ? ' · ' + descRemaining + ' more needed' : '' }}</p>
+              </div>
+            </div>
+
+            <div class="modal-foot">
+              <button class="btn btn-outline" @click="$emit('close')">{{ created ? 'Close' : 'Cancel' }}</button>
+              <button v-if="!created" class="btn btn-primary" :disabled="loading" @click="submit">
+                <span v-if="loading" class="spinner"></span>
+                <i v-else class="ph ph-paper-plane-tilt"></i>
+                {{ loading ? 'Submitting…' : 'Submit Ticket' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       AUTH: AuthStepEmail, AuthStepOtp, AuthStepSetPassword,
+             AuthStepLogin, SupportTrackerAuth
+    ================================================================ */
+    const AuthStepEmail = {
+      name: "AuthStepEmail",
+      props: { loading: Boolean, error: String },
+      emits: ["submit"],
+      data() { return { email: "" }; },
+      template: `
+        <div>
+          <p class="auth-h">Welcome back</p>
+          <p class="auth-sub">Enter your email to continue.</p>
+          <form class="auth-form" @submit.prevent="$emit('submit', email)">
+            <div>
+              <label class="fl">Email address</label>
+              <input class="fi" type="email" v-model="email" placeholder="you@company.com" autocomplete="email" required :disabled="loading" />
+            </div>
+            <div v-if="error" class="err-alert">{{ error }}</div>
+            <button type="submit" class="auth-btn" :disabled="loading || !email.trim()">
+              <span v-if="loading" class="spinner"></span>
+              {{ loading ? 'Checking…' : 'Continue' }}
+              <i v-if="!loading" class="ph ph-arrow-right"></i>
+            </button>
+          </form>
+        </div>
+      `,
+    };
+
+    const AuthStepOtp = {
+      name: "AuthStepOtp",
+      props: { email: String, loading: Boolean, error: String, resendSeconds: Number, canResend: Boolean },
+      emits: ["submit", "resend", "back"],
+      data() { return { otp: "" }; },
+      methods: {
+        onInput(e) { this.otp = e.target.value.replace(/\D/g,"").slice(0,6); },
+      },
+      template: `
+        <div>
+          <p class="auth-h">Check your email</p>
+          <p class="auth-sub">We sent a 6-digit code to <strong>{{ email }}</strong></p>
+          <form class="auth-form" @submit.prevent="$emit('submit', otp)">
+            <input class="otp-fi" type="text" inputmode="numeric" autocomplete="one-time-code"
+                   maxlength="6" placeholder="——————" :value="otp" @input="onInput" :disabled="loading" />
+            <div v-if="error" class="err-alert">{{ error }}</div>
+            <button type="submit" class="auth-btn" :disabled="loading || otp.length!==6">
+              <span v-if="loading" class="spinner"></span>
+              {{ loading ? 'Verifying…' : 'Verify code' }}
+            </button>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+              <button type="button" class="auth-link" @click="$emit('back')">← Change email</button>
+              <button type="button" class="auth-link" :disabled="!canResend" :style="{opacity: canResend ? 1 : 0.5}" @click="canResend && $emit('resend')">
+                {{ resendSeconds > 0 ? 'Resend in ' + resendSeconds + 's' : 'Resend code' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      `,
+    };
+
+    const AuthStepSetPassword = {
+      name: "AuthStepSetPassword",
+      props: { email: String, otp: String, loading: Boolean, error: String, forgotMode: Boolean },
+      emits: ["submit", "back"],
+      data() { return { pw: "", confirm: "", showPw: false }; },
+      computed: { match() { return !this.confirm || this.pw === this.confirm; } },
+      template: `
+        <div>
+          <p class="auth-h">{{ forgotMode ? 'Reset password' : 'Create password' }}</p>
+          <p class="auth-sub">{{ forgotMode ? 'Set a new password for your account.' : 'Create a password to secure your account.' }}</p>
+          <form class="auth-form" @submit.prevent="match && pw.length>=6 && $emit('submit', pw)">
+            <div>
+              <label class="fl">New password</label>
+              <div class="pw-wrap">
+                <input class="fi" :type="showPw ? 'text' : 'password'" v-model="pw" placeholder="At least 6 characters" autocomplete="new-password" :disabled="loading" />
+                <button type="button" class="pw-toggle" @click="showPw=!showPw">{{ showPw ? 'Hide' : 'Show' }}</button>
+              </div>
+            </div>
+            <div>
+              <label class="fl">Confirm password</label>
+              <input :class="['fi', confirm && !match && 'has-err']" :type="showPw ? 'text' : 'password'" v-model="confirm" placeholder="Re-enter password" autocomplete="new-password" :disabled="loading" />
+              <p v-if="confirm && !match" class="fe">Passwords do not match.</p>
+            </div>
+            <div v-if="error" class="err-alert">{{ error }}</div>
+            <button type="submit" class="auth-btn" :disabled="loading || !pw || !confirm || !match || pw.length<6">
+              <span v-if="loading" class="spinner"></span>
+              {{ loading ? 'Saving…' : (forgotMode ? 'Reset password' : 'Create account') }}
+            </button>
+            <button type="button" class="auth-link" style="text-align:center" @click="$emit('back')">← Start over</button>
+          </form>
+        </div>
+      `,
+    };
+
+    const AuthStepLogin = {
+      name: "AuthStepLogin",
+      props: { email: String, loading: Boolean, error: String },
+      emits: ["submit", "forgot", "back"],
+      data() { return { pw: "", showPw: false }; },
+      template: `
+        <div>
+          <p class="auth-h">Sign in</p>
+          <p class="auth-sub">Welcome back, <strong>{{ email }}</strong></p>
+          <form class="auth-form" @submit.prevent="$emit('submit', pw)">
+            <div>
+              <label class="fl">Password</label>
+              <div class="pw-wrap">
+                <input class="fi" :type="showPw ? 'text' : 'password'" v-model="pw" placeholder="Your password" autocomplete="current-password" required :disabled="loading" />
+                <button type="button" class="pw-toggle" @click="showPw=!showPw">{{ showPw ? 'Hide' : 'Show' }}</button>
+              </div>
+            </div>
+            <div v-if="error" class="err-alert">{{ error }}</div>
+            <button type="submit" class="auth-btn" :disabled="loading || !pw">
+              <span v-if="loading" class="spinner"></span>
+              {{ loading ? 'Signing in…' : 'Sign in' }}
+            </button>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+              <button type="button" class="auth-link" @click="$emit('back')">← Change email</button>
+              <button type="button" class="auth-link" @click="$emit('forgot')">Forgot password?</button>
+            </div>
+          </form>
+        </div>
+      `,
+    };
+
+    const SupportTrackerAuth = {
+      name: "SupportTrackerAuth",
+      emits: ["logged-in"],
+      components: { AuthStepEmail, AuthStepOtp, AuthStepSetPassword, AuthStepLogin },
+      data() {
+        return {
+          step: "email",
+          email: "", otp: "", loading: false, error: "",
+          resendSeconds: 0, resendTimer: null, forgotMode: false,
+        };
+      },
+      computed: { canResend() { return this.resendSeconds <= 0; } },
+      beforeUnmount() { clearInterval(this.resendTimer); },
+      methods: {
+        async checkEmail(email) {
+          this.loading = true; this.error = "";
+          try {
+            this.email = email;
+            const r = await apiCall("check_email", { email });
+            if (r.exists && r.verified) {
+              this.step = "password";
+            } else {
+              await this.sendOtp();
+              this.step = "otp";
+            }
+          } catch (e) { this.error = e.message; }
+          finally { this.loading = false; }
+        },
+        async sendOtp() {
+          await apiCall("send_otp", { email: this.email });
+          this.startResendTimer();
+        },
+        startResendTimer() {
+          this.resendSeconds = 30;
+          clearInterval(this.resendTimer);
+          this.resendTimer = setInterval(() => { if (--this.resendSeconds <= 0) clearInterval(this.resendTimer); }, 1000);
+        },
+        async verifyOtp(otp) {
+          this.loading = true; this.error = "";
+          try {
+            this.otp = otp;
+            const r = await apiCall("verify_otp", { email: this.email, otp });
+            if (r.valid) { this.step = "setpw"; }
+            else { this.error = r.message || "Invalid code. Please try again."; }
+          } catch (e) { this.error = e.message; }
+          finally { this.loading = false; }
+        },
+        async setPassword(pw) {
+          this.loading = true; this.error = "";
+          try {
+            const r = await apiCall("set_password", { email: this.email, otp: this.otp, new_password: pw });
+            if (r.success) { sess.save({ email: this.email, token: r.token }); this.$emit("logged-in", { email: this.email, token: r.token }); }
+            else { this.error = r.message || "Could not save password."; }
+          } catch (e) { this.error = e.message; }
+          finally { this.loading = false; }
+        },
+        async login(pw) {
+          this.loading = true; this.error = "";
+          try {
+            const r = await apiCall("portal_login", { email: this.email, password: pw });
+            if (r.success) { sess.save({ email: this.email, token: r.token }); this.$emit("logged-in", { email: this.email, token: r.token }); }
+            else { this.error = r.message || "Incorrect email or password."; }
+          } catch (e) { this.error = e.message; }
+          finally { this.loading = false; }
+        },
+        forgotPassword() { this.forgotMode = true; this.step = "otp"; this.sendOtp(); },
+        backToEmail() { this.step = "email"; this.error = ""; this.forgotMode = false; },
+      },
+      template: `
+        <div class="auth-page">
+          <div class="auth-card">
+            <div class="auth-brand">
+              <div class="auth-brand-icon"><i class="ph-bold ph-shield-check"></i></div>
+              <span class="auth-brand-name">${APP_NAME}</span>
+            </div>
+            <div class="astep-wrap" style="min-height:260px">
+              <transition name="astep">
+                <auth-step-email    v-if="step==='email'"    :key="'email'"    :loading="loading" :error="error" @submit="checkEmail"    />
+                <auth-step-otp      v-else-if="step==='otp'"   :key="'otp'"    :email="email" :loading="loading" :error="error" :resend-seconds="resendSeconds" :can-resend="canResend" @submit="verifyOtp" @resend="sendOtp" @back="backToEmail" />
+                <auth-step-set-password v-else-if="step==='setpw'" :key="'setpw'" :email="email" :otp="otp" :loading="loading" :error="error" :forgot-mode="forgotMode" @submit="setPassword" @back="backToEmail" />
+                <auth-step-login    v-else-if="step==='password'" :key="'pw'"   :email="email" :loading="loading" :error="error" @submit="login" @forgot="forgotPassword" @back="backToEmail" />
+              </transition>
+            </div>
+            <p class="auth-foot">&copy; ${new Date().getFullYear()} ${APP_NAME} &middot; Secure Support Access</p>
+          </div>
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       ROOT APP
+    ================================================================ */
+    const RootApp = {
+      name: "RootApp",
+      components: { AppSidebar, DashboardView, TicketListView, TicketDetail, RaiseTicket, SupportTrackerAuth },
+      data() {
+        return {
+          email: "", token: "", authenticated: false,
+          activeView: "dashboard",
+          openTicketName: null, showTicketDetail: false,
+          showRaiseTicket: false,
+        };
+      },
+      async mounted() {
+        const s = sess.get();
+        if (s && s.email && s.token) {
+          try {
+            const r = await apiCall("validate_token", { email: s.email, token: s.token });
+            if (r && r.valid) { this.email = s.email; this.token = s.token; this.authenticated = true; }
+            else { sess.clear(); }
+          } catch { sess.clear(); }
+        }
+      },
+      methods: {
+        onLoggedIn(s) { this.email = s.email; this.token = s.token; this.authenticated = true; },
+        async logout() {
+          try { await apiCall("portal_logout", { email: this.email, token: this.token }); } catch { /* ignore */ }
+          sess.clear();
+          this.authenticated = false; this.email = ""; this.token = "";
+          this.showTicketDetail = false; this.showRaiseTicket = false;
+        },
+        openTicket(name) { this.openTicketName = name; this.showTicketDetail = true; },
+        closeTicket() { this.showTicketDetail = false; },
+        onTicketCreated() { this.showRaiseTicket = false; },
+        navigate(view) { this.activeView = view; },
+      },
+      template: `
+        <div>
+          <support-tracker-auth v-if="!authenticated" @logged-in="onLoggedIn" />
+          <div v-else class="portal-layout">
+            <app-sidebar
+              :email="email"
+              :active-view="activeView"
+              @navigate="navigate"
+              @raise-ticket="showRaiseTicket = true"
+              @logout="logout"
+            />
+            <main class="main-col" style="overflow:hidden;position:relative">
+              <transition name="view" mode="out-in">
+                <dashboard-view
+                  v-if="activeView==='dashboard'"
+                  :key="'dashboard'"
+                  :email="email"
+                  @open-ticket="openTicket"
+                  @raise-ticket="showRaiseTicket = true"
+                  @navigate="navigate"
+                />
+                <ticket-list-view
+                  v-else-if="activeView==='tickets'"
+                  :key="'tickets'"
+                  @open-ticket="openTicket"
+                  @raise-ticket="showRaiseTicket = true"
+                />
+              </transition>
+            </main>
+          </div>
+
+          <!-- Slide-over detail panel -->
+          <ticket-detail
+            :ticket-name="openTicketName"
+            :email="email"
+            :token="token"
+            :show="showTicketDetail"
+            @close="closeTicket"
+            @refreshed="() => {}"
+          />
+
+          <!-- Raise Ticket modal -->
+          <raise-ticket
+            :email="email"
+            :token="token"
+            :show="showRaiseTicket"
+            @close="showRaiseTicket = false"
+            @created="onTicketCreated"
+          />
+        </div>
+      `,
+    };
+
+    /* ================================================================
+       BOOTSTRAP
+    ================================================================ */
+    const app = Vue.createApp(RootApp);
+    app.use(ToastPlugin);
+    app.mount("#app");
+    {% endraw %}
+  </script>
+</body>
+</html>

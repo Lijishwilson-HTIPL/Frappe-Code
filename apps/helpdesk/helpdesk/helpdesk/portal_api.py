@@ -71,7 +71,8 @@ def check_email(email=None):
             return {"exists": False, "verified": False}
         return {"exists": True, "verified": bool(user.is_verified)}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        frappe.log_error(frappe.get_traceback(), "portal_api.check_email")
+        return {"success": False, "message": "An unexpected error occurred. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +123,7 @@ def send_otp(email=None):
         return {"success": True}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.send_otp")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to send OTP. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ def verify_otp(email=None, otp=None):
         return {"valid": True, "message": "OTP verified."}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.verify_otp")
-        return {"valid": False, "message": str(e)}
+        return {"valid": False, "message": "An unexpected error occurred. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +199,7 @@ def set_password(email=None, otp=None, new_password=None):
         return {"success": True, "token": token, "email": email}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.set_password")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to set password. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -218,10 +219,17 @@ def portal_login(email=None, password=None):
         if not user.is_verified:
             return {"success": False, "message": "Account not verified. Please complete OTP verification."}
 
-        if not user.password_hash:
-            return {"success": False, "message": "Password not set. Please use OTP to set a password."}
+        # Frappe stores Password fields encrypted in __Auth, not in the doctype column.
+        # Must use get_decrypted_password to retrieve the actual werkzeug hash.
+        from frappe.utils.password import get_decrypted_password
+        stored_hash = get_decrypted_password(
+            "Support Portal User", user.name, "password_hash", raise_exception=False
+        )
 
-        if not check_password_hash(user.password_hash, password):
+        if not stored_hash:
+            return {"success": False, "message": "Password not set. Please use Forgot Password to set one."}
+
+        if not check_password_hash(stored_hash, password):
             return {"success": False, "message": "Invalid credentials."}
 
         token = secrets.token_hex(32)
@@ -235,7 +243,7 @@ def portal_login(email=None, password=None):
         return {"success": True, "token": token, "email": email}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.portal_login")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Login failed. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +354,7 @@ def get_my_tickets(email=None, token=None):
         return {"tickets": tickets, "stats": stats}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.get_my_tickets")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to load tickets. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -431,7 +439,7 @@ def get_ticket_detail(email=None, token=None, ticket_name=None):
         return {"success": False, "message": f"Ticket {ticket_name} not found."}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.get_ticket_detail")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to load ticket. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -457,11 +465,16 @@ def submit_reply(email=None, token=None, ticket_name=None, message=None):
         if (ticket.raised_by or "").strip().lower() != email:
             return {"success": False, "message": "Access denied."}
 
+        # HD Ticket Comment.commented_by is a Link to User; portal users are
+        # not Frappe Users, so use Administrator and prepend the customer info
+        # to the content so agents can see who actually wrote the reply.
+        actual_content = f"[Customer: {email}]\n\n{message}"
+
         comment = frappe.get_doc({
             "doctype": "HD Ticket Comment",
             "reference_ticket": ticket_name,
-            "content": message,
-            "commented_by": email,
+            "content": actual_content,
+            "commented_by": "Administrator",
         })
         comment.insert(ignore_permissions=True)
         frappe.db.commit()
@@ -471,7 +484,7 @@ def submit_reply(email=None, token=None, ticket_name=None, message=None):
         return {"success": False, "message": f"Ticket {ticket_name} not found."}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.submit_reply")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to send reply. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -513,7 +526,7 @@ def raise_ticket(email, token, subject, description, priority=None):
         return {"success": True, "ticket_name": doc.name}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.raise_ticket")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "Failed to raise ticket. Please try again."}
 
 
 # ---------------------------------------------------------------------------
@@ -540,7 +553,7 @@ def portal_logout(email=None, token=None):
         return {"success": True}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "portal_api.portal_logout")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "An unexpected error occurred."}
 
 
 # ---------------------------------------------------------------------------
@@ -567,3 +580,25 @@ def get_ticket_details(ticket_name=None, email=None, session_token=None):
     Returns ticket + comments + activity timeline.
     """
     return get_ticket_detail(email=email, token=session_token, ticket_name=ticket_name)
+
+
+
+# ---------------------------------------------------------------------------
+# 14. get_license_by_email  (for helpdesk agent Data tab)
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_license_by_email(email=None):
+    """Look up the most recent mft_license for an email. Returns product name for Data tab."""
+    if not email:
+        return {}
+    row = frappe.db.get_value(
+        "mft_license",
+        {"email": email},
+        ["name", "product", "customer", "status", "purchase_date", "expiry", "amount_paid"],
+        as_dict=True,
+        ignore_permissions=True,
+        order_by="purchase_date desc",
+    )
+    return row or {}
+    
