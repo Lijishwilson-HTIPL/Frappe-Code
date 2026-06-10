@@ -82,13 +82,14 @@ def reassign_task(task_name, new_user):
 	# C-4: direct child table manipulation — no full Task validation triggered
 	frappe.db.delete("Task Assignee", {"parent": task_name})
 	if new_user and new_user != "__unassigned__":
-		frappe.db.insert({
+		doc = frappe.get_doc({
 			"doctype": "Task Assignee",
 			"parent": task_name,
 			"parenttype": "Task",
 			"parentfield": "task_assignees",
 			"user": new_user,
 		})
+		doc.db_insert()
 
 	# M-3: only update _assign after child table write succeeds
 	# Keep Frappe's built-in _assign in sync so the Task form reflects the same assignment
