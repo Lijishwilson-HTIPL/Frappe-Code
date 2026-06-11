@@ -9,7 +9,7 @@ frappe.listview_settings["Task"] = {
 
 	onload: function (listview) {
 		// Hide Frappe's default "Add Task" button — the quick-bar handles creation
-		listview.page.set_primary_action = function () {};
+		// (re-hidden inside the MutationObserver below on every list re-render)
 		setTimeout(() => listview.page.btn_primary && listview.page.btn_primary.hide(), 100);
 
 		// Shortcut button — navigates to Task Assignment Board, carrying active project filter
@@ -233,6 +233,8 @@ frappe.listview_settings["Task"] = {
 		}
 
 		// ── Build project autocomplete list ───────────────────────────
+		// Remove any datalist left behind by a previous onload to avoid duplicates
+		$("#jira-project-list").remove();
 		const $datalist = $(`<datalist id="jira-project-list"></datalist>`);
 		const projectMap = {}; // lowercase display label → document name (ID)
 		frappe._task_project_id_to_name = {}; // ID → display label (used by formatter)
@@ -342,16 +344,16 @@ frappe.listview_settings["Task"] = {
 			if (!open) { $("#jira-assignee-search").val("").trigger("input").focus(); }
 		});
 
-		// Search filter
-		$(document).on("input", "#jira-assignee-search", function () {
+		// Search filter (namespaced + de-duplicated)
+		$(document).off("input.jira-assignee-search").on("input.jira-assignee-search", "#jira-assignee-search", function () {
 			const q = $(this).val().toLowerCase();
 			$("#jira-assignee-list .jira-multi-select-item").each(function () {
 				$(this).toggle($(this).text().toLowerCase().includes(q));
 			});
 		});
 
-		// Update trigger label when selection changes
-		$(document).on("change", "#jira-assignee-list input[type='checkbox']", function () {
+		// Update trigger label when selection changes (namespaced + de-duplicated)
+		$(document).off("change.jira-assignee-check").on("change.jira-assignee-check", "#jira-assignee-list input[type='checkbox']", function () {
 			const checked = $("#jira-assignee-list input:checked");
 			const $trigger = $("#jira-task-assignee");
 			$trigger.removeClass("jira-field-required");
@@ -471,8 +473,8 @@ frappe.listview_settings["Task"] = {
 			if (e.key === "Enter") create_task();
 		});
 
-		// ── Project link: click to filter list by project ─────────────
-		$(document).on("click", ".jira-project-link", function (e) {
+		// ── Project link: click to filter list by project (namespaced + de-duplicated) ──
+		$(document).off("click.jira-project-link").on("click.jira-project-link", ".jira-project-link", function (e) {
 			e.preventDefault();
 			const project = $(this).data("project");
 			// clear existing project filter then add new one
@@ -482,8 +484,8 @@ frappe.listview_settings["Task"] = {
 			frappe.show_alert({ message: __("Showing tasks for project <b>{0}</b>", [project]), indicator: "blue" }, 3);
 		});
 
-		// ── Filter chips ──────────────────────────────────────────────
-		const $chips = $(`<span style="margin-left:12px;"></span>`);
+		// ── Filter chips (skip if already injected on this page) ──────
+		const $chips = $(`<span class="jira-task-chips" style="margin-left:12px;"></span>`);
 		const $mine  = $(`<button class="jira-filter-chip">👤 Assigned to me</button>`);
 		const $dueW  = $(`<button class="jira-filter-chip">📅 Due this week</button>`);
 
@@ -512,8 +514,10 @@ frappe.listview_settings["Task"] = {
 			listview.refresh();
 		});
 
-		$chips.append($mine).append($dueW);
-		$(listview.page.body).find(".page-head .page-title").after($chips);
+		if (!$(listview.page.body).find(".jira-task-chips").length) {
+			$chips.append($mine).append($dueW);
+			$(listview.page.body).find(".page-head .page-title").after($chips);
+		}
 
 		// ── Assigner / Assigned To columns ───────────────────────────
 		function inject_assignment_cols() {
@@ -610,11 +614,14 @@ frappe.listview_settings["Task"] = {
 		// This replaces the old 400ms poll, which left a window where Frappe could
 		// re-render after our inject and undo all changes before the next poll fired.
 		setTimeout(() => { inject_assignment_cols(); inject_col_resizer(); }, 150);
-		if (listview.$result && listview.$result[0]) {
-			new MutationObserver(frappe.utils.debounce(() => {
+		if (!listview.__jira_observer && listview.$result && listview.$result[0]) {
+			listview.__jira_observer = new MutationObserver(frappe.utils.debounce(() => {
 				inject_assignment_cols();
 				inject_col_resizer();
-			}, 80)).observe(listview.$result[0], { childList: true });
+				// re-hide the default primary button after every list re-render
+				listview.page.btn_primary && listview.page.btn_primary.hide();
+			}, 80));
+			listview.__jira_observer.observe(listview.$result[0], { childList: true });
 		}
 
 		// ── Subject column drag-to-resize ────────────────────────────────
