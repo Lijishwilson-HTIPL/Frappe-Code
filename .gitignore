@@ -46,6 +46,7 @@ sites/*/public/files/*.docx
 # Site runtime/index files
 sites/*/indexes/
 sites/*/touched_tables.json
+sites/*/helpdesk_search.db
 sites/*/.test_log
 
 # Backups with credentials
