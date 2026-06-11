@@ -36,6 +36,79 @@ Team Lead → Developer → Tester → Compliance Checker → Release Manager
 
 ---
 
+## 0c. Self-Learning — Update Rules on Every New Discovery
+
+**Every mistake, correction, failed command, or new pattern must be recorded here immediately — before the task is reported as done.**
+
+This is how the rulebook grows. If it is not written down, the same mistake will happen again in a future session.
+
+### Triggers — update CLAUDE.md when ANY of these happen
+
+| Trigger | Example |
+|---|---|
+| User corrects you | "no, don't do that", "wrong approach", "stop doing X" |
+| A command fails and you find a workaround | `node` not on PATH during migrate |
+| You make the same mistake twice | Forgetting to bump `modified` in JSON |
+| A new pattern proves reliably better | `get_list` over `get_all` for permission enforcement |
+| A tool or API behaves unexpectedly | Edit tool fails if file was not Read first |
+| A protected file is almost committed | Procfile, site_config.json, uichange*.css |
+| An assumption about environment turns out wrong | Wrong WSL distro, wrong bench path |
+
+### Entry format — add under the relevant section or create a new one
+
+```
+**[Short title] — [YYYY-MM-DD]:**
+- Root cause: [why it happened]
+- Fix: [what resolves it]
+- Rule: [one sentence — what to do or never do going forward]
+```
+
+### Where to write
+
+- **CLAUDE.md** — for technical rules, environment facts, and command patterns. Shared via git; applies on every machine.
+- **Memory** (`C:\Users\Hilton\.claude\projects\...\memory\`) — for behavioral feedback, user preferences, and personal guidance. Applies only to this assistant instance.
+- **Both** — when a mistake is both a technical gotcha (CLAUDE.md) and a behavioral correction (memory `feedback` type).
+
+### Mandatory end-of-task checklist
+
+Before reporting a task complete, answer each of these:
+1. Did anything fail that needed a workaround? → Document the workaround here
+2. Was I corrected by the user during this task? → Add it as a rule
+3. Did I discover a new "always" or "never" pattern? → Add it
+4. Did a command need a specific path or flag that is not obvious? → Record it in the environment facts below
+
+---
+
+### Environment facts (update whenever a new fact is discovered)
+
+These were all learned the hard way — do not re-discover them:
+
+**WSL / shell:**
+- Always use `wsl -d Ubuntu-22.04 -e bash -lc '...'` via PowerShell — the Bash tool connects to the wrong WSL distro and cannot see the repo
+- Use single quotes for the entire `bash -lc` argument in PowerShell so PS does not expand `$HOME`, `$PATH`, or other variables inside the string
+- `$HOME` inside a PowerShell double-quoted string becomes empty — always single-quote the whole arg
+
+**bench / migrate:**
+- `bench` CLI is not reliably found by path — use `../env/bin/python -m frappe.utils.bench_helper frappe --site mysite.local` instead
+- `bench migrate` calls `Popen("node", ...)` for Website Theme compilation — node must be on PATH. Prefix with `export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"` before running migrate in a bash -lc call
+- After editing any DocType JSON or Workspace JSON, the `"modified"` timestamp **must be bumped** to a future value or `bench migrate` silently skips syncing that document
+
+**Frappe API:**
+- Use `frappe.get_list` (not `frappe.get_all`) whenever the current user's permissions must be enforced — `get_all` bypasses permission checks
+- Use `frappe.db.rollback()` at the end of any test/E2E script to leave the DB clean — never leave test data behind
+- `doc.save()` triggers hooks, validation, and Version records — `frappe.db.set_value` bypasses all of these; prefer `doc.save()` for business logic changes
+
+**File editing tools:**
+- Always `Read` a file at least once before calling `Edit` on it — Edit will error if the file has not been read in this session
+- Always `Read` a file before calling `Write` on it even if it is new or empty — Write will error otherwise
+- `frappe.db.insert` on a doc dict bypasses validation hooks — use `frappe.get_doc(dict).db_insert()` or `frappe.get_doc(dict).insert()` instead
+
+**PowerShell ↔ WSL file paths:**
+- All UNC paths to WSL files use `\\wsl.localhost\Ubuntu-22.04\home\hilton\frappe-bench\...`
+- Never use `git add sites/` — always add files explicitly by path to avoid staging site_config.json
+
+---
+
 ## 1. All Frappe changes must be in JSON, never in the database
 
 **Rule:** Any change to a DocType (fields, field_order, options, labels, layout) must be made by editing the app's JSON file and running `bench migrate`. Never use direct SQL, `frappe.db`, or the Python console to modify schema or layout data.

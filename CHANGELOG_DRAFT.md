@@ -1,5 +1,14 @@
 # Changelog Draft
 
+## 2026-06-11 — Projects Module Dead-Code Cleanup (pipeline run; NOT committed, release-manager not invoked)
+
+Delegation log (Team Lead). Pipeline: Developer -> Tester -> Compliance Checker. All passed.
+
+- Dev task A: Removed dead `get_customer_details()` method from `task.py` (referenced non-existent `self.customer` field via raw SQL; unreachable).
+- Dev task B/C/E: Pre-flight confirmed `project_timesheet.js`, `timesheet.css`, and `dependent_task/` folder already absent — no action needed.
+- Dev task D: Removed 4 stale links from `projects.json` (`Activity Cost`, `Project Update`, `Delayed Tasks Summary`, `Project Billing Summary` report) and 1 stale shortcut (`Project Billing Summary`); also removed matching entry from embedded content blob; bumped `modified` to `2026-06-11 13:00:00.000000`.
+- Compliance: No DB writes, no schema change, no protected files touched, no commits/pushes.
+
 ## 2026-06-11 — Projects Module Fix-Batch (pipeline run; NOT committed, release-manager not invoked)
 
 Delegation log (Team Lead). No subagent runtime was available in this session, so the pipeline roles (Developer -> Tester -> Compliance) were executed sequentially by the Team Lead under the stated constraints: file edits only, no bench/DB/git.

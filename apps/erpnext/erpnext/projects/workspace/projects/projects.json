@@ -13,7 +13,7 @@
    "label": "Tasks by Status"
   }
  ],
- "content": "[{\"id\": \"nc_row_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Project Overview</b></span>\", \"col\": 12}}, {\"id\": \"nc_01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Projects\", \"col\": 3}}, {\"id\": \"nc_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Tasks\", \"col\": 3}}, {\"id\": \"nc_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Tasks\", \"col\": 3}}, {\"id\": \"nc_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Completed Tasks\", \"col\": 3}}, {\"id\": \"sp_01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ch_01\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Tasks by Status\", \"col\": 6}}, {\"id\": \"ch_02\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Task Completion Trend\", \"col\": 6}}, {\"id\": \"ch_03\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Project Summary\", \"col\": 12}}, {\"id\": \"sp_02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"oGhjvYjfv-\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"TdsgJyG3EI\", \"type\": \"card\", \"data\": {\"card_name\": \"Projects\", \"col\": 4}}, {\"id\": \"nIc0iyvf1T\", \"type\": \"card\", \"data\": {\"card_name\": \"Time Tracking\", \"col\": 4}}, {\"id\": \"8G1if4jsQ7\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"o7qTNRXZI8\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}, {\"id\": \"sp_03\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"nyuMo9byw7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"dILbX_r0ve\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Task\", \"col\": 3}}, {\"id\": \"JT8ntrqRiJ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Project\", \"col\": 3}}, {\"id\": \"c4woBn8SoI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Assignment Board\", \"col\": 3}}, {\"id\": \"RsafDhm1MS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Timesheet\", \"col\": 3}}, {\"id\": \"cVJH-gD0CR\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Project Billing Summary\", \"col\": 3}}, {\"id\": \"DbctrdmAy1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sprint\", \"col\": 3}}, {\"id\": \"jx5aPK9aXN\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Learn Project Management\", \"col\": 3}}]",
+ "content": "[{\"id\": \"nc_row_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Project Overview</b></span>\", \"col\": 12}}, {\"id\": \"nc_01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Projects\", \"col\": 3}}, {\"id\": \"nc_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Tasks\", \"col\": 3}}, {\"id\": \"nc_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Tasks\", \"col\": 3}}, {\"id\": \"nc_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Completed Tasks\", \"col\": 3}}, {\"id\": \"sp_01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ch_01\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Tasks by Status\", \"col\": 6}}, {\"id\": \"ch_02\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Task Completion Trend\", \"col\": 6}}, {\"id\": \"ch_03\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Project Summary\", \"col\": 12}}, {\"id\": \"sp_02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"oGhjvYjfv-\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"TdsgJyG3EI\", \"type\": \"card\", \"data\": {\"card_name\": \"Projects\", \"col\": 4}}, {\"id\": \"nIc0iyvf1T\", \"type\": \"card\", \"data\": {\"card_name\": \"Time Tracking\", \"col\": 4}}, {\"id\": \"8G1if4jsQ7\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"o7qTNRXZI8\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}, {\"id\": \"sp_03\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"nyuMo9byw7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"dILbX_r0ve\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Task\", \"col\": 3}}, {\"id\": \"JT8ntrqRiJ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Project\", \"col\": 3}}, {\"id\": \"c4woBn8SoI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Assignment Board\", \"col\": 3}}, {\"id\": \"RsafDhm1MS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Timesheet\", \"col\": 3}}, {\"id\": \"DbctrdmAy1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sprint\", \"col\": 3}}, {\"id\": \"jx5aPK9aXN\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Learn Project Management\", \"col\": 3}}]",
  "creation": "2020-03-02 15:46:04.874669",
  "custom_blocks": [],
  "docstatus": 0,
@@ -100,17 +100,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "Project",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Project Update",
-   "link_count": 0,
-   "link_to": "Project Update",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Time Tracking",
@@ -141,17 +130,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "Activity Type",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Activity Cost",
-   "link_count": 0,
-   "link_to": "Activity Cost",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
@@ -177,28 +155,6 @@
    "label": "Project wise Stock Tracking",
    "link_count": 0,
    "link_to": "Project wise Stock Tracking",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "Project",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Project Billing Summary",
-   "link_count": 0,
-   "link_to": "Project Billing Summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "Task",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Delayed Tasks Summary",
-   "link_count": 0,
-   "link_to": "Delayed Tasks Summary",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -233,7 +189,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-02 16:55:12.248415",
+ "modified": "2026-06-11 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Projects",
@@ -299,12 +255,6 @@
    "label": "Timesheet",
    "link_to": "Timesheet",
    "type": "DocType"
-  },
-  {
-   "label": "Project Billing Summary",
-   "link_to": "Project Billing Summary",
-   "report_ref_doctype": "Timesheet",
-   "type": "Report"
   },
   {
    "doc_view": "",

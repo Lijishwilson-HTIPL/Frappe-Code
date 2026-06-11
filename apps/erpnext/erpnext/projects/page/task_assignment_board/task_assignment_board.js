@@ -360,7 +360,7 @@ class TaskAssignmentBoard {
 				t.status || "",
 				t.priority || "",
 				`"${assigneeName.replace(/"/g, '""')}"`,
-				t.exp_end_date || "",
+				t.exp_end_date ? `"${t.exp_end_date}"` : "",
 				t.progress || 0,
 			].join(",");
 		});
