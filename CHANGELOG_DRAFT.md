@@ -1,5 +1,14 @@
 # Changelog Draft
 
+## 2026-06-11 — Projects Module Fix-Batch (pipeline run; NOT committed, release-manager not invoked)
+
+Delegation log (Team Lead). No subagent runtime was available in this session, so the pipeline roles (Developer -> Tester -> Compliance) were executed sequentially by the Team Lead under the stated constraints: file edits only, no bench/DB/git.
+
+- Dev task 1 (A, B, H): Task doctype JSON gains sprint/is_blocked/cancel_reason/resolution_note/sb_subtasks+subtasks_html; stale "Closed" depends_on fixed; task.py TYPE_CHECKING block updated; share_with_project_members batched + called from on_update only on project change; set_tasks_as_overdue rewritten as bulk qb update + per-project rollup; task.js persists resolution_note; cleanup patch v15_0.delete_task_db_only_custom_fields registered at end of patches.txt.
+- Dev task 2 (C, F): deleted duplicate fixtures/Workspace.json (hooks.py had no fixtures entry to remove); module workspace Dashboard shortcut replaced by Sprint (shortcuts + serialized content string); Sprint DocType link added under Projects card; Sprint Summary report link added under Reports card; sprint.py date + single-active-sprint validation; new Sprint Summary script report (json/py/js/__init__).
+- Dev task 3 (D, E, G): task_assignment_board.py rewritten — frappe.get_list for permission-aware reads, _assign as primary assignee source, sprint filter, doc.save() with check_permission, document-API child-table writes, no frappe.db.commit, queued + HTML-escaped notification email; board JS — XSS escape in confirm dialog, Sprint filter field, status select reverts on server error; task_summary_report.py — _assign primary + child-table fallback, assignee filter on union, dead __style keys removed.
+- Dev task 4 (I, J, K, L): task_list.js handler namespacing/de-dup, chips/datalist/observer duplicate guards, set_primary_action monkeypatch removed (hide kept in setTimeout + observer); project_list.js layout background rule scoped to [data-doctype="Project"], chips guard, Open badge label "OPEN"; tasks web form status Closed->Completed; Task Completion Trend based_on completed_on; Overdue Tasks number card now computes overdue dynamically; new static tests for board endpoints and Sprint validation.
+
 ## 2026-06-04
 
 - feat(hrms): send welcome email on new Employee creation — added `send_welcome_email` doc-event handler to `hrms/overrides/employee_master.py`; registered as additional `after_insert` handler in `hooks.py`; email priority: `prefered_email` > `personal_email` > `company_email`; silently skips if no email; exceptions are logged via `frappe.log_error` and never propagate so employee creation is never blocked.

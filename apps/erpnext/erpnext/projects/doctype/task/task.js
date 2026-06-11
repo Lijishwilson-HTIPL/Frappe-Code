@@ -90,6 +90,7 @@ frappe.ui.form.on("Task", {
 				frm.set_value("status", "Completed");
 				frm.set_value("completed_by", values.completed_by);
 				frm.set_value("completed_on", values.completed_on);
+				frm.set_value("resolution_note", values.resolution_note);
 				frm._prev_status = "Completed";
 			}, __("Mark Task as Completed"), __("Confirm"));
 			return;
