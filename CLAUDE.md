@@ -89,7 +89,8 @@ These were all learned the hard way — do not re-discover them:
 - `$HOME` inside a PowerShell double-quoted string becomes empty — always single-quote the whole arg
 
 **bench / migrate:**
-- `bench` CLI is not reliably found by path — use `../env/bin/python -m frappe.utils.bench_helper frappe --site mysite.local` instead
+- `bench` is at `~/.local/bin/bench` — use `bench --site mysite.local migrate` from `/home/hilton/frappe-bench`
+- `../env/bin/python -m frappe.utils.bench_helper` does NOT work — it errors with `apps.txt Not Found`; always use the `bench` CLI directly
 - `bench migrate` calls `Popen("node", ...)` for Website Theme compilation — node must be on PATH. Prefix with `export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"` before running migrate in a bash -lc call
 - After editing any DocType JSON or Workspace JSON, the `"modified"` timestamp **must be bumped** to a future value or `bench migrate` silently skips syncing that document
 
@@ -102,6 +103,11 @@ These were all learned the hard way — do not re-discover them:
 - Always `Read` a file at least once before calling `Edit` on it — Edit will error if the file has not been read in this session
 - Always `Read` a file before calling `Write` on it even if it is new or empty — Write will error otherwise
 - `frappe.db.insert` on a doc dict bypasses validation hooks — use `frappe.get_doc(dict).db_insert()` or `frappe.get_doc(dict).insert()` instead
+
+**`bench start` Redis crash — "Can't chdir to config/pids":**
+- Root cause: `config/pids/` is gitignored as a directory, so it disappears after every clone/pull
+- Fix: `.gitignore` must ignore only `config/pids/*.pid` (not the whole directory); a `config/pids/.gitkeep` must be committed so git tracks the directory
+- Rule: if `bench start` crashes immediately with "Can't chdir to config/pids", run `mkdir -p config/pids` — then commit `.gitkeep` + `.gitignore` fix so it doesn't recur
 
 **PowerShell ↔ WSL file paths:**
 - All UNC paths to WSL files use `\\wsl.localhost\Ubuntu-22.04\home\hilton\frappe-bench\...`
@@ -414,3 +420,176 @@ Read that file first for the full picture. All cross-project rules defined there
 | Frontend (Next.js) | `C:\Users\Paul Sahaya Doss\Downloads\mft-landing-page` |
 | Backend (Express) | `C:\Users\Paul Sahaya Doss\Downloads\logs` |
 | Work Progress Log | `workprogress.txt` (this bench root)
+
+---
+
+## 8. Frappe/ERPNext Development Patterns (learned 2026-06-11)
+
+Patterns discovered during the Projects module review and enhancement session. Apply everywhere in this bench.
+
+---
+
+### 8a. DocType JSON — `field_order` must exactly match `fields`
+
+**Rule:** The `field_order` array and the `fields` array must contain the exact same fieldnames — same count, no extras, no missing entries.
+
+**Why:** Frappe silently skips rendering any field in `field_order` that has no matching entry in `fields`. Conversely, a field in `fields` with no entry in `field_order` is placed at the end randomly. After every field add/remove, verify both arrays are in sync.
+
+```bash
+# Quick count check (should print same number twice)
+python3 -c "
+import json, sys
+d = json.load(open('path/to/doctype.json'))
+fo = set(d['field_order']); ff = set(f['fieldname'] for f in d['fields'])
+print('field_order:', len(fo), '  fields:', len(ff))
+print('in field_order but not fields:', fo - ff)
+print('in fields but not field_order:', ff - fo)
+"
+```
+
+---
+
+### 8b. Script Report — always 4 files
+
+Every Script Report needs exactly these 4 files in `report/<report_name>/`:
+
+| File | Purpose |
+|---|---|
+| `report_name.json` | Report DocType record — sets `report_type`, `ref_doctype`, `roles` |
+| `report_name.py` | `execute(filters)` function — returns `(columns, data)` |
+| `report_name.js` | `frappe.query_reports["Report Name"] = { filters: [...] }` |
+| `__init__.py` | Empty — required for Python module discovery |
+
+Missing any one of these causes the report to silently 404 or fail to load filters.
+
+**`report_name.json` minimum fields:**
+```json
+{
+  "report_type": "Script Report",
+  "ref_doctype": "DocType Name",
+  "is_standard": "Yes",
+  "module": "Module Name",
+  "roles": [{"role": "Projects User"}]
+}
+```
+
+After creating, register in the Workspace JSON (`links` array + `shortcuts` array + `content` blob).
+
+---
+
+### 8c. Workspace JSON — `content` blob must stay in sync with `shortcuts`/`links`
+
+**Rule:** The `content` field in Workspace JSON is a **serialised JSON string** (not an array). It is a separate copy of the layout grid. Any shortcut added to `shortcuts` must also get a `{"id": "...", "type": "shortcut", "data": {"shortcut_name": "..."}}` entry in `content`. Any link removed from `shortcuts` must also be removed from `content`.
+
+**Why:** Frappe renders the workspace from `content`, not from `shortcuts`/`links` directly. A shortcut in `shortcuts` but missing from `content` is invisible on the workspace page. A stale entry in `content` pointing to a deleted shortcut throws a render error.
+
+**After any workspace edit:** Search the `content` string for the affected shortcut name to confirm both sides match.
+
+---
+
+### 8d. Patch workflow — cleaning up DB-only custom fields
+
+When a DocType field is added to the JSON but was previously created as a DB-only Custom Field (e.g. via Customize Form), a patch must delete the duplicate Custom Field record before migrate tries to create the real column.
+
+**File location:** `apps/erpnext/erpnext/patches/vXX_Y/descriptive_name.py`
+
+```python
+import frappe
+
+def execute():
+    for name in ["DocType-fieldname1", "DocType-fieldname2"]:
+        frappe.delete_doc("Custom Field", name, ignore_missing=True, force=1)
+```
+
+**Register at the END of `apps/erpnext/erpnext/patches.txt`:**
+```
+erpnext.patches.vXX_Y.descriptive_name
+```
+
+**Rule:** Never register a patch in the middle of `patches.txt` — patches run in order; inserting in the middle can cause them to be skipped on sites that already ran later patches.
+
+---
+
+### 8e. `@frappe.whitelist()` — required on every Python function called from JS
+
+Any Python function invoked via `frappe.call(...)` from the browser **must** have the `@frappe.whitelist()` decorator. Without it, Frappe returns a 403 `PermissionError`.
+
+```python
+@frappe.whitelist()
+def my_function(arg1, arg2):
+    ...
+```
+
+Also applies to functions registered as `doc_events` hooks that can be triggered remotely. Check every new `@frappe.whitelist()` function also has `doc.check_permission("write")` when it mutates data.
+
+---
+
+### 8f. `frappe.sendmail` — never use `now=True` for user-facing emails
+
+```python
+# WRONG — blocks the request thread, can timeout on slow mail servers
+frappe.sendmail(recipients=[...], subject="...", message="...", now=True)
+
+# CORRECT — queued and sent by the background worker
+frappe.sendmail(recipients=[...], subject="...", message="...")
+```
+
+**Rule:** Omit `now=True` in all user-facing flows. Only use `now=True` in migration patches or CLI scripts where there is no background worker.
+
+---
+
+### 8g. Dead code audit before cleanup — check DB counts first
+
+Before removing a feature or module, check whether it has any live data:
+
+```python
+# In frappe console or a temp script
+for dt in ["Project Update", "Activity Cost", "Sprint", "Project Template"]:
+    print(dt, frappe.db.count(dt))
+```
+
+**Rule:** A feature with 0 records is safe to hide from the workspace. A feature with records — even 1 — must not have its DocType deleted without a data migration plan.
+
+---
+
+### 8h. Assignment sync — always update both `_assign` and child table together
+
+This codebase uses a dual assignment system on Task:
+- `_assign` — Frappe-native JSON field, used by the bell icon, `frappe.get_list` assignee filter, and all built-in assignment flows
+- `task_assignees` — custom child table (Task Assignee), used by legacy board and reporting
+
+**Rule:** Whenever a task is (re)assigned, always sync both:
+1. `doc.set("task_assignees", [...])` + `doc.save()` for the child table
+2. `clear_assignments(...)` + `add_assignment(...)` from `frappe.desk.form.assign_to` for `_assign`
+
+Never update only one side — the board will show one assignee while the Task form shows another.
+
+**Priority:** `_assign` is the source of truth for reads. When reading assignees, prefer parsing `_assign` JSON first; fall back to `task_assignees` only if `_assign` is empty.
+
+---
+
+### 8i. NestedSet DocTypes (`is_tree: 1`) — key rules
+
+- The `lft` / `rgt` / `old_parent` fields are auto-managed by Frappe's NestedSet manager — never write to them manually
+- Set `"nsm_parent_field": "parent_task"` (or equivalent) in the DocType JSON
+- In `before_delete`: check `frappe.db.get_value("Task", {"parent_task": self.name})` and throw if children exist — Frappe does NOT block group deletion automatically
+- Group tasks (`is_group = 1`) should block direct status changes; status should roll up from children
+
+---
+
+### 8j. E2E / integration test pattern for this bench
+
+Write test as a standalone Python script, pipe into the frappe console, roll back at the end:
+
+```bash
+# Write script to /tmp (not inside the bench)
+# Always end with frappe.db.rollback() — never leave test data behind
+
+wsl -d Ubuntu-22.04 -e bash -lc '
+export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+cd /home/hilton/frappe-bench
+../env/bin/python -m frappe.utils.bench_helper frappe --site mysite.local console < /tmp/test_script.py
+'
+```
+
+**Do not use `frappe.db.commit()` anywhere in a test script.** If a test accidentally commits, you must restore from the last backup at `sites/mysite.local/private/backups/`.

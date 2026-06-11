@@ -8,8 +8,9 @@ logs/
 sites/*/logs/
 archived/sites/*/logs/
 
-# PID files
-config/pids/
+# PID files — ignore the runtime files but track the directory so it survives git clone
+config/pids/*.pid
+config/pids/*.pid.old
 
 # Claude — ignore settings/cache but track shared agent definitions
 .claude/
