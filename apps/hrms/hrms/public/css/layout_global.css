@@ -1,0 +1,94 @@
+/* layout_global.css — Full-width layout + single scrollbar fix
+   Applies to ALL themes (built-in Frappe + custom uichange1-9).
+   Loaded via app_include_css in hooks.py */
+
+/* 1. Single scrollbar */
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.desk-wrapper,
+.page-wrapper {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100vh !important;
+}
+
+/* 2. Full-width content — .page-body is a Bootstrap .container (max-width:1140px),
+   must be overridden to stretch to full viewport */
+.page-container,
+.page-content,
+.desk-page,
+.layout-main-section,
+.main-section {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.page-body,
+.page-head > .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 3. Navbar - keep padding so items do not hug the edges */
+header.navbar .container,
+header.navbar .container-fluid,
+.navbar.navbar-expand .container,
+.navbar.navbar-expand .container-fluid {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 15px !important;
+  padding-right: 60px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 5. Workspace new-block-button (Frappe hardcodes left:-22px) */
+.new-block-button {
+  left: 20px !important;
+}
+
+/* 8. Sidebar toggle — "Toggle Full Width" hides/shows the left nav sidebar */
+body.hrms-sidebar-hidden .layout-side-section {
+  display: none !important;
+}
+body.hrms-sidebar-hidden .layout-main-section-wrapper {
+  max-width: 100% !important;
+  flex: 1 1 0% !important;
+}
+
+/* 6. Fixed sidebar width — px so it's identical on laptop and desktop */
+.layout-main .layout-side-section {
+  flex: 0 0 250px !important;
+  max-width: 250px !important;
+  width: 250px !important;
+  min-width: 250px !important;
+}
+
+/* 9. Sidebar indent — shift items away from the left edge */
+.desk-sidebar {
+  padding-left: 10px !important;
+}
+.desk-sidebar .standard-sidebar-item > a,
+.desk-sidebar .standard-sidebar-item {
+  padding-left: 10px !important;
+}
+
+/* 7. Content wrapper — stretch to fill all space after the fixed sidebar */
+.layout-main .layout-main-section-wrapper {
+  min-width: 0 !important;
+  flex: 1 1 0% !important;
+  max-width: 100% !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}

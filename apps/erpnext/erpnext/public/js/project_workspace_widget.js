@@ -4,6 +4,7 @@
     var _injected = false;
     var _current_status = 'All';
     var _current_search = '';
+    var _positionObserver = null;
 
     var CSS = [
         '#pw-projects-section { padding: 8px 0 24px; }',
@@ -13,10 +14,10 @@
         '.pw-status-btn { font-size:12px; padding:3px 12px; border-radius:12px; border:1px solid var(--border-color,#e2e8f0); cursor:pointer; background:var(--bg-color,#fff); color:var(--text-muted,#6b7280); transition:background .15s,color .15s; }',
         '.pw-status-btn.active { background:var(--primary,#2563eb); color:#fff; border-color:var(--primary,#2563eb); }',
         '.pw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }',
-        '.pw-card { background:var(--card-bg,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:8px; padding:14px 16px; transition:box-shadow .15s,transform .15s; }',
-        '.pw-card:hover { box-shadow:0 4px 14px rgba(0,0,0,.10); transform:translateY(-2px); }',
-        '.pw-card-title { font-weight:600; font-size:14px; color:var(--text-color,#1a202c); text-decoration:none; display:block; margin-bottom:7px; }',
-        '.pw-card-title:hover { color:var(--primary,#2563eb); text-decoration:underline; }',
+        '.pw-card { background:var(--card-bg,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:8px; padding:14px 16px; transition:box-shadow .15s,transform .15s; display:block; text-decoration:none; color:inherit; cursor:pointer; }',
+        '.pw-card:hover { box-shadow:0 4px 14px rgba(0,0,0,.10); transform:translateY(-2px); text-decoration:none; color:inherit; }',
+        '.pw-card-title { font-weight:600; font-size:14px; color:var(--text-color,#1a202c); display:block; margin-bottom:7px; }',
+        '.pw-card:hover .pw-card-title { color:var(--primary,#2563eb); }',
         '.pw-badge-row { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }',
         '.pw-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; text-transform:uppercase; letter-spacing:.4px; }',
         '.pw-badge-Open { background:#dbeafe; color:#1d4ed8; }',
@@ -29,12 +30,22 @@
         '.pw-progress-label { font-size:11px; color:var(--text-muted,#6b7280); margin-bottom:2px; }',
         '.pw-progress-bg { background:var(--border-color,#e2e8f0); border-radius:4px; height:5px; overflow:hidden; margin-bottom:8px; }',
         '.pw-progress-fill { height:5px; border-radius:4px; background:var(--primary,#2563eb); }',
-        '.pw-meta { font-size:11px; color:var(--text-muted,#6b7280); display:flex; gap:10px; flex-wrap:wrap; }',
+        '.pw-meta { font-size:11px; color:var(--text-muted,#6b7280); display:flex; gap:10px; flex-wrap:wrap; align-items:center; }',
+        '.pw-meta span { display:flex; align-items:center; gap:4px; }',
+        '.pw-meta svg { width:12px; height:12px; stroke:var(--text-muted,#6b7280); flex-shrink:0; }',
         '.pw-empty { grid-column:1/-1; text-align:center; padding:40px 0; color:var(--text-muted,#6b7280); }'
     ].join('\n');
 
     function isProjectsWorkspace() {
-        return window.location.pathname === '/app/projects';
+        try {
+            var route = frappe.get_route ? frappe.get_route() : null;
+            if (route) {
+                return route[0] === 'Workspaces' &&
+                    (route[1] || '').toLowerCase() === 'projects';
+            }
+        } catch (e) {}
+        var path = window.location.pathname.replace(/\/$/, '').toLowerCase();
+        return path === '/app/projects' || path === '/app/workspaces/projects';
     }
 
     function injectCSS() {
@@ -105,9 +116,9 @@
         var priHtml = p.priority
             ? '<span class="pw-badge ' + priCls + '">' + (frappe && frappe.__ ? frappe.__(p.priority) : p.priority) + '</span>'
             : '';
-        return '<div class="pw-card">' +
-            '<a class="pw-card-title" href="/app/project/' + encodeURIComponent(p.name) + '">' +
-            frappe.utils.escape_html(p.project_name || p.name) + '</a>' +
+        return '<a class="pw-card" href="/app/task?project=' + encodeURIComponent(p.name) + '">' +
+            '<span class="pw-card-title">' +
+            frappe.utils.escape_html(p.project_name || p.name) + '</span>' +
             '<div class="pw-badge-row">' +
             '<span class="pw-badge ' + statusCls + '">' + (frappe && frappe.__ ? frappe.__(p.status || '—') : (p.status || '—')) + '</span>' +
             priHtml +
@@ -115,10 +126,10 @@
             '<div class="pw-progress-label">' + (frappe && frappe.__ ? frappe.__('Progress') : 'Progress') + ': ' + pct + '%</div>' +
             '<div class="pw-progress-bg"><div class="pw-progress-fill" style="width:' + pct + '%"></div></div>' +
             '<div class="pw-meta">' +
-            '<span>📅 ' + endDate + '</span>' +
-            '<span>📋 ' + taskText + '</span>' +
+            '<span>' + frappe.utils.icon('calendar', 'sm') + ' ' + endDate + '</span>' +
+            '<span>' + frappe.utils.icon('list', 'sm') + ' ' + taskText + '</span>' +
             '</div>' +
-            '</div>';
+            '</a>';
     }
 
     function renderCards(projects) {
@@ -132,18 +143,45 @@
         projects.forEach(function (p) { $grid.append(cardHTML(p)); });
     }
 
+    function getMain() {
+        // Frappe keeps every visited page in the DOM — only one .page-container is
+        // visible at a time. Target the visible one to avoid prepending into hidden pages.
+        var $vis = $('.page-container:visible');
+        if ($vis.length) return $vis.find('.layout-main-section').first();
+        return $('.layout-main-section:visible').first();
+    }
+
+    function ensureTop() {
+        // Called by MutationObserver: workspace may prepend a loading skeleton above
+        // our section — move ourselves back to first-child whenever that happens.
+        var $section = $('#pw-projects-section');
+        if (!$section.length) return;
+        var $main = getMain();
+        if (!$main.length) return;
+        if ($main.children().first().attr('id') !== 'pw-projects-section') {
+            $main.prepend($section.detach());
+        }
+    }
+
     function tryInject() {
         if (_injected || !isProjectsWorkspace()) return false;
-        var $main = $('.layout-main-section');
+        var $main = getMain();
         if (!$main.length) return false;
-        if (!$main.find('.widget-group, .widget, .workspace-container').length) return false;
         if ($('#pw-projects-section').length) { _injected = true; return true; }
 
         injectCSS();
-        $main.append(buildSectionHTML());
+        $main.prepend(buildSectionHTML());
         _injected = true;
         attachHandlers();
         fetchAndRender();
+
+        // Keep our section at the top even if workspace later prepends its skeleton
+        if (window.MutationObserver) {
+            if (_positionObserver) _positionObserver.disconnect();
+            _positionObserver = new MutationObserver(ensureTop);
+            _positionObserver.observe($main[0], { childList: true });
+        }
+
         return true;
     }
 
@@ -154,12 +192,13 @@
         var attempts = 0;
         var id = setInterval(function () {
             attempts++;
-            if (!isProjectsWorkspace() || attempts > 40) { clearInterval(id); return; }
+            if (!isProjectsWorkspace() || attempts > 60) { clearInterval(id); return; }
             if (tryInject()) clearInterval(id);
         }, 100);
     }
 
     function teardown() {
+        if (_positionObserver) { _positionObserver.disconnect(); _positionObserver = null; }
         $('#pw-projects-section').remove();
         detachHandlers();
         _injected = false;

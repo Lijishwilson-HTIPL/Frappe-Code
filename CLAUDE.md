@@ -113,6 +113,41 @@ These were all learned the hard way — do not re-discover them:
 - All UNC paths to WSL files use `\\wsl.localhost\Ubuntu-22.04\home\hilton\frappe-bench\...`
 - Never use `git add sites/` — always add files explicitly by path to avoid staging site_config.json
 
+**Workspace JSON — `content` blob must include every shortcut — 2026-06-12:**
+- Root cause: Frappe renders the workspace from the `content` blob, not from `shortcuts`/`links` arrays directly. A shortcut in `shortcuts` but missing from `content` is invisible on the workspace page.
+- Fix: Add `{"id": "...", "type": "shortcut", "data": {"shortcut_name": "..."}}` to the `content` blob for every entry in `shortcuts`.
+- Rule: After adding any shortcut to the `shortcuts` array, always also add a matching entry in the `content` blob and bump the `modified` timestamp, then run `bench migrate`.
+
+**layout_global.css — static file, not bundled — 2026-06-12:**
+- Root cause: `layout_global.css` is served as a static file at `/assets/hrms/css/layout_global.css` (symlinked from the source). It does NOT go through the Vite build pipeline — `bench build --app hrms` does NOT update it. The source and asset file are the same symlink.
+- Fix: Edit the source file directly (`apps/hrms/hrms/public/css/layout_global.css`). Changes are immediately live on disk, but the browser will keep serving the old cached version until the `?v=N` is bumped.
+- **Mandatory steps after every edit to `layout_global.css`:**
+  1. Edit `apps/hrms/hrms/public/css/layout_global.css`
+  2. Bump `?v=N` → `?v=N+1` in `app_include_css` inside `apps/hrms/hrms/hooks.py` (current: **v=13**)
+  3. Run `bench --site mysite.local clear-cache`
+  4. Hard-refresh the browser with `Ctrl+Shift+R`
+- Rule: **Without the `?v=N` bump the browser always serves the old file** — `bench build`, `bench clear-cache`, and hard-refresh alone are NOT enough. The version bump is the only mechanism that forces the browser to request a new copy.
+
+**Sidebar width — use fixed px, not percentage — 2026-06-12:**
+- Root cause: Percentage-based sidebar width (`flex: 0 0 13.5%`) looks different on laptops vs large monitors (e.g. 13.5% = 184px on 1366px, 259px on 1920px).
+- Fix: Use a fixed pixel value: `flex: 0 0 210px; max-width: 210px; width: 210px; min-width: 210px` on `.layout-main .layout-side-section`.
+- Rule: Always use `px` for the sidebar width override, never `%`. Also always add `padding-left: 20px` on `.layout-main .layout-main-section-wrapper` to prevent content from crowding the sidebar edge.
+
+**Bootstrap `.row` negative margins cause content overlap — 2026-06-12:**
+- Root cause: Bootstrap's `.row` has `margin-left: -15px` which pulls the row left beyond its container's padding box, causing the first column to overlap with any sibling that has a fixed width.
+- Fix: Add explicit `padding-left: 20px !important` to `.layout-main .layout-main-section-wrapper` so content always has breathing room from the sidebar.
+- Rule: When fixing sidebar width via CSS, always also set `padding-left` on the adjacent content wrapper — never rely on Bootstrap column padding alone when custom flex overrides are in play.
+
+**SVG sidebar icons — target child elements, not the `<svg>` root — 2026-06-12:**
+- Root cause: Frappe feather icons use `stroke="currentColor"` on `<path>`, `<line>`, `<circle>`, `<polyline>`, `<rect>` elements — NOT on the `<svg>` root. The broad `.desk-sidebar * { color: #94A3B8 !important }` rule applies directly to those child elements, so `currentColor` resolves to grey. Setting `stroke` on the `<svg>` root does NOT cascade to the path/line/circle attributes.
+- Fix: Target SVG child elements explicitly: `.desk-sidebar .sidebar-item-icon svg path, svg line, svg circle, svg polyline, svg rect { stroke: #2DD4BF !important; fill: none !important; }`
+- Rule: When overriding SVG icon color in a custom Frappe theme, always target the child shape elements (`path`, `line`, `circle`, `polyline`, `rect`) directly — never just the `<svg>` root. Setting `stroke` on `<svg>` alone has no effect on `stroke="currentColor"` attributes on child elements.
+
+**`.page-body` padding affects sidebar — apply padding to content wrapper only — 2026-06-12:**
+- Root cause: `.page-body` wraps BOTH the sidebar (`.layout-side-section`) and the content (`.layout-main-section-wrapper`). Adding `padding-left` to `.page-body` pushes the sidebar away from the left edge, creating a white gap.
+- Fix: Set `padding-left: 0; padding-right: 0` on `.page-body`. Apply padding only to `.layout-main-section-wrapper` (the content column) so the sidebar stays flush with the left edge.
+- Rule: Never add horizontal padding to `.page-body` or `.container.page-body`. Always scope content padding to `.layout-main-section-wrapper` only.
+
 ---
 
 ## 1. All Frappe changes must be in JSON, never in the database
@@ -398,6 +433,41 @@ Remove-Item $tmp -Recurse -Force
 - Fix (uichange9.css — STEP 11): Added `html[data-hrms-theme="uichange9"] .list-row *, .list-row-container *, .list-subject *, .level-item *, .dt-cell *, .dt-row *, .list-toolbar-wrapper *, .filter-area *, .standard-filter-section *` → `color: #EDE9FE; -webkit-text-fill-color: #EDE9FE`. Column headers restored to `#C4B5FD`. Kanban/board cards to `#EDE9FE`.
 - Fix (uichange7.css — end of file): Same selectors (no html prefix needed — Theme 7 applies via injected `<link>` not a body attribute) → `color: #E2E8F0; -webkit-text-fill-color: #E2E8F0`. Column headers to `#A78BFA`. Kanban cards to `#E2E8F0`.
 - **Rule:** When adding a list/board view to a custom Frappe theme, ALWAYS set BOTH `color` AND `-webkit-text-fill-color` on `.list-row *`, `.list-subject *`, `.level-item *`, `.dt-cell *`. Setting only `color` is not enough — `-webkit-text-fill-color` from any ancestor or prior stylesheet overrides `color` silently.
+
+**Bug 7 — Themes 5–9 stability pass (fixed 2026-06-11):**
+Audit of themes 5–9 against the rules from Bugs 1–6 found the earlier fixes had only been applied to the theme where each bug was first reported. Applied across the board:
+- **`.app-icon .inner` white fix was missing in themes 5, 6, 7, 8** (only theme 9 had it). Each of these themes sets a broad sidebar `*` color, so the module icon letter was invisible on colored icon backgrounds. Added the white letter + SVG fill block to all four files. (Bug 4 rule)
+- **List/board `-webkit-text-fill-color` fix was missing in themes 5, 6, 8** (only 7 and 9 had it). Added the full Bug 6 selector block (`.list-row *`, `.list-subject *`, `.level-item *`, `.dt-cell *`, `.list-toolbar-wrapper *`, `.filter-area *`, headers, kanban cards) with theme-appropriate colors to all three files.
+- **Kanban board was completely unstyled in themes 5 and 6** — added column/card styling matching each palette.
+- **Theme 7 & 9 datepicker invisible/clashing:** Frappe's air-datepicker keeps its default WHITE panel; theme 7's global `span, div { color: #E2E8F0 }` made the dates light-on-white = invisible. Added dark `.datepicker` panel styling (`.datepicker--cell`, `--nav`, `--day-name`, `-selected-`, `--pointer`) to both dark themes. **Rule: every dark theme must explicitly style the air-datepicker panel — it is appended to `<body>` and inherits the global text color but NOT the card background.**
+- **Theme 7 & 9 form grid (child tables) + timeline/comment boxes:** added explicit dark backgrounds + light text (both `color` and `-webkit-text-fill-color`) for `.grid-heading-row`, `.grid-row`, `.grid-static-col`, `.row-index`, `.timeline-content`, `.comment-box`, `.ql-editor`.
+- **Theme 9 JS:** `_fix_t9()` Step 1 sets inline-`!important` DARK text on everything in `.layout-main-section`; the timeline/comment area lives outside `.form-layout` so the restore pass missed it. Added `.timeline-content *, .comment-box *, .ql-editor *` to the LIGHT restore step. **Rule: any element that CSS gives a dark background in theme 9 MUST also be added to a `_fix_t9()` restore step, because the JS inline pass beats all CSS.**
+- **Theme 5 & 6 switcher preview tiles showed dark backgrounds but the themes are light.** Fixed `hrms.theme.custom_themes` metadata in `theme_switcher.js` to the actual rendered colors (t5: bg `#F0FDFA`, card `#CCFBF1`; t6: bg `#F0F9FF`, card `#E0F2FE`). **Rule: the `nav`/`bg`/`card`/`primary` preview metadata in `theme_switcher.js` must match the theme's real rendered colors, not its accent palette.**
+- **Meta-rule: when a bug is found and fixed in one theme, immediately check all 9 themes for the same pattern and apply the fix everywhere it applies — don't wait for it to be reported per-theme.**
+
+**Bug 8 — Themes 5, 6, 9: Form sidebar labels invisible (fixed 2026-06-11):**
+- Symptom: on a document form (e.g. Task), the left sidebar labels — "Assigned To", "Tags", "Share", like/comment counts, "You last edited this · 2 days ago" — were dark-on-dark and unreadable.
+- Root cause: the sidebar **background** rule includes `.layout-side-section` (the form sidebar) in the dark-bg selector list, but the sidebar **text** rules only cover `.body-sidebar-container`, `.workspace-sidebar`, `.desk-sidebar` (the workspace/app sidebar). The form sidebar therefore fell through to the theme's global `span, div { color: <dark> !important }` rule (themes 5/6) or theme 9's STEP 1 dark-purple override → dark text on dark panel.
+- Fix: added `.layout-side-section *` / `.form-sidebar *` light text rules (+ links, svg stroke) to uichange5/6/9.css, and a `.layout-side-section` restore step to `_fix_t9()` in theme_switcher.js.
+- **Rule: `.layout-side-section` (form sidebar) and the workspace sidebar are DIFFERENT containers. Any theme that darkens `.layout-side-section` in its background rules MUST also add a `.layout-side-section *` text-color rule — the `.body-sidebar-container/.workspace-sidebar/.desk-sidebar` selectors do NOT cover it.**
+- Follow-up (same day, themes 5/6): two leftovers after the first pass:
+  1. The "Assigned To" label stayed dark because the theme's visibility-fix block sets `.frappe-control label / .col-form-label` to a dark color at (0,1,1)+ specificity, beating the (0,1,0) `.layout-side-section *` rule. Fixed by adding explicit `.layout-side-section label / .control-label / .col-form-label / .frappe-control .control-label` selectors at equal-or-higher specificity placed LATER in the file.
+  2. Avatar initials were forced to `#FFFFFF`, but themes 5/6 keep Frappe's default PALE pastel avatar circles → white-on-pastel = invisible. Initials must match the avatar background the theme actually uses: dark `#1F2937` for default pastel circles (themes 5/6), white only when the theme restyles `.avatar` to a dark/saturated gradient (themes 7/8/9).
+- **Rule: never blanket-force avatar initials to white — check what background the theme gives `.avatar`/`.avatar-frame` first. Default Frappe avatars are pastel and need DARK initials.**
+
+**Bug 9 — Theme 9: "Reports & Masters" link-card text too dull (fixed 2026-06-11):**
+- Symptom: on a module page (e.g. /app/hr), the links-widget cards (Setup, Employee, Leaves …) showed their card titles and link items in dull dark purple on the near-black card background.
+- Root cause: CSS darkens EVERY `.widget` to `#0D0B16`, but only `.shortcut-widget-box` had restore steps (CSS STEP 4 + `_fix_t9()` Step 2). The `.links-widget-box` widgets fell through to `_fix_t9()` Step 1's global inline-`!important` dark-purple `#2E1065` → dark-on-dark.
+- Fix: (1) uichange9.css end-of-file block — `.links-widget-box *` → `#DDD6FE`, `.widget .widget-head * / .widget-title` → `#FFFFFF`, hover → white. (2) theme_switcher.js `_fix_t9()` Step 2b — restore ALL `.widget, .widget *` to `#DDD6FE` and widget titles to `#FFFFFF`, placed after Step 2 and BEFORE the form/list/modal/page-head steps so those still apply their specific colors.
+- **Rule: theme 9's `_fix_t9()` restore steps must cover every widget TYPE, not just shortcut boxes — when CSS darkens a container class broadly (`.widget`), the JS restore must target the same broad class, otherwise each widget type (links, number card, chart, onboarding) regresses one by one.**
+
+**Bug 10 — Theme 7: Jira task quick-bar dropdown + chart tooltip unreadable (fixed 2026-06-11):**
+- Symptom 1: on the Task list, the custom "Assign To" multi-select dropdown showed member names in pale gray on a white menu — unreadable.
+- Symptom 2: on the Projects workspace, the frappe-charts tooltip ("OVERDUE / 12 Tasks by Status") showed light text on a white tooltip box.
+- Root cause: `task_list.js` injects its own `<style id="jira-task-list-css">` with WHITE backgrounds (`.jira-quick-bar`, `.jira-multi-select-menu`, inputs, `.jira-filter-chip`) **without** `!important`, while theme 7's global text rules force light `#E2E8F0` **with** `!important`. The theme wins the text battle but loses the background (white stays) → light-on-white. Same for `.graph-svg-tip` (frappe-charts tooltip).
+- Fix: uichange7.css end-of-file block dark-themes the jira widgets (`.jira-quick-bar`, inputs, `.jira-multi-select-trigger/menu/search/item`, `.jira-filter-chip`) and `.graph-svg-tip` — the theme's `!important` rules beat the injected non-important jira CSS.
+- **Rule: custom app JS that injects its own `<style>` with hardcoded light backgrounds (task_list.js jira bar, board views) creates light-on-white text in every DARK theme. Each dark theme (7, 9) must explicitly re-skin those injected widget classes. Check `.jira-*` classes and `.graph-svg-tip` whenever a new dark theme is added.**
+- Note: theme 9 does NOT need the jira fix — its `_fix_t9()` Step 1 sets dark inline text on everything in the main section, which is readable on the jira white widgets.
 
 ---
 

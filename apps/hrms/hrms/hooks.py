@@ -24,10 +24,13 @@ add_to_apps_screen = [
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
-	"/assets/hrms/js/theme_switcher.js",  # local-only; gitignored — adds uichange1–9 to theme toggle
+	"/assets/hrms/js/theme_switcher.js?v=2",  # local-only; gitignored — adds uichange1–9 to theme toggle
 ]
 
-app_include_css = ["hrms.bundle.css"]
+app_include_css = [
+	"hrms.bundle.css",
+	"/assets/hrms/css/layout_global.css?v=17",  # full-width layout + single scrollbar — all themes
+]
 
 # website
 
