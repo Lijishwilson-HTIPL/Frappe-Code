@@ -26,6 +26,10 @@
 
 **fix(seeder):** `seed_tenant()` now passes `currency`/`timezone` from Tenant doc instead of hardcoded values; creates admin user if `admin_email` set
 
+**feat(email):** Welcome email on provisioning — sends a styled HTML welcome email to the tenant admin email address after successful provisioning. Includes site URL, login email, plan, and getting started instructions. Email failure is silently logged and never affects provisioning outcome.
+
+- [2026-06-12] feat(sbiq_provisioner): send welcome email to tenant admin after provisioning (branch: stagging-deployment)
+
 ## 2026-06-11
 
 - fix(sbiq_provisioner): tenant seeding failed for multi-word client names (SyntaxError: '(' was never closed) — converted all provisioner subprocess calls in `seeder.py` and `engine.py` from shell=True f-strings to argv lists (shell=False); branding script now embeds site_name/client_name via json.dumps; closes shell-injection vector from user-supplied Tenant client_name/site_name. Compliance hardening: `engine._run` redacts `--mariadb-root-password`/`--admin-password` values via `_redact_argv` in error messages, and both `_run` functions catch `subprocess.TimeoutExpired` and re-raise a redacted RuntimeError `from None` so raw credentials can never reach Tenant.error_log / Provisioning Log / Error Log. Pipeline: Developer -> Tester PASS (end-to-end re-provision of tenant hephzibahtech: PROV-0006/0007 Completed, site live, branding applied) -> Compliance COMPLIANT (initial NON-COMPLIANT TimeoutExpired leak fixed and re-audited). NOT committed/pushed — awaiting user verification ("promote it"); app is untracked in git. Follow-up backlog: `_setup_local_routing` still shell=True with sudo_password; weak default credential fallbacks in engine.py; no site_name format validation; archived site_config.json files tracked in repo.
