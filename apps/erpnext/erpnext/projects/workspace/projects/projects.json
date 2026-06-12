@@ -13,7 +13,7 @@
    "label": "Tasks by Status"
   }
  ],
- "content": "[{\"id\": \"nc_row_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Project Overview</b></span>\", \"col\": 12}}, {\"id\": \"nc_01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Projects\", \"col\": 3}}, {\"id\": \"nc_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Tasks\", \"col\": 3}}, {\"id\": \"nc_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Tasks\", \"col\": 3}}, {\"id\": \"nc_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Completed Tasks\", \"col\": 3}}, {\"id\": \"sp_01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ch_01\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Tasks by Status\", \"col\": 6}}, {\"id\": \"ch_02\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Task Completion Trend\", \"col\": 6}}, {\"id\": \"ch_03\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Project Summary\", \"col\": 12}}, {\"id\": \"sp_02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"oGhjvYjfv-\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"TdsgJyG3EI\", \"type\": \"card\", \"data\": {\"card_name\": \"Projects\", \"col\": 4}}, {\"id\": \"nIc0iyvf1T\", \"type\": \"card\", \"data\": {\"card_name\": \"Time Tracking\", \"col\": 4}}, {\"id\": \"8G1if4jsQ7\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"o7qTNRXZI8\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}, {\"id\": \"sp_03\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"nyuMo9byw7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"dILbX_r0ve\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Task\", \"col\": 3}}, {\"id\": \"JT8ntrqRiJ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Project\", \"col\": 3}}, {\"id\": \"c4woBn8SoI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Assignment Board\", \"col\": 3}}, {\"id\": \"RsafDhm1MS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Timesheet\", \"col\": 3}}, {\"id\": \"DbctrdmAy1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sprint\", \"col\": 3}}, {\"id\": \"jx5aPK9aXN\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Learn Project Management\", \"col\": 3}}]",
+ "content": "[{\"id\": \"nc_row_hdr\",\"type\": \"header\",\"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Project Overview</b></span>\",\"col\": 12}},{\"id\": \"nc_01\",\"type\": \"number_card\",\"data\": {\"number_card_name\": \"Active Projects\",\"col\": 3}},{\"id\": \"nc_02\",\"type\": \"number_card\",\"data\": {\"number_card_name\": \"Open Tasks\",\"col\": 3}},{\"id\": \"nc_03\",\"type\": \"number_card\",\"data\": {\"number_card_name\": \"Overdue Tasks\",\"col\": 3}},{\"id\": \"nc_04\",\"type\": \"number_card\",\"data\": {\"number_card_name\": \"Completed Tasks\",\"col\": 3}},{\"id\": \"sp_01\",\"type\": \"spacer\",\"data\": {\"col\": 12}},{\"id\": \"ch_01\",\"type\": \"chart\",\"data\": {\"chart_name\": \"Tasks by Status\",\"col\": 6}},{\"id\": \"ch_02\",\"type\": \"chart\",\"data\": {\"chart_name\": \"Task Completion Trend\",\"col\": 6}},{\"id\": \"ch_03\",\"type\": \"chart\",\"data\": {\"chart_name\": \"Project Summary\",\"col\": 12}},{\"id\": \"sp_02\",\"type\": \"spacer\",\"data\": {\"col\": 12}},{\"id\": \"oGhjvYjfv-\",\"type\": \"header\",\"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\": 12}},{\"id\": \"TdsgJyG3EI\",\"type\": \"card\",\"data\": {\"card_name\": \"Projects\",\"col\": 4}},{\"id\": \"nIc0iyvf1T\",\"type\": \"card\",\"data\": {\"card_name\": \"Time Tracking\",\"col\": 4}},{\"id\": \"8G1if4jsQ7\",\"type\": \"card\",\"data\": {\"card_name\": \"Reports\",\"col\": 4}},{\"id\": \"o7qTNRXZI8\",\"type\": \"card\",\"data\": {\"card_name\": \"Settings\",\"col\": 4}},{\"id\": \"sp_03\",\"type\": \"spacer\",\"data\": {\"col\": 12}},{\"id\": \"nyuMo9byw7\",\"type\": \"header\",\"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\": 12}},{\"id\": \"dILbX_r0ve\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Task\",\"col\": 3}},{\"id\": \"JT8ntrqRiJ\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Project\",\"col\": 3}},{\"id\": \"c4woBn8SoI\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Assignment Board\",\"col\": 3}},{\"id\": \"RsafDhm1MS\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Timesheet\",\"col\": 3}},{\"id\": \"DbctrdmAy1\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Sprint\",\"col\": 3}},{\"id\": \"jx5aPK9aXN\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Learn Project Management\",\"col\": 3}},{\"id\": \"TskSmmryRpt1\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Task Summary Report\",\"col\": 3}},{\"id\": \"CnstrProgressRpt1\",\"type\": \"shortcut\",\"data\": {\"shortcut_name\": \"Construction Progress Report\",\"col\": 3}}]",
  "creation": "2020-03-02 15:46:04.874669",
  "custom_blocks": [],
  "docstatus": 0,
@@ -171,6 +171,17 @@
    "type": "Link"
   },
   {
+   "dependencies": "Project",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Construction Progress Report",
+   "link_count": 0,
+   "link_to": "Construction Progress Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
@@ -189,7 +200,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-13 00:00:00.000000",
+ "modified": "2026-06-13 00:00:02.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Projects",
@@ -267,6 +278,13 @@
    "label": "Task Summary Report",
    "link_to": "Task Summary Report",
    "report_ref_doctype": "Task",
+   "type": "Report"
+  },
+  {
+   "doc_view": "",
+   "label": "Construction Progress Report",
+   "link_to": "Construction Progress Report",
+   "report_ref_doctype": "Project",
    "type": "Report"
   }
  ],
