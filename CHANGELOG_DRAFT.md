@@ -1,5 +1,35 @@
 # Changelog Draft
 
+## 2026-06-12
+
+### sbiq_provisioner v2 — Multi-Tenant Provisioning Dashboard (2026-06-12)
+
+**feat(dashboard):** Full rebuild of the SBIQ Provisioner control plane
+- New sidebar-navigation layout (5 sections: Tenants, Queue, Health, Reports, Errors)
+- 3-step wizard for new tenant creation (subdomain, apps, confirmation)
+- Add-apps slideout for post-provisioning app installation
+- Live progress bars via Frappe realtime events
+- CSS-variable-only theming (works with all Frappe themes)
+- `get_bench_health()`, `get_provisioning_report()`, `update_tenant_apps()` API functions
+
+**feat(engine):** `provision_update()` for installing apps on active tenants
+
+**feat(doctype):** `currency` and `timezone` fields on Tenant DocType
+
+**fix(security):**
+- Command injection in `delete_tenant` → `shell=False` argv list
+- Shell injection in `_setup_local_routing` → stdin-based sudo password
+- PII redaction in `seeder._run()` error messages (`-c` script args)
+- All API endpoints gated with `frappe.only_for("System Manager")`
+- XSS escaping via `frappe.utils.escape_html()` throughout dashboard JS
+- Audit log written before tenant deletion
+
+**fix(seeder):** `seed_tenant()` now passes `currency`/`timezone` from Tenant doc instead of hardcoded values; creates admin user if `admin_email` set
+
+## 2026-06-11
+
+- fix(sbiq_provisioner): tenant seeding failed for multi-word client names (SyntaxError: '(' was never closed) — converted all provisioner subprocess calls in `seeder.py` and `engine.py` from shell=True f-strings to argv lists (shell=False); branding script now embeds site_name/client_name via json.dumps; closes shell-injection vector from user-supplied Tenant client_name/site_name. Compliance hardening: `engine._run` redacts `--mariadb-root-password`/`--admin-password` values via `_redact_argv` in error messages, and both `_run` functions catch `subprocess.TimeoutExpired` and re-raise a redacted RuntimeError `from None` so raw credentials can never reach Tenant.error_log / Provisioning Log / Error Log. Pipeline: Developer -> Tester PASS (end-to-end re-provision of tenant hephzibahtech: PROV-0006/0007 Completed, site live, branding applied) -> Compliance COMPLIANT (initial NON-COMPLIANT TimeoutExpired leak fixed and re-audited). NOT committed/pushed — awaiting user verification ("promote it"); app is untracked in git. Follow-up backlog: `_setup_local_routing` still shell=True with sudo_password; weak default credential fallbacks in engine.py; no site_name format validation; archived site_config.json files tracked in repo.
+
 ## 2026-06-08
 
 - feat(helpdesk/portal): fix support-tracker UI visibility, add activity timeline, register HD Ticket after_insert hook — CSS override added to Web Page HTML so authShell hero text is visible (#ffffff) against Frappe theme injection; portal_api.py updated: get_ticket_detail now returns HD Ticket Activity records as "activity" key; new methods portal_logout, get_user_tickets (alias), get_ticket_details (alias) added; renderActivityTimeline JS function added to portal page slide-over; doc_events in hooks.py updated to register send_ticket_acknowledgment as HD Ticket after_insert; all existing HD Ticket, HD Ticket Activity, and HD Ticket Comment records deleted per user request.
