@@ -1,5 +1,10 @@
 # Changelog Draft
 
+## 2026-06-12
+
+- [2026-06-12] feat(projects): embed live project card grid on /app/projects workspace — status filter, search, progress bars, permission-enforced task counts (branch: Hilton-Project-module)
+- [2026-06-12] feat(projects): add All Projects page — card grid with status/search filters visible directly on the Projects workspace (branch: Hilton-Project-module)
+
 ## 2026-06-11 — Projects Module Dead-Code Cleanup (pipeline run; NOT committed, release-manager not invoked)
 
 Delegation log (Team Lead). Pipeline: Developer -> Tester -> Compliance Checker. All passed.
