@@ -63,6 +63,12 @@ doc_events = {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
         "validate": "helpdesk.extends.assignment_rule.on_assignment_rule_validate",
     },
+    "Issue": {
+        "on_update": "helpdesk.overrides.issue.on_update",
+    },
+    "HD Ticket": {
+        "after_insert": "helpdesk.overrides.hd_ticket_hooks.send_ticket_acknowledgment",
+    },
 }
 
 has_permission = {

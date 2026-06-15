@@ -1,11 +1,19 @@
 {
  "charts": [
   {
+   "chart_name": "Task Completion Trend",
+   "label": "Task Completion Trend"
+  },
+  {
    "chart_name": "Project Summary",
    "label": "Open Projects"
+  },
+  {
+   "chart_name": "Tasks by Status",
+   "label": "Tasks by Status"
   }
  ],
- "content": "[{\"id\":\"VDMms0hapk\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Open Projects\",\"col\":12}},{\"id\":\"7Mbx6I5JUf\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"nyuMo9byw7\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"dILbX_r0ve\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Task\",\"col\":3}},{\"id\":\"JT8ntrqRiJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project\",\"col\":3}},{\"id\":\"RsafDhm1MS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Timesheet\",\"col\":3}},{\"id\":\"cVJH-gD0CR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project Billing Summary\",\"col\":3}},{\"id\":\"DbctrdmAy1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dashboard\",\"col\":3}},{\"id\":\"jx5aPK9aXN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Learn Project Management\",\"col\":3}},{\"id\":\"ncIHWGQQvX\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oGhjvYjfv-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"TdsgJyG3EI\",\"type\":\"card\",\"data\":{\"card_name\":\"Projects\",\"col\":4}},{\"id\":\"nIc0iyvf1T\",\"type\":\"card\",\"data\":{\"card_name\":\"Time Tracking\",\"col\":4}},{\"id\":\"8G1if4jsQ7\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}},{\"id\":\"o7qTNRXZI8\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\": \"nc_row_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Project Overview</b></span>\", \"col\": 12}}, {\"id\": \"nc_01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Projects\", \"col\": 3}}, {\"id\": \"nc_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Tasks\", \"col\": 3}}, {\"id\": \"nc_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Tasks\", \"col\": 3}}, {\"id\": \"nc_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Completed Tasks\", \"col\": 3}}, {\"id\": \"sp_01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ch_01\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Tasks by Status\", \"col\": 6}}, {\"id\": \"ch_02\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Task Completion Trend\", \"col\": 6}}, {\"id\": \"ch_03\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Project Summary\", \"col\": 12}}, {\"id\": \"sp_02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"oGhjvYjfv-\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\", \"col\": 12}}, {\"id\": \"TdsgJyG3EI\", \"type\": \"card\", \"data\": {\"card_name\": \"Projects\", \"col\": 4}}, {\"id\": \"nIc0iyvf1T\", \"type\": \"card\", \"data\": {\"card_name\": \"Time Tracking\", \"col\": 4}}, {\"id\": \"8G1if4jsQ7\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"o7qTNRXZI8\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}, {\"id\": \"sp_03\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"nyuMo9byw7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"dILbX_r0ve\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Task\", \"col\": 3}}, {\"id\": \"JT8ntrqRiJ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Project\", \"col\": 3}}, {\"id\": \"c4woBn8SoI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Assignment Board\", \"col\": 3}}, {\"id\": \"RsafDhm1MS\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Timesheet\", \"col\": 3}}, {\"id\": \"DbctrdmAy1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sprint\", \"col\": 3}}, {\"id\": \"jx5aPK9aXN\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Learn Project Management\", \"col\": 3}}]",
  "creation": "2020-03-02 15:46:04.874669",
  "custom_blocks": [],
  "docstatus": 0,
@@ -17,6 +25,17 @@
  "is_hidden": 0,
  "label": "Projects",
  "links": [
+  {
+   "dependencies": "Task",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Task Summary Report",
+   "link_count": 0,
+   "link_to": "Task Summary Report",
+   "link_type": "Report",
+   "onboard": 1,
+   "type": "Link"
+  },
   {
    "hidden": 0,
    "is_query_report": 0,
@@ -51,6 +70,17 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Sprint",
+   "link_count": 0,
+   "link_to": "Sprint",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Project Template",
    "link_count": 0,
    "link_to": "Project Template",
@@ -65,17 +95,6 @@
    "label": "Project Type",
    "link_count": 0,
    "link_to": "Project Type",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "Project",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Project Update",
-   "link_count": 0,
-   "link_to": "Project Update",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -111,17 +130,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "Activity Type",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Activity Cost",
-   "link_count": 0,
-   "link_to": "Activity Cost",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
@@ -152,23 +160,12 @@
    "type": "Link"
   },
   {
-   "dependencies": "Project",
+   "dependencies": "Sprint",
    "hidden": 0,
    "is_query_report": 1,
-   "label": "Project Billing Summary",
+   "label": "Sprint Summary",
    "link_count": 0,
-   "link_to": "Project Billing Summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "Task",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Delayed Tasks Summary",
-   "link_count": 0,
-   "link_to": "Delayed Tasks Summary",
+   "link_to": "Sprint Summary",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -192,18 +189,35 @@
    "type": "Link"
   }
  ],
- "modified": "2026-05-04 11:57:31.501766",
+ "modified": "2026-06-11 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Projects",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Overdue Tasks",
+   "number_card_name": "Overdue Tasks"
+  },
+  {
+   "label": "Active Projects",
+   "number_card_name": "Active Projects"
+  },
+  {
+   "label": "Completed Tasks",
+   "number_card_name": "Completed Tasks"
+  },
+  {
+   "label": "Open Tasks",
+   "number_card_name": "Open Tasks"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
  "roles": [],
- "sequence_id": 21.0,
+ "sequence_id": 11.0,
  "shortcuts": [
   {
    "color": "Grey",
@@ -211,6 +225,15 @@
    "label": "Learn Project Management",
    "type": "URL",
    "url": "https://school.frappe.io/lms/courses/project-management?utm_source=in_app"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "format": "{} Active",
+   "label": "Sprint",
+   "link_to": "Sprint",
+   "stats_filter": "{\n    \"status\": \"Active\"\n}",
+   "type": "DocType"
   },
   {
    "color": "Blue",
@@ -234,15 +257,17 @@
    "type": "DocType"
   },
   {
-   "label": "Project Billing Summary",
-   "link_to": "Project Billing Summary",
-   "report_ref_doctype": "Timesheet",
-   "type": "Report"
+   "doc_view": "",
+   "label": "Assignment Board",
+   "link_to": "task-assignment-board",
+   "type": "Page"
   },
   {
-   "label": "Dashboard",
-   "link_to": "Project",
-   "type": "Dashboard"
+   "doc_view": "",
+   "label": "Task Summary Report",
+   "link_to": "Task Summary Report",
+   "report_ref_doctype": "Task",
+   "type": "Report"
   }
  ],
  "title": "Projects"

@@ -1,0 +1,20 @@
+{
+ "based_on": "completed_on",
+ "chart_name": "Task Completion Trend",
+ "chart_type": "Count",
+ "custom_options": "{\"colors\": [\"#10b981\"], \"lineOptions\": {\"hideDots\": 0, \"dotSize\": 3}}",
+ "document_type": "Task",
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "[[\"Task\", \"status\", \"=\", \"Completed\"]]",
+ "is_public": 1,
+ "is_standard": 1,
+ "module": "Projects",
+ "name": "Task Completion Trend",
+ "owner": "Administrator",
+ "time_interval": "Weekly",
+ "timeseries": 1,
+ "timespan": "Last Month",
+ "type": "Line",
+ "use_report_chart": 0
+}

@@ -434,3 +434,5 @@ erpnext.patches.v16_0.add_portal_redirects
 erpnext.patches.v16_0.update_order_qty_and_requested_qty_based_on_mr_and_po
 erpnext.patches.v16_0.depends_on_inv_dimensions
 erpnext.patches.v16_0.add_career_inquiry_fixtures
+erpnext.patches.v16_0.reorder_projects_above_hr_workspace
+erpnext.patches.v15_0.delete_task_db_only_custom_fields

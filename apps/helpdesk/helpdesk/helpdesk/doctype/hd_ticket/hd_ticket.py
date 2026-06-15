@@ -77,7 +77,7 @@ class HDTicket(Document):
         self.set_feedback_values()
         self.set_default_status()
         self.set_status_category()
-        # self.apply_escalation_rule()
+        self.apply_escalation_rule()
         self.set_sla()
 
         self.set_contact()
@@ -223,9 +223,24 @@ class HDTicket(Document):
                 f"<b>Team:</b> {self.agent_group}<br><br>"
                 f"{self.description or ''}"
             )
+            issue.rca_hd_ticket = str(self.name)
             issue.flags.ignore_mandatory = True
             issue.insert(ignore_permissions=True)
             self.db_set("erp_issue", issue.name, update_modified=False)
+
+            assignees = set()
+            ticket_agents = get_assignees({"doctype": "HD Ticket", "name": self.name})
+            for a in ticket_agents:
+                assignees.add(a.owner)
+            team_members = frappe.get_all(
+                "HD Team Member", filters={"parent": self.agent_group}, pluck="user"
+            )
+            for m in team_members:
+                assignees.add(m)
+            if assignees:
+                assign(
+                    {"assign_to": list(assignees), "doctype": "Issue", "name": issue.name}
+                )
         except Exception:
             frappe.log_error(frappe.get_traceback(), "HD Ticket L2 Issue Creation Failed")
 
@@ -346,6 +361,8 @@ class HDTicket(Document):
         )
 
     def validate_feedback(self):
+        if getattr(self.flags, "from_issue_sync", False):
+            return
         is_feedback_mandatory = frappe.get_cached_value(
             "HD Settings", "HD Settings", "is_feedback_mandatory"
         )

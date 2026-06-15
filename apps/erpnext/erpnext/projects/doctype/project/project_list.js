@@ -13,8 +13,8 @@ frappe.listview_settings["Project"] = {
 			s.textContent = `
 				/* === JIRA LIST SKIN FOR PROJECTS === */
 
-				/* page background */
-				.layout-main-section { background: #fff !important; }
+				/* page background — scoped to Project list only (unscoped rule leaked to every desk page) */
+				[data-doctype="Project"] .layout-main-section { background: #fff !important; }
 
 				/* header row */
 				[data-doctype="Project"] .list-row-head {
@@ -93,9 +93,9 @@ frappe.listview_settings["Project"] = {
 			document.head.appendChild(s);
 		}
 
-		// ── "Assigned to me" chip ──────────────────────────────────────
+		// ── "Assigned to me" chip (skip if already injected on this page) ──
 		const $bar = $(listview.page.page_actions || listview.page.$title_area);
-		const $chips = $(`<span style="margin-left:12px;"></span>`);
+		const $chips = $(`<span class="jira-project-chips" style="margin-left:12px;"></span>`);
 
 		const $assigned = $(`<button class="jira-filter-chip" data-filter="assigned">👤 Assigned to me</button>`);
 		const $due      = $(`<button class="jira-filter-chip" data-filter="due">📅 Due this week</button>`);
@@ -127,8 +127,10 @@ frappe.listview_settings["Project"] = {
 			listview.refresh();
 		});
 
-		$chips.append($assigned).append($due);
-		$(listview.page.body).find(".page-head .page-title").after($chips);
+		if (!$(listview.page.body).find(".jira-project-chips").length) {
+			$chips.append($assigned).append($due);
+			$(listview.page.body).find(".page-head .page-title").after($chips);
+		}
 	},
 
 	button: {
@@ -161,7 +163,7 @@ frappe.listview_settings["Project"] = {
 		status: function (value) {
 			if (!value) return "";
 			const cfg = {
-				Open:      { bg: "#0052CC", color: "#fff", label: "IN PROGRESS" },
+				Open:      { bg: "#0052CC", color: "#fff", label: "OPEN" },
 				Completed: { bg: "#00875A", color: "#fff", label: "DONE"        },
 				Cancelled: { bg: "#97a0af", color: "#fff", label: "CANCELLED"   },
 			};

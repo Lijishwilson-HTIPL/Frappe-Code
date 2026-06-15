@@ -117,6 +117,65 @@ def update_employee_transfer(doc, method=None):
 		emp_transfer.db_set("new_employee_id", "")
 
 
+def send_welcome_email(doc, method=None):
+	"""Send a welcome email to a newly created Employee.
+
+	Email priority: prefered_email > personal_email > company_email.
+	Failures are logged but never raised so they cannot block employee creation.
+	"""
+	recipient = (
+		doc.get("prefered_email")
+		or doc.get("personal_email")
+		or doc.get("company_email")
+	)
+
+	if not recipient:
+		return
+
+	employee_name = doc.get("employee_name") or doc.get("first_name") or "Employee"
+	company = doc.get("company") or ""
+
+	subject = "Welcome to {company}, {name}!".format(company=company, name=employee_name)
+
+	message = """
+<p>Dear {name},</p>
+
+<p>
+	Congratulations and a warm welcome to <strong>{company}</strong>!
+</p>
+
+<p>
+	We are thrilled to have you join the team. Your skills and experience are a wonderful
+	addition to our organisation, and we look forward to the great things we will accomplish
+	together.
+</p>
+
+<p>
+	As you settle in, please do not hesitate to reach out to your manager or the HR team
+	if you have any questions or need any assistance.
+</p>
+
+<p>
+	Once again, welcome aboard — we are so glad you are here!
+</p>
+
+<p>Warm regards,<br><strong>HR Team</strong><br>{company}</p>
+""".format(name=employee_name, company=company)
+
+	try:
+		frappe.sendmail(
+			recipients=[recipient],
+			subject=subject,
+			message=message,
+			now=True,
+		)
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			"Welcome Email Failed — Employee {0}".format(doc.name),
+		)
+
+
 @frappe.whitelist()
 def get_timeline_data(doctype, name):
 	"""Return timeline for attendance"""

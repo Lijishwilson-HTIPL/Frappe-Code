@@ -30,11 +30,13 @@ class Task(NestedSet):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from erpnext.projects.doctype.task_assignee.task_assignee import TaskAssignee
 		from erpnext.projects.doctype.task_depends_on.task_depends_on import TaskDependsOn
 
 		act_end_date: DF.Date | None
 		act_start_date: DF.Date | None
 		actual_time: DF.Float
+		cancel_reason: DF.SmallText | None
 		closing_date: DF.Date | None
 		color: DF.Color | None
 		company: DF.Link | None
@@ -48,6 +50,7 @@ class Task(NestedSet):
 		exp_end_date: DF.Date | None
 		exp_start_date: DF.Date | None
 		expected_time: DF.Float
+		is_blocked: DF.Check
 		is_group: DF.Check
 		is_milestone: DF.Check
 		is_template: DF.Check
@@ -58,13 +61,16 @@ class Task(NestedSet):
 		priority: DF.Literal["Low", "Medium", "High", "Urgent"]
 		progress: DF.Percent
 		project: DF.Link | None
+		resolution_note: DF.SmallText | None
 		review_date: DF.Date | None
 		rgt: DF.Int
+		sprint: DF.Link | None
 		start: DF.Int
 		status: DF.Literal[
 			"Open", "Working", "Pending Review", "Overdue", "Template", "Completed", "Cancelled"
 		]
 		subject: DF.Data
+		task_assignees: DF.Table[TaskAssignee]
 		task_weight: DF.Float
 		template_task: DF.Data | None
 		total_billing_amount: DF.Currency
@@ -73,12 +79,6 @@ class Task(NestedSet):
 	# end: auto-generated types
 
 	nsm_parent_field = "parent_task"
-
-	def get_customer_details(self):
-		cust = frappe.db.sql("select customer_name from `tabCustomer` where name=%s", self.customer)
-		if cust:
-			ret = {"customer_name": cust and cust[0][0] or ""}
-			return ret
 
 	def validate(self):
 		self.validate_dates()
@@ -208,21 +208,31 @@ class Task(NestedSet):
 		self.update_project()
 		self.unassign_todo()
 		self.populate_depends_on()
-		self.share_with_project_members()
+		if self.has_value_changed("project"):
+			self.share_with_project_members()
 
 	def share_with_project_members(self):
 		"""Share this task with every user listed in the project's Users table."""
 		if not self.project:
 			return
-		project_users = frappe.get_all(
-			"Project User", filters={"parent": self.project}, fields=["user"]
+		project_users = frappe.get_all("Project User", filters={"parent": self.project}, pluck="user")
+		if not project_users:
+			return
+		already_shared = set(
+			frappe.get_all(
+				"DocShare",
+				filters={
+					"share_doctype": "Task",
+					"share_name": self.name,
+					"user": ["in", project_users],
+				},
+				pluck="user",
+			)
 		)
-		for pu in project_users:
-			if frappe.db.exists(
-				"DocShare", {"share_doctype": "Task", "share_name": self.name, "user": pu.user}
-			):
+		for user in project_users:
+			if user in already_shared:
 				continue
-			frappe.share.add("Task", self.name, pu.user, read=1, write=1, notify=0)
+			frappe.share.add("Task", self.name, user, read=1, write=1, notify=0)
 
 	def unassign_todo(self):
 		if self.status == "Completed":
@@ -318,6 +328,7 @@ class Task(NestedSet):
 		if check_if_child_exists(self.name):
 			throw(_("Child Task exists for this Task. You can not delete this Task."))
 
+		clear(self.doctype, self.name, ignore_permissions=True)
 		self.update_nsm_model()
 
 	def after_delete(self):
@@ -404,14 +415,30 @@ def set_multiple_status(names, status):
 def set_tasks_as_overdue():
 	tasks = frappe.get_all(
 		"Task",
-		filters={"status": ["not in", ["Cancelled", "Completed"]]},
-		fields=["name", "status", "review_date"],
+		filters={
+			"status": ["not in", ["Cancelled", "Completed", "Template"]],
+			"exp_end_date": ["<", today()],
+		},
+		fields=["name", "status", "review_date", "project"],
 	)
+
+	overdue_tasks = []
+	projects = set()
 	for task in tasks:
-		if task.status == "Pending Review":
-			if getdate(task.review_date) > getdate(today()):
-				continue
-		frappe.get_doc("Task", task.name).update_status()
+		if task.status == "Pending Review" and getdate(task.review_date) > getdate(today()):
+			continue
+		overdue_tasks.append(task.name)
+		if task.project:
+			projects.add(task.project)
+
+	if not overdue_tasks:
+		return
+
+	TaskDT = frappe.qb.DocType("Task")
+	(frappe.qb.update(TaskDT).set(TaskDT.status, "Overdue").where(TaskDT.name.isin(overdue_tasks))).run()
+
+	for project in projects:
+		frappe.get_cached_doc("Project", project).update_project()
 
 
 @frappe.whitelist()

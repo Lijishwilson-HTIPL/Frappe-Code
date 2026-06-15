@@ -3,13 +3,21 @@ frappe.listview_settings["Task"] = {
 	add_fields: [
 		"project", "status", "priority", "subject",
 		"exp_end_date", "progress", "_assign", "owner",
+		"is_group", "parent_task",
 	],
 	filters: [["status", "=", "Open"]],
 
 	onload: function (listview) {
 		// Hide Frappe's default "Add Task" button — the quick-bar handles creation
-		listview.page.set_primary_action = function () {};
+		// (re-hidden inside the MutationObserver below on every list re-render)
 		setTimeout(() => listview.page.btn_primary && listview.page.btn_primary.hide(), 100);
+
+		// Shortcut button — navigates to Task Assignment Board, carrying active project filter
+		listview.page.add_button(__("Assignment Board"), () => {
+			const project = get_active_project_id();
+			if (project) frappe.route_options = { project: project };
+			frappe.set_route("task-assignment-board");
+		}, { icon: "arrow-right" });
 
 		// ── Jira CSS ───────────────────────────────────────────────────
 		{
@@ -70,6 +78,30 @@ frappe.listview_settings["Task"] = {
 					text-overflow:ellipsis !important;
 				}
 
+				/* ── Subject column: wider + wraps on hover ── */
+				[data-doctype="Task"] .list-row .list-subject,
+				[data-doctype="Task"] .list-row-head .list-subject {
+					min-width:260px !important;
+					flex:3 !important;
+				}
+				[data-doctype="Task"] .list-row .level-item.bold {
+					white-space:nowrap !important;
+					overflow:hidden !important;
+					text-overflow:ellipsis !important;
+					max-width:420px !important;
+					cursor:pointer;
+					transition:max-width 0.2s ease;
+				}
+				[data-doctype="Task"] .list-row:hover .level-item.bold {
+					white-space:normal !important;
+					overflow:visible !important;
+					text-overflow:unset !important;
+					max-width:none !important;
+					background:#fff;
+					position:relative;
+					z-index:2;
+				}
+
 				/* ── Quick-create bar ── */
 				.jira-quick-bar {
 					display:flex; align-items:center; gap:8px;
@@ -95,6 +127,26 @@ frappe.listview_settings["Task"] = {
 				/* required field highlight */
 				.jira-field-required { border-color:#DE350B !important; box-shadow:0 0 0 2px #ffebe6 !important; }
 				.jira-field-required::placeholder { color:#DE350B !important; }
+
+				/* ── Task type badges — solid colors that survive any theme ── */
+				[data-doctype="Task"] .jira-task-badge {
+					display:inline-block !important;
+					font-size:10px !important; font-weight:700 !important;
+					border-radius:3px !important; padding:2px 6px !important;
+					letter-spacing:0.05em !important; vertical-align:middle !important;
+					flex-shrink:0 !important; margin-left:6px !important;
+					line-height:1.4 !important;
+				}
+				[data-doctype="Task"] .jira-task-badge.jira-badge-parent {
+					background:#0052cc !important;
+					color:#ffffff !important;
+					-webkit-text-fill-color:#ffffff !important;
+				}
+				[data-doctype="Task"] .jira-task-badge.jira-badge-subtask {
+					background:#505f79 !important;
+					color:#ffffff !important;
+					-webkit-text-fill-color:#ffffff !important;
+				}
 
 				.jira-quick-add-btn {
 					height:32px; padding:0 16px; background:#0052cc; color:#fff;
@@ -136,10 +188,53 @@ frappe.listview_settings["Task"] = {
 				}
 				.jira-filter-chip:hover { background:#ebecf0; border-color:#b3bac5; }
 				.jira-filter-chip.active { background:#deebff; border-color:#4c9aff; color:#0052cc; }
+
+				/* Multi-assignee select */
+				.jira-multi-select-wrap { position:relative; display:inline-block; }
+				.jira-multi-select-trigger {
+					height:32px; border:1px solid #dfe1e6; border-radius:3px;
+					padding:0 10px; font-size:13px; color:#97a0af;
+					background:#fff; display:flex; align-items:center; gap:6px;
+					cursor:pointer; min-width:150px; white-space:nowrap;
+					transition:border-color 0.15s, box-shadow 0.15s; user-select:none;
+				}
+				.jira-multi-select-trigger:hover { border-color:#4c9aff; }
+				.jira-multi-select-trigger.has-value { color:#172b4d; }
+				.jira-multi-select-arrow { margin-left:auto; font-size:10px; color:#97a0af; }
+				.jira-multi-select-menu {
+					position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
+					background:#fff; border:1px solid #dfe1e6; border-radius:4px;
+					box-shadow:0 4px 16px rgba(0,0,0,0.15); min-width:220px; max-width:280px;
+				}
+				.jira-multi-select-search { padding:8px 8px 4px; border-bottom:1px solid #f0f0f0; }
+				.jira-multi-select-search input {
+					width:100%; height:28px; border:1px solid #dfe1e6; border-radius:3px;
+					padding:0 8px; font-size:12px; outline:none; box-sizing:border-box;
+				}
+				.jira-multi-select-search input:focus { border-color:#4c9aff; }
+				.jira-multi-select-list { max-height:200px; overflow-y:auto; padding:4px 0; }
+				.jira-multi-select-item {
+					display:flex; align-items:center; gap:8px; padding:6px 12px;
+					font-size:13px; color:#172b4d; cursor:pointer; transition:background 0.1s;
+				}
+				.jira-multi-select-item:hover { background:#f4f5f7; }
+				.jira-multi-select-item input[type="checkbox"] { cursor:pointer; }
+
+				/* Assignment board shortcut button */
+				[data-doctype="Task"] .page-actions .btn:has(.icon-arrow-right) {
+					border-color: #0052cc;
+					color: #0052cc;
+					font-weight: 600;
+				}
+				[data-doctype="Task"] .page-actions .btn:has(.icon-arrow-right):hover {
+					background: #deebff;
+				}
 			`;
 		}
 
 		// ── Build project autocomplete list ───────────────────────────
+		// Remove any datalist left behind by a previous onload to avoid duplicates
+		$("#jira-project-list").remove();
 		const $datalist = $(`<datalist id="jira-project-list"></datalist>`);
 		const projectMap = {}; // lowercase display label → document name (ID)
 		frappe._task_project_id_to_name = {}; // ID → display label (used by formatter)
@@ -164,9 +259,18 @@ frappe.listview_settings["Task"] = {
 		const $bar = $(`
 			<div class="jira-quick-bar" id="jira-quick-bar">
 				<input type="text" id="jira-task-subject"  placeholder="+ What needs to be done?" />
-				<select id="jira-task-assignee">
-					<option value="">👤 Assign To *</option>
-				</select>
+				<div class="jira-multi-select-wrap" id="jira-assignee-wrap">
+					<div class="jira-multi-select-trigger" id="jira-task-assignee">
+						<span id="jira-assignee-label">👤 Assign To *</span>
+						<span class="jira-multi-select-arrow">▾</span>
+					</div>
+					<div class="jira-multi-select-menu" id="jira-assignee-menu" style="display:none;">
+						<div class="jira-multi-select-search">
+							<input type="text" placeholder="🔍 Search members..." id="jira-assignee-search" />
+						</div>
+						<div class="jira-multi-select-list" id="jira-assignee-list"></div>
+					</div>
+				</div>
 				<select id="jira-task-priority">
 					<option value="">⚡ Priority</option>
 					<option value="Low">↓ Low</option>
@@ -212,23 +316,72 @@ frappe.listview_settings["Task"] = {
 			return null;
 		}
 
-		// Populate assignee dropdown
+		// Populate assignee checkbox list
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: { doctype: "User", filters: { enabled: 1, user_type: "System User" }, fields: ["name", "full_name"], limit_page_length: 100 },
 			callback: function (r) {
 				if (!r.message) return;
 				r.message.forEach(u => {
-					$("#jira-task-assignee").append(`<option value="${u.name}">${u.full_name || u.name}</option>`);
+					const label = frappe.utils.escape_html(u.full_name || u.name);
+					const val = frappe.utils.escape_html(u.name);
+					$("#jira-assignee-list").append(
+						`<label class="jira-multi-select-item">
+							<input type="checkbox" value="${val}" />
+							<span>${label}</span>
+						</label>`
+					);
 				});
 			},
+		});
+
+		// Toggle dropdown
+		$("#jira-task-assignee").on("click", function (e) {
+			e.stopPropagation();
+			const $menu = $("#jira-assignee-menu");
+			const open = $menu.is(":visible");
+			$menu.toggle(!open);
+			if (!open) { $("#jira-assignee-search").val("").trigger("input").focus(); }
+		});
+
+		// Search filter (namespaced + de-duplicated)
+		$(document).off("input.jira-assignee-search").on("input.jira-assignee-search", "#jira-assignee-search", function () {
+			const q = $(this).val().toLowerCase();
+			$("#jira-assignee-list .jira-multi-select-item").each(function () {
+				$(this).toggle($(this).text().toLowerCase().includes(q));
+			});
+		});
+
+		// Update trigger label when selection changes (namespaced + de-duplicated)
+		$(document).off("change.jira-assignee-check").on("change.jira-assignee-check", "#jira-assignee-list input[type='checkbox']", function () {
+			const checked = $("#jira-assignee-list input:checked");
+			const $trigger = $("#jira-task-assignee");
+			$trigger.removeClass("jira-field-required");
+			if (!checked.length) {
+				$("#jira-assignee-label").text("👤 Assign To *");
+				$trigger.removeClass("has-value");
+			} else if (checked.length === 1) {
+				const name = checked.first().closest("label").find("span").text();
+				$("#jira-assignee-label").text("👤 " + name);
+				$trigger.addClass("has-value");
+			} else {
+				$("#jira-assignee-label").text("👤 " + checked.length + " members");
+				$trigger.addClass("has-value");
+			}
+		});
+
+		// Close on click outside
+		$(document).off("click.jira-assignee").on("click.jira-assignee", function (e) {
+			if (!$(e.target).closest("#jira-assignee-wrap").length) {
+				$("#jira-assignee-menu").hide();
+			}
 		});
 
 		// ── Submit handler ────────────────────────────────────────────
 		function create_task() {
 			const subject  = $("#jira-task-subject").val().trim();
 			const projectId = get_active_project_id();
-			const assignee  = $("#jira-task-assignee").val();
+			const assignees = $("#jira-assignee-list input:checked").map((_, el) => el.value).get();
 			const priority  = $("#jira-task-priority").val();
 			const due_date  = $("#jira-task-due").val();
 
@@ -244,7 +397,7 @@ frappe.listview_settings["Task"] = {
 				frappe.show_alert({ message: __("Please open a project and view its tasks before adding a task"), indicator: "red" }, 4);
 				valid = false;
 			}
-			if (!assignee) {
+			if (!assignees.length) {
 				$("#jira-task-assignee").addClass("jira-field-required");
 				frappe.show_alert({ message: __("Please select who to assign this task to"), indicator: "red" }, 3);
 				valid = false;
@@ -281,7 +434,7 @@ frappe.listview_settings["Task"] = {
 				args: { doc },
 				callback: function (res) {
 					if (res.message) {
-						if (assignee) {
+						if (assignees.length) {
 							const emailBody = [
 								__("Task: {0}", [subject]),
 								__("Project: {0}", [projectLabel]),
@@ -295,7 +448,7 @@ frappe.listview_settings["Task"] = {
 								args: {
 									doctype: "Task",
 									name: res.message.name,
-									assign_to: [assignee],
+									assign_to: assignees,
 									notify: 1,
 									description: emailBody,
 								},
@@ -303,7 +456,10 @@ frappe.listview_settings["Task"] = {
 						}
 						frappe.show_alert({ message: __("Task <b>{0}</b> created", [subject]), indicator: "green" }, 3);
 						$("#jira-task-subject").val("").attr("placeholder", "+ What needs to be done?");
-						$("#jira-task-assignee,#jira-task-priority").val("");
+						$("#jira-assignee-list input[type='checkbox']").prop("checked", false);
+						$("#jira-assignee-label").text("👤 Assign To *");
+						$("#jira-task-assignee").removeClass("has-value");
+						$("#jira-task-priority").val("");
 						$("#jira-task-due").val("");
 						listview.refresh();
 					}
@@ -317,8 +473,8 @@ frappe.listview_settings["Task"] = {
 			if (e.key === "Enter") create_task();
 		});
 
-		// ── Project link: click to filter list by project ─────────────
-		$(document).on("click", ".jira-project-link", function (e) {
+		// ── Project link: click to filter list by project (namespaced + de-duplicated) ──
+		$(document).off("click.jira-project-link").on("click.jira-project-link", ".jira-project-link", function (e) {
 			e.preventDefault();
 			const project = $(this).data("project");
 			// clear existing project filter then add new one
@@ -328,8 +484,8 @@ frappe.listview_settings["Task"] = {
 			frappe.show_alert({ message: __("Showing tasks for project <b>{0}</b>", [project]), indicator: "blue" }, 3);
 		});
 
-		// ── Filter chips ──────────────────────────────────────────────
-		const $chips = $(`<span style="margin-left:12px;"></span>`);
+		// ── Filter chips (skip if already injected on this page) ──────
+		const $chips = $(`<span class="jira-task-chips" style="margin-left:12px;"></span>`);
 		const $mine  = $(`<button class="jira-filter-chip">👤 Assigned to me</button>`);
 		const $dueW  = $(`<button class="jira-filter-chip">📅 Due this week</button>`);
 
@@ -358,8 +514,10 @@ frappe.listview_settings["Task"] = {
 			listview.refresh();
 		});
 
-		$chips.append($mine).append($dueW);
-		$(listview.page.body).find(".page-head .page-title").after($chips);
+		if (!$(listview.page.body).find(".jira-task-chips").length) {
+			$chips.append($mine).append($dueW);
+			$(listview.page.body).find(".page-head .page-title").after($chips);
+		}
 
 		// ── Assigner / Assigned To columns ───────────────────────────
 		function inject_assignment_cols() {
@@ -397,6 +555,29 @@ frappe.listview_settings["Task"] = {
 				const task = rowName ? (listview.data || []).find(d => d.name === rowName) : null;
 				if (!task) return;
 
+				// ── Subject type badge (parent / subtask) ──────────────────
+				const $subjectLink = $container.find('.list-subject a, .level-item.bold a').first();
+				if ($subjectLink.length && !$container.find('.jira-task-badge').length) {
+					const subjectText = $subjectLink.text().trim();
+					$subjectLink.attr("title", subjectText);
+					if (task.is_group) {
+						$subjectLink.before(
+							'<svg viewBox="0 0 16 16" width="13" height="13" fill="#0052cc" style="flex-shrink:0;margin-right:4px;vertical-align:middle;" title="Parent Task">' +
+							'<path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.764c.415 0 .813.165 1.107.46l.647.646A1.5 1.5 0 0 0 9.125 3.5H13.5A1.5 1.5 0 0 1 15 5v7.5A1.5 1.5 0 0 1 13.5 14h-11A1.5 1.5 0 0 1 1 12.5z"/></svg>'
+						);
+						$subjectLink.after(
+							'<span class="jira-task-badge jira-badge-parent" title="This is a parent task">PARENT</span>'
+						);
+					} else if (task.parent_task) {
+						$subjectLink.before(
+							'<span style="color:#97a0af;font-size:14px;margin-right:4px;vertical-align:middle;line-height:1;" title="Subtask of ' + frappe.utils.escape_html(task.parent_task) + '">↳</span>'
+						);
+						$subjectLink.after(
+							'<span class="jira-task-badge jira-badge-subtask" title="Subtask of ' + frappe.utils.escape_html(task.parent_task) + '">SUBTASK</span>'
+						);
+					}
+				}
+
 				// Assigner — task owner
 				let assigner = "—";
 				if (task.owner) {
@@ -432,10 +613,78 @@ frappe.listview_settings["Task"] = {
 		// Fire inject immediately on every list re-render using MutationObserver.
 		// This replaces the old 400ms poll, which left a window where Frappe could
 		// re-render after our inject and undo all changes before the next poll fired.
-		setTimeout(inject_assignment_cols, 150);
-		if (listview.$result && listview.$result[0]) {
-			new MutationObserver(frappe.utils.debounce(inject_assignment_cols, 80))
-				.observe(listview.$result[0], { childList: true });
+		setTimeout(() => { inject_assignment_cols(); inject_col_resizer(); }, 150);
+		if (!listview.__jira_observer && listview.$result && listview.$result[0]) {
+			listview.__jira_observer = new MutationObserver(frappe.utils.debounce(() => {
+				inject_assignment_cols();
+				inject_col_resizer();
+				// re-hide the default primary button after every list re-render
+				listview.page.btn_primary && listview.page.btn_primary.hide();
+			}, 80));
+			listview.__jira_observer.observe(listview.$result[0], { childList: true });
+		}
+
+		// ── Subject column drag-to-resize ────────────────────────────────
+		const COL_W_KEY = "jira_task_subject_col_width";
+
+		function apply_subject_width(px) {
+			if (!listview.$result) return;
+			// .list-subject class is on BOTH header and data-row subject cells
+			listview.$result.find(".list-subject").each(function () {
+				this.style.setProperty("min-width", px + "px", "important");
+				this.style.setProperty("max-width", px + "px", "important");
+				this.style.setProperty("flex", "none", "important");
+			});
+			let s = document.getElementById("jira-subject-col-style");
+			if (!s) { s = document.createElement("style"); s.id = "jira-subject-col-style"; document.head.appendChild(s); }
+			s.textContent = `[data-doctype="Task"] .list-subject{min-width:${px}px!important;max-width:${px}px!important;flex:none!important;}`;
+		}
+
+		function inject_col_resizer() {
+			if (!listview.$result || !listview.$result.length) return;
+			const $head = listview.$result.find(".list-row-head");
+			if (!$head.length) return;
+
+			// The header subject cell carries the same .list-subject class as data rows
+			const col = $head.find(".list-subject")[0];
+			if (!col || col.__jira_resizer) return;
+			col.__jira_resizer = true;
+
+			// Hover near the right edge → blue border + col-resize cursor (16px hot zone)
+			col.addEventListener("mousemove", function (e) {
+				const near = e.clientX > col.getBoundingClientRect().right - 16;
+				col.style.cursor = near ? "col-resize" : "";
+				col.style.borderRight = near ? "2px solid #4c9aff" : "";
+			});
+			col.addEventListener("mouseleave", () => {
+				col.style.cursor = "";
+				col.style.borderRight = "";
+			});
+
+			// Mousedown near right edge → start drag via full-screen overlay
+			col.addEventListener("mousedown", function (e) {
+				if (e.clientX < col.getBoundingClientRect().right - 16) return;
+				e.preventDefault();
+				e.stopPropagation();
+				col.style.borderRight = "2px solid #0052cc";
+				const startX = e.clientX;
+				const startW = col.getBoundingClientRect().width;
+				const overlay = document.createElement("div");
+				overlay.style.cssText = "position:fixed;inset:0;z-index:99999;cursor:col-resize;";
+				document.body.appendChild(overlay);
+				overlay.addEventListener("mousemove", ev => apply_subject_width(Math.max(120, startW + ev.clientX - startX)));
+				overlay.addEventListener("mouseup", ev => {
+					const w = Math.max(120, startW + ev.clientX - startX);
+					apply_subject_width(w);
+					localStorage.setItem(COL_W_KEY, w);
+					document.body.removeChild(overlay);
+					col.style.borderRight = "";
+					col.style.cursor = "";
+				});
+			});
+
+			const saved = localStorage.getItem(COL_W_KEY);
+			if (saved) apply_subject_width(parseInt(saved, 10));
 		}
 
 		// Bulk status actions
@@ -545,8 +794,12 @@ frappe.listview_settings["Task"] = {
 		if (task.project) html += `<p class="mb-1">${__("Project")}: <a class="text-white" href="/app/project/${task.project}">${task.project}</a></p>`;
 		html += `<p class="mb-1">${__("Progress")}: <span class="text-white">${ganttobj.progress}%</span></p>`;
 		if (task._assign) {
-			const users = JSON.parse(task._assign);
-			html += `<span>Assigned to: </span><span class="text-white">${users.map(u => frappe.user_info(u).fullname).join(", ")}</span>`;
+			try {
+				const users = JSON.parse(task._assign);
+				if (Array.isArray(users) && users.length) {
+					html += `<br><small>Assigned: ${users.map(u => (frappe.user_info(u) || {}).fullname || u).join(", ")}</small>`;
+				}
+			} catch(e) {}
 		}
 		return `<div class="p-3" style="min-width:220px">${html}</div>`;
 	},
