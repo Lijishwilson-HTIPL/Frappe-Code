@@ -94,3 +94,6 @@ start-bench.sh
 # Windows Zone.Identifier ADS metadata files (created when files downloaded on Windows)
 *Zone.Identifier
 *:Zone.Identifier
+
+# Unapproved MFT license API (OTP version — not in use)
+apps/erpnext/erpnext/mft_license_api.py
