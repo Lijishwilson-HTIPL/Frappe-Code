@@ -72,6 +72,18 @@ class CRMDashboard {
     .crm-activity-title { font-weight:600; font-size:0.85rem; color:var(--text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .crm-activity-sub { font-size:0.75rem; color:var(--text-muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .crm-activity-time { font-size:0.7rem; color:var(--text-muted); white-space:nowrap; flex-shrink:0; padding-top:4px; }
+    .crm-tasks-list { display:flex; flex-direction:column; gap:8px; }
+    .crm-task-item { display:flex; align-items:center; gap:12px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:12px 16px; cursor:pointer; transition:box-shadow 0.12s; }
+    .crm-task-item:hover { box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+    .crm-task-priority { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .crm-task-priority.High { background:#ef4444; }
+    .crm-task-priority.Medium { background:#f59e0b; }
+    .crm-task-priority.Low { background:#10b981; }
+    .crm-task-body { flex:1; min-width:0; }
+    .crm-task-title { font-weight:600; font-size:0.85rem; color:var(--text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .crm-task-meta { font-size:0.72rem; color:var(--text-muted); margin-top:2px; }
+    .crm-task-status { font-size:0.72rem; padding:2px 8px; border-radius:8px; font-weight:600; background:var(--border-color); color:var(--text-muted); flex-shrink:0; }
+    .crm-task-due { font-size:0.72rem; color:var(--text-muted); flex-shrink:0; }
     .crm-loading { display:flex; align-items:center; justify-content:center; padding:60px 0; color:var(--text-muted); font-size:0.9rem; gap:10px; }
     .crm-spinner { width:22px; height:22px; border:3px solid var(--border-color); border-top-color:var(--primary); border-radius:50%; animation:crm-spin 0.7s linear infinite; }
     @keyframes crm-spin { to { transform:rotate(360deg); } }
@@ -108,19 +120,32 @@ class CRMDashboard {
       <div class="crm-kpi-value" id="kpi-won">—</div>
       <div class="crm-kpi-sub">${__("Closed won deals")}</div>
     </div>
+    <div class="crm-kpi-card">
+      <div class="crm-kpi-label">${__("Contacts")}</div>
+      <div class="crm-kpi-value" id="kpi-contacts">—</div>
+      <div class="crm-kpi-sub">${__("Total contacts")}</div>
+    </div>
   </div>
 
   <div class="crm-tabs">
     <div class="crm-tab-pill active" data-tab="pipeline">${__("Pipeline")}</div>
+    <div class="crm-tab-pill" data-tab="lead-journey">${__("Lead Journey")}</div>
     <div class="crm-tab-pill" data-tab="leads">${__("Leads")}</div>
+    <div class="crm-tab-pill" data-tab="tasks">${__("Tasks")}</div>
     <div class="crm-tab-pill" data-tab="activity">${__("Activity")}</div>
   </div>
 
   <div id="crm-tab-pipeline" class="crm-tab-content active">
     <div class="crm-loading"><div class="crm-spinner"></div> ${__("Loading pipeline…")}</div>
   </div>
+  <div id="crm-tab-lead-journey" class="crm-tab-content">
+    <div class="crm-loading"><div class="crm-spinner"></div> ${__("Loading lead journey…")}</div>
+  </div>
   <div id="crm-tab-leads" class="crm-tab-content">
     <div class="crm-loading"><div class="crm-spinner"></div> ${__("Loading leads…")}</div>
+  </div>
+  <div id="crm-tab-tasks" class="crm-tab-content">
+    <div class="crm-loading"><div class="crm-spinner"></div> ${__("Loading tasks…")}</div>
   </div>
   <div id="crm-tab-activity" class="crm-tab-content">
     <div class="crm-loading"><div class="crm-spinner"></div> ${__("Loading activity…")}</div>
@@ -164,9 +189,11 @@ class CRMDashboard {
             method: "erpnext.crm.page.crm_dashboard.crm_dashboard.get_dashboard_data",
             callback: function (r) {
                 if (r.message) {
-                    me._render_kpis(r.message.kpis);
+                    me._render_kpis(r.message.kpis, r.message.crm_contacts_count);
                     me._render_pipeline(r.message);
+                    me._render_lead_journey(r.message);
                     me._render_leads(r.message);
+                    me._render_tasks(r.message.crm_tasks);
                     me._render_activity(r.message.activities);
                 }
             },
@@ -177,11 +204,12 @@ class CRMDashboard {
         });
     }
 
-    _render_kpis(kpis) {
+    _render_kpis(kpis, contacts_count) {
         this.$main.find("#kpi-open-leads").text(kpis.open_leads || 0);
         this.$main.find("#kpi-open-deals").text(kpis.open_deals || 0);
         this.$main.find("#kpi-pipeline").text(this._fmt_currency(kpis.pipeline_value || 0));
         this.$main.find("#kpi-won").text(kpis.won_this_month || 0);
+        this.$main.find("#kpi-contacts").text(contacts_count || 0);
     }
 
     _render_pipeline(data) {
@@ -318,6 +346,87 @@ class CRMDashboard {
         }).join("");
 
         this.$main.find("#crm-tab-activity").html(`<div class="crm-activity-list">${items}</div>`);
+    }
+
+    _render_lead_journey(data) {
+        const crmLeads = data.crm_leads || [];
+        const statuses = data.crm_lead_statuses || ["New", "Contacted", "Nurture", "Qualified", "Unqualified", "Junk"];
+
+        // Also include ERPNext Leads by status
+        const erpLeads = data.erpnext_leads || [];
+        const erpStatuses = [...new Set(erpLeads.map(l => l.status || "Open"))];
+
+        let crmKanban = statuses.map(status => {
+            const cards = crmLeads.filter(l => l.status === status);
+            return `<div class="crm-kanban-col">
+              <div class="crm-kanban-col-header">${frappe.utils.escape_html(status)} <span class="col-count">${cards.length}</span></div>
+              <div class="crm-kanban-cards">
+                ${cards.length ? cards.map(l => `<div class="crm-kanban-card" data-crm-route="crm/leads/${frappe.utils.escape_html(l.name)}">
+                  <div class="card-name">${frappe.utils.escape_html(l.lead_name || l.name)}</div>
+                  <div class="card-meta">${frappe.utils.escape_html(l.organization || "")}${l.source ? " · " + frappe.utils.escape_html(l.source) : ""}</div>
+                  <div class="card-meta">${frappe.utils.escape_html(l.lead_owner || "")}</div>
+                </div>`).join("") : `<div class="crm-kanban-empty">${__("No leads")}</div>`}
+              </div>
+            </div>`;
+        }).join("");
+
+        let erpKanban = erpStatuses.map(status => {
+            const cards = erpLeads.filter(l => (l.status || "Open") === status);
+            return `<div class="crm-kanban-col">
+              <div class="crm-kanban-col-header">${frappe.utils.escape_html(status)} <span class="col-count">${cards.length}</span></div>
+              <div class="crm-kanban-cards">
+                ${cards.map(l => `<div class="crm-kanban-card" data-route="Form/Lead/${frappe.utils.escape_html(l.name)}">
+                  <div class="card-name">${frappe.utils.escape_html(l.lead_name || l.name)}</div>
+                  <div class="card-meta">${frappe.utils.escape_html(l.company_name || "")}${l.source ? " · " + frappe.utils.escape_html(l.source) : ""}</div>
+                  <div class="card-meta">${frappe.utils.escape_html(l.lead_owner || "")}</div>
+                </div>`).join("") || `<div class="crm-kanban-empty">${__("No leads")}</div>`}
+              </div>
+            </div>`;
+        }).join("");
+
+        const html = `
+          <div class="crm-pipeline-section">
+            <h3>${__("Frappe CRM Lead Journey")} <span class="badge">${crmLeads.length}</span></h3>
+            ${crmLeads.length || statuses.length
+                ? `<div class="crm-kanban">${crmKanban}</div>`
+                : `<div class="crm-empty">${__("No Frappe CRM leads found")}</div>`}
+          </div>
+          <div class="crm-pipeline-section" style="margin-top:28px;">
+            <h3>${__("ERPNext Leads by Status")} <span class="badge">${erpLeads.length}</span></h3>
+            ${erpStatuses.length
+                ? `<div class="crm-kanban">${erpKanban}</div>`
+                : `<div class="crm-empty">${__("No ERPNext leads found")}</div>`}
+          </div>`;
+
+        this.$main.find("#crm-tab-lead-journey").html(html);
+    }
+
+    _render_tasks(tasks) {
+        const $panel = this.$main.find("#crm-tab-tasks");
+        if (!tasks || !tasks.length) {
+            $panel.html(`<div class="crm-empty">${__("No open tasks")}</div>`);
+            return;
+        }
+        const rows = tasks.map(t => {
+            const priority = frappe.utils.escape_html(t.priority || "Medium");
+            const title = frappe.utils.escape_html(t.title || t.name);
+            const ref = t.reference_docname
+                ? `${frappe.utils.escape_html(t.reference_doctype || "")} · ${frappe.utils.escape_html(t.reference_docname)}`
+                : "";
+            const assignee = frappe.utils.escape_html(t.assigned_to || "");
+            const due = t.due_date ? `Due: ${frappe.utils.str_to_user(t.due_date)}` : "";
+            const status = frappe.utils.escape_html(t.status || "");
+            return `<div class="crm-task-item">
+              <div class="crm-task-priority ${priority}" title="${priority} priority"></div>
+              <div class="crm-task-body">
+                <div class="crm-task-title">${title}</div>
+                <div class="crm-task-meta">${ref}${assignee ? (ref ? " · " : "") + assignee : ""}</div>
+              </div>
+              <div class="crm-task-due">${due}</div>
+              <div class="crm-task-status">${status}</div>
+            </div>`;
+        }).join("");
+        $panel.html(`<div class="crm-tasks-list">${rows}</div>`);
     }
 
     _go(tab) {

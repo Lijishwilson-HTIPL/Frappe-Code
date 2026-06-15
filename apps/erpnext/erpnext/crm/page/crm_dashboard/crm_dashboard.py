@@ -74,6 +74,32 @@ def get_dashboard_data():
     except Exception:
         crm_deal_statuses = ["Qualification", "Demo/Making", "Proposal", "Negotiation", "Won", "Lost"]
 
+    # CRM Lead Statuses (for Lead Journey Kanban)
+    crm_lead_statuses = []
+    try:
+        lead_statuses = frappe.get_all("CRM Lead Status", fields=["name", "position"], order_by="position asc, name asc")
+        crm_lead_statuses = [s["name"] for s in lead_statuses]
+    except Exception:
+        crm_lead_statuses = ["New", "Contacted", "Nurture", "Qualified", "Unqualified", "Junk"]
+
+    # CRM Tasks (open tasks linked to leads/deals)
+    crm_tasks = []
+    try:
+        crm_tasks = frappe.get_all("CRM Task",
+            filters={"status": ["not in", ["Done", "Cancelled"]]},
+            fields=["name", "title", "status", "priority", "due_date", "assigned_to", "reference_doctype", "reference_docname"],
+            order_by="due_date asc", limit=50)
+        crm_tasks = [dict(t) for t in crm_tasks]
+    except Exception:
+        pass
+
+    # CRM Contacts count
+    crm_contacts_count = 0
+    try:
+        crm_contacts_count = frappe.db.count("Contact")
+    except Exception:
+        pass
+
     # Activities
     activities = []
     if frappe.has_permission("Communication", "read"):
@@ -141,5 +167,8 @@ def get_dashboard_data():
         "crm_deal_statuses": crm_deal_statuses,
         "erpnext_leads": [dict(l) for l in erpnext_leads],
         "crm_leads": [dict(l) for l in crm_leads],
+        "crm_lead_statuses": crm_lead_statuses,
+        "crm_tasks": crm_tasks,
+        "crm_contacts_count": crm_contacts_count,
         "activities": activities
     }
