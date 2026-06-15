@@ -452,6 +452,19 @@ frappe.listview_settings["Task"] = {
 									notify: 1,
 									description: emailBody,
 								},
+								callback: function () {
+									// Sync task_assignees child table now that _assign is written
+									frappe.call({
+										method: "erpnext.projects.doctype.task.task.sync_task_assignees",
+										args: { name: res.message.name },
+									});
+								},
+								error: function () {
+									frappe.show_alert({
+										message: __("Task created but assignment failed — open the task to assign manually."),
+										indicator: "orange",
+									}, 5);
+								},
 							});
 						}
 						frappe.show_alert({ message: __("Task <b>{0}</b> created", [subject]), indicator: "green" }, 3);
@@ -587,14 +600,21 @@ frappe.listview_settings["Task"] = {
 
 				// Assigned To — _assign JSON array
 				let assignedTo = "—";
+				let assignedToTitle = "";
 				if (task._assign && task._assign !== "[]" && task._assign !== "null") {
 					try {
 						const users = JSON.parse(task._assign);
 						if (users && users.length) {
-							assignedTo = users.map(function (u) {
+							const names = users.map(function (u) {
 								const info = frappe.user_info(u);
 								return (info && info.fullname) ? info.fullname : u.split("@")[0];
-							}).join(", ");
+							});
+							assignedToTitle = names.join(", ");
+							if (names.length === 1) {
+								assignedTo = names[0];
+							} else {
+								assignedTo = names[0] + " +" + (names.length - 1);
+							}
 						}
 					} catch (_) { /* show — */ }
 				}
@@ -603,20 +623,82 @@ frappe.listview_settings["Task"] = {
 					return String(v || "—").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 				}
 
+				const assignedToHtml = assignedToTitle
+					? '<span style="font-size:12px;color:#172b4d;" title="' + safe(assignedToTitle) + '">' + safe(assignedTo) + '</span>'
+					: '<span style="font-size:12px;color:#172b4d;">—</span>';
+
 				$container.find('.level-right').first().before(
-					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assigner)   + '</span></div>' +
-					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assignedTo) + '</span></div>'
+					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assigner) + '</span></div>' +
+					'<div class="jira-assign-col">' + assignedToHtml + '</div>'
 				);
 			});
+		}
+
+		// ── Group subtasks under their parent tasks ──────────────────────
+		function reorder_subtasks_under_parents() {
+			if (!listview.data || !listview.data.length) return;
+			const $result = listview.$result;
+			if (!$result || !$result.length) return;
+
+			const $containers = $result.find('.list-row-container');
+			if ($containers.length < 2) return;
+
+			// rowName → $container
+			const rowMap = {};
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (n) rowMap[n] = $(this);
+			});
+
+			// rowName → task data
+			const taskMap = {};
+			(listview.data || []).forEach(function (d) { taskMap[d.name] = d; });
+
+			const ordered = [];
+			const placed = new Set();
+
+			// First pass: top-level tasks (no parent_task) followed by their subtasks
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (!n || placed.has(n)) return;
+				const task = taskMap[n];
+				if (!task || task.parent_task) return; // skip subtasks in this pass
+
+				placed.add(n);
+				ordered.push(rowMap[n]);
+
+				// Immediately append any subtasks of this task
+				$containers.each(function () {
+					const sn = $(this).find('.list-row-checkbox').data('name');
+					if (!sn || placed.has(sn)) return;
+					const sub = taskMap[sn];
+					if (sub && sub.parent_task === n) {
+						placed.add(sn);
+						ordered.push(rowMap[sn]);
+					}
+				});
+			});
+
+			// Second pass: orphan subtasks whose parent is not in the current list
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (!n || placed.has(n)) return;
+				ordered.push(rowMap[n]);
+			});
+
+			// Re-insert all rows in the new order (append moves existing elements — no clone needed)
+			const $listBody = $containers.first().parent();
+			ordered.forEach(function ($el) { $listBody.append($el); });
 		}
 
 		// Fire inject immediately on every list re-render using MutationObserver.
 		// This replaces the old 400ms poll, which left a window where Frappe could
 		// re-render after our inject and undo all changes before the next poll fired.
-		setTimeout(() => { inject_assignment_cols(); inject_col_resizer(); }, 150);
+		setTimeout(() => { inject_assignment_cols(); reorder_subtasks_under_parents(); inject_col_resizer(); }, 150);
 		if (!listview.__jira_observer && listview.$result && listview.$result[0]) {
 			listview.__jira_observer = new MutationObserver(frappe.utils.debounce(() => {
 				inject_assignment_cols();
+				reorder_subtasks_under_parents();
 				inject_col_resizer();
 				// re-hide the default primary button after every list re-render
 				listview.page.btn_primary && listview.page.btn_primary.hide();
