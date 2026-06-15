@@ -193,7 +193,7 @@ class ProjectHome {
 	}
 
 	_render_heatmap() {
-		this.$heatmap = $('<div class="ph-hm-wrap"></div>').prependTo($(this.page.main));
+		this.$heatmap = $('<div class="ph-hm-wrap"></div>').appendTo($(this.page.main));
 		this.$heatmap.html(
 			`<div class="ph-hm-title">${__("Task Activity — Last 52 Weeks")}</div>` +
 			`<div style="color:var(--text-muted,#6b7280);font-size:12px;">${__("Loading…")}</div>`

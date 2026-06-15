@@ -72,7 +72,6 @@ def get_task_heatmap():
                    SUM(status != 'Completed') AS updated
             FROM `tabTask`
             WHERE modified >= DATE_SUB(CURDATE(), INTERVAL 52 WEEK)
-              AND DATE(modified) != DATE(creation)
             GROUP BY DATE(modified)
         ) t
         GROUP BY day

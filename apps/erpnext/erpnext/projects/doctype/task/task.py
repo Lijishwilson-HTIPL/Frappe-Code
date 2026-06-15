@@ -192,6 +192,8 @@ class Task(NestedSet):
 	def validate_blocked(self):
 		if self.is_blocked and not self.blocked_by_task:
 			frappe.throw(_("Please specify which task is blocking this one (Blocked By field)."))
+		if self.is_blocked and self.blocked_by_task == self.name:
+			frappe.throw(_("A task cannot be blocked by itself."))
 
 	def update_depends_on(self):
 		depends_on_tasks = ""
@@ -243,6 +245,8 @@ class Task(NestedSet):
 	def sync_assignees_from_assign(self):
 		import json
 		if not self.name:
+			return
+		if self.flags.get("ignore_sync_assignees"):
 			return
 		_assign = self.get("_assign") or frappe.db.get_value("Task", self.name, "_assign") or "[]"
 		users = json.loads(_assign)
@@ -332,6 +336,7 @@ class Task(NestedSet):
 					task.exp_start_date = add_days(end_date, 1)
 					task.exp_end_date = add_days(task.exp_start_date, task_duration)
 					task.flags.ignore_recursion_check = True
+					task.flags.ignore_sync_assignees = True
 					task.save()
 
 	def has_webform_permission(self):
@@ -404,6 +409,7 @@ def reassign_task(name, employee, note=None):
 def sync_task_assignees(name):
 	"""Called by the quick-bar after frappe.desk.form.assign_to.add succeeds."""
 	task_doc = frappe.get_doc("Task", name)
+	task_doc.check_permission("write")
 	task_doc.sync_assignees_from_assign()
 
 
