@@ -15,6 +15,7 @@ class ProjectHome {
 		this.search_value = "";
 		this._setup_filters();
 		this._inject_css();
+		this._render_heatmap();
 		this.$grid = $('<div class="ph-grid"></div>').appendTo(
 			$(this.page.main)
 		);
@@ -126,9 +127,186 @@ class ProjectHome {
 	color: var(--text-muted, #6b7280);
 	font-size: 14px;
 }
+/* ── Heatmap ── */
+.ph-hm-wrap { padding: 16px 0 12px; }
+.ph-hm-title { font-weight: 600; font-size: 13px; color: var(--text-color, #1a202c); margin-bottom: 8px; }
+.ph-hm-months {
+    display: grid;
+    grid-template-columns: 28px repeat(53, 14px);
+    gap: 2px;
+    margin-bottom: 2px;
+}
+.ph-hm-month-lbl {
+    font-size: 10px;
+    color: var(--text-muted, #6b7280);
+    white-space: nowrap;
+    overflow: visible;
+    line-height: 1;
+}
+.ph-hm-grid {
+    display: grid;
+    grid-template-columns: 28px repeat(53, 14px);
+    grid-template-rows: repeat(7, 14px);
+    gap: 2px;
+}
+.ph-hm-day-lbl {
+    font-size: 9px;
+    color: var(--text-muted, #6b7280);
+    text-align: right;
+    padding-right: 4px;
+    line-height: 14px;
+    white-space: nowrap;
+}
+.ph-hm-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.1s;
+}
+.ph-hm-cell:hover { opacity: 0.75; }
+.ph-hm-gap { background: transparent !important; cursor: default; pointer-events: none; }
+.ph-hm-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+}
+.ph-hm-legend span { font-size: 11px; color: var(--text-muted, #6b7280); }
+.ph-hm-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: #1e293b;
+    color: #f1f5f9;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 8px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
 `;
 		const $style = $(`<style id="ph-page-css">${css}</style>`);
 		$("head").append($style);
+	}
+
+	_render_heatmap() {
+		this.$heatmap = $('<div class="ph-hm-wrap"></div>').prependTo($(this.page.main));
+		this.$heatmap.html(
+			`<div class="ph-hm-title">${__("Task Activity — Last 52 Weeks")}</div>` +
+			`<div style="color:var(--text-muted,#6b7280);font-size:12px;">${__("Loading…")}</div>`
+		);
+		frappe.call({
+			method: "erpnext.projects.page.project_home.project_home.get_task_heatmap",
+			callback: (r) => this._draw_heatmap(r.message || {}),
+		});
+	}
+
+	_draw_heatmap(data) {
+		const COLORS = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
+		const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+		const DAY_LABELS = ["Mon","","Wed","","Fri","","Sun"];
+
+		function cellColor(total) {
+			if (total === 0)  return COLORS[0];
+			if (total <= 2)   return COLORS[1];
+			if (total <= 5)   return COLORS[2];
+			if (total <= 9)   return COLORS[3];
+			return COLORS[4];
+		}
+
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
+
+		const startRaw = new Date(today);
+		startRaw.setDate(startRaw.getDate() - 364);
+		startRaw.setHours(0, 0, 0, 0);
+		const dow = startRaw.getDay();
+		const toMonday = dow === 0 ? -6 : 1 - dow;
+		startRaw.setDate(startRaw.getDate() + toMonday);
+
+		const weeks = [];
+		const cur = new Date(startRaw);
+		while (cur <= today) {
+			const week = [];
+			for (let d = 0; d < 7; d++) {
+				const dateStr = cur.toISOString().slice(0, 10);
+				const inRange = cur >= startRaw && cur <= today;
+				const v = (inRange && data[dateStr]) ? data[dateStr] : { created: 0, completed: 0, updated: 0 };
+				const total = (v.created || 0) + (v.completed || 0) + (v.updated || 0);
+				week.push({ dateStr, inRange, created: v.created || 0, completed: v.completed || 0, updated: v.updated || 0, total });
+				cur.setDate(cur.getDate() + 1);
+			}
+			weeks.push(week);
+		}
+
+		let prevMonth = -1;
+		const monthCells = weeks.map((week) => {
+			const first = week.find(c => c.inRange);
+			if (!first) return `<div></div>`;
+			const m = new Date(first.dateStr + "T00:00:00").getMonth();
+			if (m !== prevMonth) { prevMonth = m; return `<div class="ph-hm-month-lbl">${MONTHS[m]}</div>`; }
+			return `<div></div>`;
+		});
+		const monthsHtml = `<div class="ph-hm-months"><div></div>${monthCells.join("")}</div>`;
+
+		let gridCells = "";
+		DAY_LABELS.forEach((label, ri) => {
+			gridCells += `<div class="ph-hm-day-lbl" style="grid-column:1;grid-row:${ri + 1};">${label}</div>`;
+		});
+		weeks.forEach((week, wi) => {
+			week.forEach((cell, ri) => {
+				if (!cell.inRange) {
+					gridCells += `<div class="ph-hm-cell ph-hm-gap" style="grid-column:${wi + 2};grid-row:${ri + 1};"></div>`;
+					return;
+				}
+				const color = cellColor(cell.total);
+				const d = new Date(cell.dateStr + "T00:00:00");
+				const label = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+				gridCells += `<div class="ph-hm-cell"
+					style="grid-column:${wi + 2};grid-row:${ri + 1};background:${color};"
+					data-date="${cell.dateStr}"
+					data-tip="${cell.created} created · ${cell.completed} completed · ${cell.updated} updated · ${cell.total} total"
+					data-label="${frappe.utils.escape_html(label)}">
+				</div>`;
+			});
+		});
+		const gridHtml = `<div class="ph-hm-grid">${gridCells}</div>`;
+
+		const legendHtml = `<div class="ph-hm-legend">
+			<span>${__("Less")}</span>
+			${COLORS.map(c => `<div class="ph-hm-cell" style="background:${c};cursor:default;"></div>`).join("")}
+			<span>${__("More")}</span>
+		</div>`;
+
+		this.$heatmap.html(
+			`<div class="ph-hm-title">${__("Task Activity — Last 52 Weeks")}</div>` +
+			monthsHtml + gridHtml + legendHtml
+		);
+
+		if (!$("#ph-hm-tip").length) {
+			$('<div id="ph-hm-tip" class="ph-hm-tooltip"></div>').appendTo("body");
+		}
+		const $tip = $("#ph-hm-tip");
+
+		this.$heatmap.find(".ph-hm-cell[data-date]")
+			.on("mouseenter", function (e) {
+				const label = $(this).data("label");
+				const info  = $(this).data("tip");
+				$tip.html(`<b>${label}</b><br>${info}`).show();
+			})
+			.on("mousemove", function (e) {
+				$tip.css({ left: e.pageX + 14, top: e.pageY - 48 });
+			})
+			.on("mouseleave", function () { $tip.hide(); })
+			.on("click", function () {
+				const dateStr = $(this).data("date");
+				frappe.set_route("List", "Task", {
+					creation: ["Between", [dateStr + " 00:00:00", dateStr + " 23:59:59"]],
+				});
+			});
 	}
 
 	refresh() {
