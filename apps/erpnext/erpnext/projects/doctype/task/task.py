@@ -393,14 +393,14 @@ class Task(NestedSet):
 
 
 @frappe.whitelist()
-def reassign_task(name, employee, note=None):
-	user = frappe.db.get_value("Employee", employee, "user_id")
-	if not user:
+def reassign_task(name, user, note=None):
+	"""Reassign a task to a User. Accepts a User email/ID directly."""
+	if not frappe.db.exists("User", user):
 		frappe.throw(
-			_("Employee {0} does not have a linked User account. Please set the User ID on the Employee record.").format(
-				frappe.bold(employee)
-			)
+			_("User {0} does not exist.").format(frappe.bold(user))
 		)
+
+	frappe.get_doc("Task", name).check_permission("write")
 
 	previous_assign = frappe.db.get_value("Task", name, "_assign")
 	if previous_assign:
@@ -417,8 +417,7 @@ def reassign_task(name, employee, note=None):
 		}
 	)
 
-	# Sync task_assignees child table — add_assignment writes _assign directly
-	# without triggering on_update, so we must sync explicitly
+	# Sync task_assignees child table
 	task_doc = frappe.get_doc("Task", name)
 	task_doc.sync_assignees_from_assign()
 

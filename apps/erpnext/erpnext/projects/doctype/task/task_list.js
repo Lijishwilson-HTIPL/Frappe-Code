@@ -26,8 +26,25 @@ frappe.listview_settings["Task"] = {
 			s.textContent = `
 				[data-doctype="Task"] .layout-main-section { background:#fff !important; }
 
-				/* push sidebar down so it starts below the page title, eliminating the overlap */
-				[data-doctype="Task"] .layout-side-section { padding-top: 52px !important; }
+				/* indent page title to match content area — page-head container has padding:0 */
+				[data-doctype="Task"] .page-head .page-title,
+				[data-doctype="Task"] .page-head .title-area {
+					padding-left: 15px !important;
+				}
+
+				/* push sidebar down so it starts below the page title, eliminating the overlap.
+				   padding-left: 15px counteracts Bootstrap .row margin-left:-15px that clips
+				   sidebar text against overflow-x:hidden on .page-wrapper */
+				[data-doctype="Task"] .layout-side-section {
+					padding-top: 52px !important;
+					padding-left: 15px !important;
+				}
+
+				/* fix Bootstrap .row negative margins that push .layout-main left by 15px */
+				[data-doctype="Task"] .layout-main.row {
+					margin-left: 0 !important;
+					margin-right: 0 !important;
+				}
 
 				[data-doctype="Task"] .list-row-head {
 					background:#f4f5f7 !important;
@@ -231,6 +248,21 @@ frappe.listview_settings["Task"] = {
 				}
 			`;
 		}
+
+		// ── Fix sidebar clipping — Bootstrap .row margin-left:-15px pushes .layout-main
+		//    left of its container; overflow-x:hidden on .page-wrapper clips the sidebar text.
+		//    JS inline style beats all CSS specificity issues.
+		setTimeout(() => {
+			const sideSec = document.querySelector('.layout-side-section');
+			if (sideSec) {
+				sideSec.style.setProperty('padding-left', '15px', 'important');
+				const layoutMain = sideSec.parentElement;
+				if (layoutMain) {
+					layoutMain.style.setProperty('margin-left', '0', 'important');
+					layoutMain.style.setProperty('margin-right', '0', 'important');
+				}
+			}
+		}, 50);
 
 		// ── Build project autocomplete list ───────────────────────────
 		// Remove any datalist left behind by a previous onload to avoid duplicates
@@ -774,7 +806,6 @@ frappe.listview_settings["Task"] = {
 		listview.page.add_menu_item(__("Set as Open"),      () => listview.call_for_selected_items(method, { status: "Open" }));
 		listview.page.add_menu_item(__("Set as Completed"), () => listview.call_for_selected_items(method, { status: "Completed" }));
 
-		// Reassign action
 		listview.page.add_menu_item(__("Reassign Task"), function () {
 			const selected = listview.get_checked_items();
 			if (!selected.length) {
@@ -787,9 +818,10 @@ frappe.listview_settings["Task"] = {
 					{
 						fieldtype: "Link",
 						fieldname: "assignee",
-						label: __("Assign To (Employee)"),
-						options: "Employee",
+						label: __("Assign To (User)"),
+						options: "User",
 						reqd: 1,
+						get_query: () => ({ filters: { enabled: 1, user_type: "System User" } }),
 					},
 					{
 						fieldtype: "Small Text",
@@ -804,7 +836,7 @@ frappe.listview_settings["Task"] = {
 							method: "erpnext.projects.doctype.task.task.reassign_task",
 							args: {
 								name: task.name,
-								employee: values.assignee,
+								user: values.assignee,
 								note: values.note || "",
 							},
 						})
