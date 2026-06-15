@@ -254,7 +254,7 @@ erpnext.projects.render_blocked_banner = function (frm) {
 							background:#1e293b;color:#f1f5f9;font-size:12px;font-weight:400;
 							padding:10px 14px;border-radius:6px;min-width:220px;
 							box-shadow:0 4px 16px rgba(0,0,0,0.25);line-height:1.6;
-							white-space:nowrap;margin-top:4px;">
+							white-space:normal;max-width:300px;margin-top:4px;">
 							${tooltipLines}
 						</div>
 					</span>
