@@ -236,16 +236,17 @@ class Task(NestedSet):
 		self.populate_depends_on()
 		if self.has_value_changed("project"):
 			self.share_with_project_members()
+		frappe.cache().delete_key("task_heatmap_data")
 
 	def share_with_project_members(self):
 		"""Share this task with every user listed in the project's Users table."""
 		if not self.project:
 			return
-		project_users = frappe.get_all("Project User", filters={"parent": self.project}, pluck="user")
+		project_users = frappe.get_list("Project User", filters={"parent": self.project}, pluck="user")
 		if not project_users:
 			return
 		already_shared = set(
-			frappe.get_all(
+			frappe.get_list(
 				"DocShare",
 				filters={
 					"share_doctype": "Task",
@@ -382,6 +383,7 @@ class Task(NestedSet):
 
 	def after_delete(self):
 		self.update_project()
+		frappe.cache().delete_key("task_heatmap_data")
 
 	def update_status(self):
 		if self.status not in ("Cancelled", "Completed") and self.exp_end_date:

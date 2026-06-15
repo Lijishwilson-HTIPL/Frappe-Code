@@ -52,6 +52,11 @@ def get_projects(status=None, search=None):
 
 @frappe.whitelist()
 def get_task_heatmap():
+    CACHE_KEY = "task_heatmap_data"
+    cached = frappe.cache().get_value(CACHE_KEY)
+    if cached is not None:
+        return cached
+
     rows = frappe.db.sql(
         """
         SELECT day, SUM(created) AS created, SUM(completed) AS completed, SUM(updated) AS updated
@@ -78,7 +83,7 @@ def get_task_heatmap():
         """,
         as_dict=1,
     )
-    return {
+    result = {
         str(r.day): {
             "created":   int(r.created or 0),
             "completed": int(r.completed or 0),
@@ -86,3 +91,9 @@ def get_task_heatmap():
         }
         for r in rows
     }
+    cache = frappe.cache()
+    cache.set_value(CACHE_KEY, result, expires_in_sec=3600)
+    # Also populate frappe.local.cache so the value is readable within the same request
+    # (Frappe only populates local.cache in set_value when expires_in_sec is None)
+    frappe.local.cache[cache.make_key(CACHE_KEY)] = result
+    return result
