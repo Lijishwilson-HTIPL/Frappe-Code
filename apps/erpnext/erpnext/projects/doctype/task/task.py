@@ -395,17 +395,23 @@ class Task(NestedSet):
 @frappe.whitelist()
 def reassign_task(name, user, note=None):
 	"""Reassign a task to a User. Accepts a User email/ID directly."""
-	if not frappe.db.exists("User", user):
-		frappe.throw(
-			_("User {0} does not exist.").format(frappe.bold(user))
-		)
+	user_doc = frappe.db.get_value("User", user, ["enabled", "user_type"], as_dict=1)
+	if not user_doc:
+		frappe.throw(_("User {0} does not exist.").format(frappe.bold(user)))
+	if not user_doc.enabled:
+		frappe.throw(_("User {0} is disabled.").format(frappe.bold(user)))
+	if user_doc.user_type != "System User":
+		frappe.throw(_("User {0} is not a System User.").format(frappe.bold(user)))
 
 	frappe.get_doc("Task", name).check_permission("write")
 
 	previous_assign = frappe.db.get_value("Task", name, "_assign")
 	if previous_assign:
 		for prev_user in json.loads(previous_assign):
-			remove_assignment("Task", name, prev_user)
+			try:
+				remove_assignment("Task", name, prev_user)
+			except Exception:
+				frappe.log_error(f"Could not remove {prev_user} from Task {name} during reassignment")
 
 	add_assignment(
 		{
