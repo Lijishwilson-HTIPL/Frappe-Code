@@ -135,6 +135,55 @@ class TestTask(unittest.TestCase):
 		self.assertRaises(frappe.ValidationError, task.insert)
 		frappe.db.rollback()
 
+	def test_sync_assignees_from_assign(self):
+		"""sync_assignees_from_assign must rebuild task_assignees to match _assign."""
+		import json
+		task = frappe.get_doc({
+			"doctype": "Task",
+			"subject": "Test Assignee Sync",
+			"status": "Open",
+		}).insert(ignore_permissions=True)
+
+		# Simulate Frappe's assign mechanism writing directly to _assign column
+		frappe.db.set_value("Task", task.name, "_assign", json.dumps([frappe.session.user]))
+
+		task.reload()
+		task.sync_assignees_from_assign()
+
+		rows = frappe.get_all(
+			"Task Assignee",
+			filters={"parent": task.name},
+			fields=["user", "full_name"],
+		)
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0].user, frappe.session.user)
+
+		frappe.db.rollback()
+
+	def test_sync_assignees_clears_when_assign_empty(self):
+		"""sync_assignees_from_assign must clear task_assignees when _assign is empty."""
+		import json
+		task = frappe.get_doc({
+			"doctype": "Task",
+			"subject": "Test Assignee Sync Clear",
+			"status": "Open",
+		}).insert(ignore_permissions=True)
+
+		# First add an assignment
+		frappe.db.set_value("Task", task.name, "_assign", json.dumps([frappe.session.user]))
+		task.reload()
+		task.sync_assignees_from_assign()
+
+		# Now clear it
+		frappe.db.set_value("Task", task.name, "_assign", "[]")
+		task.reload()
+		task.sync_assignees_from_assign()
+
+		rows = frappe.get_all("Task Assignee", filters={"parent": task.name})
+		self.assertEqual(len(rows), 0)
+
+		frappe.db.rollback()
+
 
 def create_task(
 	subject,

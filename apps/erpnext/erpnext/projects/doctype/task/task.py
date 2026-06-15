@@ -212,6 +212,7 @@ class Task(NestedSet):
 		self.reschedule_dependent_tasks()
 		self.update_project()
 		self.unassign_todo()
+		self.sync_assignees_from_assign()
 		self.populate_depends_on()
 		if self.has_value_changed("project"):
 			self.share_with_project_members()
@@ -238,6 +239,26 @@ class Task(NestedSet):
 			if user in already_shared:
 				continue
 			frappe.share.add("Task", self.name, user, read=1, write=1, notify=0)
+
+	def sync_assignees_from_assign(self):
+		import json
+		if not self.name:
+			return
+		_assign = self.get("_assign") or frappe.db.get_value("Task", self.name, "_assign") or "[]"
+		users = json.loads(_assign)
+		frappe.db.delete("Task Assignee", {"parent": self.name})
+		for idx, user in enumerate(users, start=1):
+			full_name = frappe.db.get_value("User", user, "full_name") or user
+			frappe.get_doc({
+				"doctype": "Task Assignee",
+				"name": frappe.generate_hash(length=10),
+				"parent": self.name,
+				"parenttype": "Task",
+				"parentfield": "task_assignees",
+				"idx": idx,
+				"user": user,
+				"full_name": full_name,
+			}).db_insert()
 
 	def unassign_todo(self):
 		if self.status == "Completed":
@@ -372,6 +393,18 @@ def reassign_task(name, employee, note=None):
 			"description": note or _("Task has been reassigned to you."),
 		}
 	)
+
+	# Sync task_assignees child table — add_assignment writes _assign directly
+	# without triggering on_update, so we must sync explicitly
+	task_doc = frappe.get_doc("Task", name)
+	task_doc.sync_assignees_from_assign()
+
+
+@frappe.whitelist()
+def sync_task_assignees(name):
+	"""Called by the quick-bar after frappe.desk.form.assign_to.add succeeds."""
+	task_doc = frappe.get_doc("Task", name)
+	task_doc.sync_assignees_from_assign()
 
 
 @frappe.whitelist()
