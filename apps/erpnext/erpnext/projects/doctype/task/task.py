@@ -81,6 +81,7 @@ class Task(NestedSet):
 	nsm_parent_field = "parent_task"
 
 	def validate(self):
+		self.compute_progress_from_subtasks()   # must be before validate_progress
 		self.validate_dates()
 		self.validate_progress()
 		self.validate_status()
@@ -194,6 +195,23 @@ class Task(NestedSet):
 			frappe.throw(_("Please specify which task is blocking this one (Blocked By field)."))
 		if self.is_blocked and self.blocked_by_task == self.name:
 			frappe.throw(_("A task cannot be blocked by itself."))
+
+	def compute_progress_from_subtasks(self):
+		"""Auto-compute progress of a group task from its children (weighted average)."""
+		if not self.is_group or not self.name:
+			return
+		children = frappe.get_all(
+			"Task",
+			filters={"parent_task": self.name, "status": ["!=", "Cancelled"]},
+			fields=["progress", "task_weight"],
+		)
+		if not children:
+			return
+		total_weight = sum(float(c.task_weight or 1) for c in children)
+		if not total_weight:
+			return
+		weighted = sum(float(c.progress or 0) * float(c.task_weight or 1) for c in children)
+		self.progress = round(weighted / total_weight, 1)
 
 	def update_depends_on(self):
 		depends_on_tasks = ""
@@ -415,7 +433,7 @@ def sync_task_assignees(name):
 
 @frappe.whitelist()
 def check_if_child_exists(name):
-	child_tasks = frappe.get_all("Task", filters={"parent_task": name})
+	child_tasks = frappe.get_list("Task", filters={"parent_task": name})
 	child_tasks = [get_link_to_form("Task", task.name) for task in child_tasks]
 	return child_tasks
 
