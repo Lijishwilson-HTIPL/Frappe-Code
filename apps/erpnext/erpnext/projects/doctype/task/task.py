@@ -479,6 +479,26 @@ def set_multiple_status(names, status):
 		task.save()
 
 
+@frappe.whitelist()
+def set_multiple_fields(names, priority=None, due_date=None):
+	"""Bulk-update priority and/or due date on a list of tasks."""
+	names = json.loads(names)
+	if not names:
+		return
+	for name in names:
+		task = frappe.get_doc("Task", name)
+		task.check_permission("write")
+		changed = False
+		if priority:
+			task.priority = priority
+			changed = True
+		if due_date:
+			task.exp_end_date = due_date
+			changed = True
+		if changed:
+			task.save()
+
+
 def set_tasks_as_overdue():
 	tasks = frappe.get_all(
 		"Task",

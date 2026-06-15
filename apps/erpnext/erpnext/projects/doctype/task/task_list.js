@@ -806,6 +806,54 @@ frappe.listview_settings["Task"] = {
 		listview.page.add_menu_item(__("Set as Open"),      () => listview.call_for_selected_items(method, { status: "Open" }));
 		listview.page.add_menu_item(__("Set as Completed"), () => listview.call_for_selected_items(method, { status: "Completed" }));
 
+		// Bulk field edit — priority + due date
+		listview.page.add_menu_item(__("Edit Selected Fields"), function () {
+			const selected = listview.get_checked_items();
+			if (!selected.length) {
+				frappe.show_alert({ message: __("Select at least one task first"), indicator: "orange" }, 3);
+				return;
+			}
+			const d = new frappe.ui.Dialog({
+				title: __("Edit {0} Task(s)", [selected.length]),
+				fields: [
+					{
+						fieldtype: "Select",
+						fieldname: "priority",
+						label: __("Priority"),
+						options: "\nLow\nMedium\nHigh\nUrgent",
+						description: __("Leave blank to keep existing priority"),
+					},
+					{
+						fieldtype: "Date",
+						fieldname: "due_date",
+						label: __("Due Date"),
+						description: __("Leave blank to keep existing due date"),
+					},
+				],
+				primary_action_label: __("Apply"),
+				primary_action(values) {
+					if (!values.priority && !values.due_date) {
+						frappe.show_alert({ message: __("Select at least one field to update"), indicator: "orange" }, 3);
+						return;
+					}
+					frappe.call({
+						method: "erpnext.projects.doctype.task.task.set_multiple_fields",
+						args: {
+							names: JSON.stringify(selected.map(t => t.name)),
+							priority: values.priority || null,
+							due_date: values.due_date || null,
+						},
+						callback() {
+							frappe.show_alert({ message: __("Updated {0} task(s)", [selected.length]), indicator: "green" }, 3);
+							listview.refresh();
+						},
+					});
+					d.hide();
+				},
+			});
+			d.show();
+		});
+
 		listview.page.add_menu_item(__("Reassign Task"), function () {
 			const selected = listview.get_checked_items();
 			if (!selected.length) {
