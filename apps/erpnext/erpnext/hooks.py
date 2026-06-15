@@ -432,7 +432,10 @@ scheduler_events = {
 		"erpnext.erpnext_integrations.doctype.plaid_settings.plaid_settings.automatic_synchronization",
 		"erpnext.utilities.doctype.video.video.update_youtube_data",
 	],
-	"daily": [],
+	"daily": [
+		"erpnext.accounts.doctype.mft_license.mft_license.send_renewal_requests",
+		"erpnext.accounts.doctype.mft_license.mft_license.auto_expire_licenses",
+	],
 	"daily_long": [],
 	"daily_maintenance": [
 		"erpnext.support.doctype.issue.issue.auto_close_tickets",
