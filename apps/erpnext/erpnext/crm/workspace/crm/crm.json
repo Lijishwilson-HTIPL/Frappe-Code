@@ -463,6 +463,12 @@
    "label": "Dashboard",
    "link_to": "CRM",
    "type": "Dashboard"
+  },
+  {
+   "icon": "dashboard",
+   "label": "CRM Dashboard",
+   "link_to": "crm-dashboard",
+   "type": "Page"
   }
  ],
  "title": "CRM"

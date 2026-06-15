@@ -1,0 +1,346 @@
+<div id="crm-dashboard-wrapper" style="padding: 0;">
+  <style>
+    #crm-dashboard-wrapper {
+      font-family: var(--font-stack);
+      color: var(--text-color);
+      background: var(--bg-color);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    .crm-db-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px 10px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--card-bg);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .crm-db-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    .crm-db-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .crm-db-actions .btn {
+      font-size: 0.8rem;
+      padding: 5px 14px;
+      border-radius: 6px;
+    }
+    .crm-kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      padding: 20px 24px 10px;
+    }
+    .crm-kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: box-shadow 0.15s;
+    }
+    .crm-kpi-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .crm-kpi-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .crm-kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.1;
+    }
+    .crm-kpi-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .crm-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 24px;
+      border-bottom: 2px solid var(--border-color);
+      margin-top: 8px;
+    }
+    .crm-tab-pill {
+      padding: 10px 22px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .crm-tab-pill:hover { color: var(--primary); }
+    .crm-tab-pill.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .crm-tab-content { display: none; padding: 20px 24px; }
+    .crm-tab-content.active { display: block; }
+    /* Pipeline */
+    .crm-pipeline-section { margin-bottom: 28px; }
+    .crm-pipeline-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-color);
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .crm-pipeline-section h3 .badge {
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: 0.7rem;
+    }
+    .crm-kanban {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .crm-kanban-col {
+      min-width: 180px;
+      max-width: 220px;
+      flex: 0 0 auto;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .crm-kanban-col-header {
+      background: var(--card-bg);
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .crm-kanban-col-header .col-count {
+      background: var(--border-color);
+      color: var(--text-color);
+      border-radius: 8px;
+      padding: 1px 7px;
+      font-size: 0.68rem;
+    }
+    .crm-kanban-cards { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .crm-kanban-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: box-shadow 0.12s;
+    }
+    .crm-kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
+    .crm-kanban-card .card-name {
+      font-weight: 600;
+      color: var(--text-color);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .crm-kanban-card .card-meta {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+    .crm-kanban-card .card-amount {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.78rem;
+      margin-top: 4px;
+    }
+    .crm-kanban-empty {
+      padding: 12px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    /* Leads table */
+    .crm-leads-table-wrap { overflow-x: auto; }
+    .crm-leads-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .crm-leads-table th {
+      background: var(--card-bg);
+      color: var(--text-muted);
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 2px solid var(--border-color);
+      white-space: nowrap;
+    }
+    .crm-leads-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-color);
+      vertical-align: middle;
+    }
+    .crm-leads-table tr:hover td { background: var(--bg-color); }
+    .crm-leads-table .badge-source {
+      background: var(--border-color);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+    }
+    .crm-leads-table .badge-type {
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+    .badge-type-erpnext { background: #e8f4fd; color: #1a73e8; }
+    .badge-type-crm { background: #fce8fd; color: #8e24aa; }
+    /* Activity */
+    .crm-activity-list { display: flex; flex-direction: column; gap: 0; }
+    .crm-activity-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .crm-activity-item:last-child { border-bottom: none; }
+    .crm-activity-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+      color: var(--primary);
+    }
+    .crm-activity-body { flex: 1; min-width: 0; }
+    .crm-activity-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .crm-activity-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .crm-activity-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-top: 4px;
+    }
+    /* Loading */
+    .crm-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      gap: 10px;
+    }
+    .crm-spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: crm-spin 0.7s linear infinite;
+    }
+    @keyframes crm-spin { to { transform: rotate(360deg); } }
+    .crm-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 0;
+      font-size: 0.85rem;
+    }
+  </style>
+
+  <div class="crm-db-header">
+    <h2>CRM Dashboard</h2>
+    <div class="crm-db-actions">
+      <button class="btn btn-sm btn-primary crm-action-btn" data-action="new-lead">+ New Lead</button>
+      <button class="btn btn-sm btn-default crm-action-btn" data-action="new-crm-lead">+ New CRM Lead</button>
+      <button class="btn btn-sm btn-default crm-action-btn" data-action="new-opportunity">+ New Opportunity</button>
+    </div>
+  </div>
+
+  <div class="crm-kpi-strip">
+    <div class="crm-kpi-card">
+      <div class="crm-kpi-label">Open Leads</div>
+      <div class="crm-kpi-value" id="kpi-open-leads">—</div>
+      <div class="crm-kpi-sub">ERPNext + Frappe CRM</div>
+    </div>
+    <div class="crm-kpi-card">
+      <div class="crm-kpi-label">Open Deals</div>
+      <div class="crm-kpi-value" id="kpi-open-deals">—</div>
+      <div class="crm-kpi-sub">Opportunities + CRM Deals</div>
+    </div>
+    <div class="crm-kpi-card">
+      <div class="crm-kpi-label">Pipeline Value</div>
+      <div class="crm-kpi-value" id="kpi-pipeline">—</div>
+      <div class="crm-kpi-sub">Open pipeline (₹)</div>
+    </div>
+    <div class="crm-kpi-card">
+      <div class="crm-kpi-label">Won This Month</div>
+      <div class="crm-kpi-value" id="kpi-won">—</div>
+      <div class="crm-kpi-sub">Closed won deals</div>
+    </div>
+  </div>
+
+  <div class="crm-tabs">
+    <div class="crm-tab-pill active" data-tab="pipeline">Pipeline</div>
+    <div class="crm-tab-pill" data-tab="leads">Leads</div>
+    <div class="crm-tab-pill" data-tab="activity">Activity</div>
+  </div>
+
+  <div id="crm-tab-pipeline" class="crm-tab-content active">
+    <div class="crm-loading"><div class="crm-spinner"></div> Loading pipeline…</div>
+  </div>
+  <div id="crm-tab-leads" class="crm-tab-content">
+    <div class="crm-loading"><div class="crm-spinner"></div> Loading leads…</div>
+  </div>
+  <div id="crm-tab-activity" class="crm-tab-content">
+    <div class="crm-loading"><div class="crm-spinner"></div> Loading activity…</div>
+  </div>
+</div>
