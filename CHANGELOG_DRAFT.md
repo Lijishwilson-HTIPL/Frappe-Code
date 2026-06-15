@@ -1,7 +1,15 @@
 # Changelog Draft
 
+## 2026-06-15
+
+- feat(task): add `blocked_by_task` Link field — when `is_blocked` is checked the form now prompts to select the blocking task; banner shows the task ID with a hover tooltip (subject, status, priority, due date); clicking the ID navigates to the blocking task form; server-side validation prevents saving with `is_blocked=1` but no blocker set; self-blocking guard added (branch: Hilton-Project-module)
+- feat(task): sync `task_assignees` child table from Frappe's native `_assign` field — `sync_assignees_from_assign()` fires on every `on_update`, after `reassign_task()`, and via new whitelisted `sync_task_assignees()` endpoint; quick-bar assignment now calls the sync after `assign_to.add` succeeds, with an orange-alert fallback if assignment fails (branch: Hilton-Project-module)
+- perf(project-home): replace N+1 per-project task-count queries with a single bulk SQL `GROUP BY project`; add `get_task_heatmap()` whitelisted API returning 52-week activity counts (created/completed/updated per day) via UNION ALL SQL (branch: Hilton-Project-module)
+- feat(project-home): add GitHub-style 52-week task activity heatmap — 53-column × 7-row CSS grid, 5-level green color scale, floating tooltip with created/completed/updated/total counts, click-to-filter Task list by date, month/weekday labels, legend (branch: Hilton-Project-module)
+
 ## 2026-06-12
 
+- [2026-06-12] feat(projects): add Construction Progress Report, two Number Cards, and workspace shortcuts for construction project tracking (branch: Hilton-Project-module)
 - [2026-06-12] feat(projects): embed live project card grid on /app/projects workspace — status filter, search, progress bars, permission-enforced task counts (branch: Hilton-Project-module)
 - [2026-06-12] feat(projects): add All Projects page — card grid with status/search filters visible directly on the Projects workspace (branch: Hilton-Project-module)
 
