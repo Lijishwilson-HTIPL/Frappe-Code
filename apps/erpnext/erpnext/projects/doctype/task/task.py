@@ -88,6 +88,7 @@ class Task(NestedSet):
 		self.validate_dependencies_for_template_task()
 		self.validate_completed_on()
 		self.validate_parent_is_group()
+		self.validate_blocked()
 
 	def validate_dates(self):
 		self.validate_from_to_dates("exp_start_date", "exp_end_date")
@@ -187,6 +188,10 @@ class Task(NestedSet):
 					),
 					ParentIsGroupError,
 				)
+
+	def validate_blocked(self):
+		if self.is_blocked and not self.blocked_by_task:
+			frappe.throw(_("Please specify which task is blocking this one (Blocked By field)."))
 
 	def update_depends_on(self):
 		depends_on_tasks = ""

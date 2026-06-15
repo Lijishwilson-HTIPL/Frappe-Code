@@ -123,6 +123,18 @@ class TestTask(unittest.TestCase):
 
 		self.assertRaises(ParentIsGroupError, child_task.save)
 
+	def test_validate_blocked_requires_blocked_by_task(self):
+		"""is_blocked=1 without blocked_by_task must throw a ValidationError."""
+		task = frappe.get_doc({
+			"doctype": "Task",
+			"subject": "Test Blocked Validation EC-5",
+			"status": "Open",
+			"is_blocked": 1,
+			# blocked_by_task intentionally omitted
+		})
+		self.assertRaises(frappe.ValidationError, task.insert)
+		frappe.db.rollback()
+
 
 def create_task(
 	subject,
