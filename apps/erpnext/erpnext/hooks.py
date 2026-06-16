@@ -22,7 +22,7 @@ add_to_apps_screen = [
 
 develop_version = "15.x.x-develop"
 
-app_include_js = "erpnext.bundle.js"
+app_include_js = ["erpnext.bundle.js", "/assets/erpnext/js/project_workspace_widget.js?v=5"]
 app_include_css = ["erpnext.bundle.css"]
 web_include_js = "erpnext-web.bundle.js"
 web_include_css = "erpnext-web.bundle.css"
@@ -354,6 +354,9 @@ doc_events = {
 	},
 	"Event": {
 		"after_insert": "erpnext.crm.utils.link_events_with_prospect",
+	},
+	"ToDo": {
+		"on_update": "erpnext.projects.doctype.task.task.sync_task_assignees_on_todo_change",
 	},
 	"Sales Invoice": {
 		"on_submit": [

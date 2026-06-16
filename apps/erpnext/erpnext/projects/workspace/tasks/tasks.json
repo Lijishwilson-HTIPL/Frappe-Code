@@ -1,0 +1,38 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"tasks_sc_01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Task\",\"col\":12}}]",
+ "creation": "2026-06-16 10:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "task",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Tasks",
+ "links": [],
+ "modified": "2026-06-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projects",
+ "name": "Tasks",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Projects",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 11.1,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "format": "{} Open",
+   "label": "Task",
+   "link_to": "Task",
+   "stats_filter": "{\n    \"status\": \"Open\"\n}",
+   "type": "DocType"
+  }
+ ],
+ "title": "Tasks"
+}

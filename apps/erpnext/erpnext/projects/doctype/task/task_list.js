@@ -26,8 +26,25 @@ frappe.listview_settings["Task"] = {
 			s.textContent = `
 				[data-doctype="Task"] .layout-main-section { background:#fff !important; }
 
-				/* push sidebar down so it starts below the page title, eliminating the overlap */
-				[data-doctype="Task"] .layout-side-section { padding-top: 52px !important; }
+				/* indent page title to match content area — page-head container has padding:0 */
+				[data-doctype="Task"] .page-head .page-title,
+				[data-doctype="Task"] .page-head .title-area {
+					padding-left: 15px !important;
+				}
+
+				/* push sidebar down so it starts below the page title, eliminating the overlap.
+				   padding-left: 15px counteracts Bootstrap .row margin-left:-15px that clips
+				   sidebar text against overflow-x:hidden on .page-wrapper */
+				[data-doctype="Task"] .layout-side-section {
+					padding-top: 52px !important;
+					padding-left: 15px !important;
+				}
+
+				/* fix Bootstrap .row negative margins that push .layout-main left by 15px */
+				[data-doctype="Task"] .layout-main.row {
+					margin-left: 0 !important;
+					margin-right: 0 !important;
+				}
 
 				[data-doctype="Task"] .list-row-head {
 					background:#f4f5f7 !important;
@@ -231,6 +248,21 @@ frappe.listview_settings["Task"] = {
 				}
 			`;
 		}
+
+		// ── Fix sidebar clipping — Bootstrap .row margin-left:-15px pushes .layout-main
+		//    left of its container; overflow-x:hidden on .page-wrapper clips the sidebar text.
+		//    JS inline style beats all CSS specificity issues.
+		setTimeout(() => {
+			const sideSec = document.querySelector('.layout-side-section');
+			if (sideSec) {
+				sideSec.style.setProperty('padding-left', '15px', 'important');
+				const layoutMain = sideSec.parentElement;
+				if (layoutMain) {
+					layoutMain.style.setProperty('margin-left', '0', 'important');
+					layoutMain.style.setProperty('margin-right', '0', 'important');
+				}
+			}
+		}, 50);
 
 		// ── Build project autocomplete list ───────────────────────────
 		// Remove any datalist left behind by a previous onload to avoid duplicates
@@ -452,6 +484,19 @@ frappe.listview_settings["Task"] = {
 									notify: 1,
 									description: emailBody,
 								},
+								callback: function () {
+									// Sync task_assignees child table now that _assign is written
+									frappe.call({
+										method: "erpnext.projects.doctype.task.task.sync_task_assignees",
+										args: { name: res.message.name },
+									});
+								},
+								error: function () {
+									frappe.show_alert({
+										message: __("Task created but assignment failed — open the task to assign manually."),
+										indicator: "orange",
+									}, 5);
+								},
 							});
 						}
 						frappe.show_alert({ message: __("Task <b>{0}</b> created", [subject]), indicator: "green" }, 3);
@@ -587,14 +632,21 @@ frappe.listview_settings["Task"] = {
 
 				// Assigned To — _assign JSON array
 				let assignedTo = "—";
+				let assignedToTitle = "";
 				if (task._assign && task._assign !== "[]" && task._assign !== "null") {
 					try {
 						const users = JSON.parse(task._assign);
 						if (users && users.length) {
-							assignedTo = users.map(function (u) {
+							const names = users.map(function (u) {
 								const info = frappe.user_info(u);
 								return (info && info.fullname) ? info.fullname : u.split("@")[0];
-							}).join(", ");
+							});
+							assignedToTitle = names.join(", ");
+							if (names.length === 1) {
+								assignedTo = names[0];
+							} else {
+								assignedTo = names[0] + " +" + (names.length - 1);
+							}
 						}
 					} catch (_) { /* show — */ }
 				}
@@ -603,20 +655,82 @@ frappe.listview_settings["Task"] = {
 					return String(v || "—").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 				}
 
+				const assignedToHtml = assignedToTitle
+					? '<span style="font-size:12px;color:#172b4d;" title="' + safe(assignedToTitle) + '">' + safe(assignedTo) + '</span>'
+					: '<span style="font-size:12px;color:#172b4d;">—</span>';
+
 				$container.find('.level-right').first().before(
-					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assigner)   + '</span></div>' +
-					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assignedTo) + '</span></div>'
+					'<div class="jira-assign-col"><span style="font-size:12px;color:#172b4d;">' + safe(assigner) + '</span></div>' +
+					'<div class="jira-assign-col">' + assignedToHtml + '</div>'
 				);
 			});
+		}
+
+		// ── Group subtasks under their parent tasks ──────────────────────
+		function reorder_subtasks_under_parents() {
+			if (!listview.data || !listview.data.length) return;
+			const $result = listview.$result;
+			if (!$result || !$result.length) return;
+
+			const $containers = $result.find('.list-row-container');
+			if ($containers.length < 2) return;
+
+			// rowName → $container
+			const rowMap = {};
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (n) rowMap[n] = $(this);
+			});
+
+			// rowName → task data
+			const taskMap = {};
+			(listview.data || []).forEach(function (d) { taskMap[d.name] = d; });
+
+			const ordered = [];
+			const placed = new Set();
+
+			// First pass: top-level tasks (no parent_task) followed by their subtasks
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (!n || placed.has(n)) return;
+				const task = taskMap[n];
+				if (!task || task.parent_task) return; // skip subtasks in this pass
+
+				placed.add(n);
+				ordered.push(rowMap[n]);
+
+				// Immediately append any subtasks of this task
+				$containers.each(function () {
+					const sn = $(this).find('.list-row-checkbox').data('name');
+					if (!sn || placed.has(sn)) return;
+					const sub = taskMap[sn];
+					if (sub && sub.parent_task === n) {
+						placed.add(sn);
+						ordered.push(rowMap[sn]);
+					}
+				});
+			});
+
+			// Second pass: orphan subtasks whose parent is not in the current list
+			$containers.each(function () {
+				const n = $(this).find('.list-row-checkbox').data('name');
+				if (!n || placed.has(n)) return;
+				ordered.push(rowMap[n]);
+			});
+
+			// Re-insert all rows in the new order (append moves existing elements — no clone needed)
+			const $listBody = $containers.first().parent();
+			ordered.forEach(function ($el) { $listBody.append($el); });
 		}
 
 		// Fire inject immediately on every list re-render using MutationObserver.
 		// This replaces the old 400ms poll, which left a window where Frappe could
 		// re-render after our inject and undo all changes before the next poll fired.
-		setTimeout(() => { inject_assignment_cols(); inject_col_resizer(); }, 150);
+		setTimeout(() => { inject_assignment_cols(); reorder_subtasks_under_parents(); inject_col_resizer(); }, 150);
 		if (!listview.__jira_observer && listview.$result && listview.$result[0]) {
 			listview.__jira_observer = new MutationObserver(frappe.utils.debounce(() => {
 				inject_assignment_cols();
+				reorder_subtasks_under_parents();
 				inject_col_resizer();
 				// re-hide the default primary button after every list re-render
 				listview.page.btn_primary && listview.page.btn_primary.hide();
@@ -692,7 +806,54 @@ frappe.listview_settings["Task"] = {
 		listview.page.add_menu_item(__("Set as Open"),      () => listview.call_for_selected_items(method, { status: "Open" }));
 		listview.page.add_menu_item(__("Set as Completed"), () => listview.call_for_selected_items(method, { status: "Completed" }));
 
-		// Reassign action
+		// Bulk field edit — priority + due date
+		listview.page.add_menu_item(__("Edit Selected Fields"), function () {
+			const selected = listview.get_checked_items();
+			if (!selected.length) {
+				frappe.show_alert({ message: __("Select at least one task first"), indicator: "orange" }, 3);
+				return;
+			}
+			const d = new frappe.ui.Dialog({
+				title: __("Edit {0} Task(s)", [selected.length]),
+				fields: [
+					{
+						fieldtype: "Select",
+						fieldname: "priority",
+						label: __("Priority"),
+						options: "\nLow\nMedium\nHigh\nUrgent",
+						description: __("Leave blank to keep existing priority"),
+					},
+					{
+						fieldtype: "Date",
+						fieldname: "due_date",
+						label: __("Due Date"),
+						description: __("Leave blank to keep existing due date"),
+					},
+				],
+				primary_action_label: __("Apply"),
+				primary_action(values) {
+					if (!values.priority && !values.due_date) {
+						frappe.show_alert({ message: __("Select at least one field to update"), indicator: "orange" }, 3);
+						return;
+					}
+					frappe.call({
+						method: "erpnext.projects.doctype.task.task.set_multiple_fields",
+						args: {
+							names: JSON.stringify(selected.map(t => t.name)),
+							priority: values.priority || null,
+							due_date: values.due_date || null,
+						},
+						callback() {
+							frappe.show_alert({ message: __("Updated {0} task(s)", [selected.length]), indicator: "green" }, 3);
+							listview.refresh();
+						},
+					});
+					d.hide();
+				},
+			});
+			d.show();
+		});
+
 		listview.page.add_menu_item(__("Reassign Task"), function () {
 			const selected = listview.get_checked_items();
 			if (!selected.length) {
@@ -705,9 +866,10 @@ frappe.listview_settings["Task"] = {
 					{
 						fieldtype: "Link",
 						fieldname: "assignee",
-						label: __("Assign To (Employee)"),
-						options: "Employee",
+						label: __("Assign To (User)"),
+						options: "User",
 						reqd: 1,
+						get_query: () => ({ filters: { enabled: 1, user_type: "System User" } }),
 					},
 					{
 						fieldtype: "Small Text",
@@ -722,7 +884,7 @@ frappe.listview_settings["Task"] = {
 							method: "erpnext.projects.doctype.task.task.reassign_task",
 							args: {
 								name: task.name,
-								employee: values.assignee,
+								user: values.assignee,
 								note: values.note || "",
 							},
 						})

@@ -2,45 +2,16 @@
 
 ## 2026-06-15
 
-- **feat(crm-unify) Phase 0 — Foundation:** New upgrade-safe custom app `crm_unify` (zero core edits to `erpnext`/`crm`). Ships the integration bridge join-keys as JSON fixtures so a fresh `bench migrate` reproduces them even when `ERPNext CRM Settings` is never enabled (fixes CLAUDE.md rule #1/#4 violation). Fixtures: `crm_deal` (Data, read-only) on Customer/Quotation/Sales Invoice/Prospect; `erpnext_customer`/`erpnext_invoice` on CRM Deal; new read-only write-back fields on CRM Deal (`erpnext_invoice_status`, `erpnext_invoice_outstanding`, `erpnext_quotation`, `erpnext_quotation_status`, `erpnext_last_synced`) under an "ERPNext Sync" section; `Quotation.quotation_to` Property Setter. Verified: 12 Custom Fields + 1 Property Setter import on migrate; idempotent by name. Spec: `docs/superpowers/specs/2026-06-15-crm-unification-design.md`. (branch: stagging-deployment)
-
-- [2026-06-15] feat(crm): add CRM Dashboard page — unified KPI strip, pipeline kanban, leads table, and activity timeline combining ERPNext CRM and Frappe CRM data (branch: stagging-deployment)
-
-- **feat(sbiqc-provisioner):** Rewrote provisioning dashboard from vanilla JS/HTML to Vue 3 SFC (`SBIQProvisioning.vue`) — fixes blank page render. Bundle mounts Vue app via `createApp` onto `.layout-main-section`. All `frappe.call` paths, auto-refresh timers, and `sbiqc_update` realtime wiring preserved. Tester: PASS. Compliance: COMPLIANT. Commit `8c11c92` in `apps/sbiq_provisioner` (develop branch).
+- feat(task): add `blocked_by_task` Link field — when `is_blocked` is checked the form now prompts to select the blocking task; banner shows the task ID with a hover tooltip (subject, status, priority, due date); clicking the ID navigates to the blocking task form; server-side validation prevents saving with `is_blocked=1` but no blocker set; self-blocking guard added (branch: Hilton-Project-module)
+- feat(task): sync `task_assignees` child table from Frappe's native `_assign` field — `sync_assignees_from_assign()` fires on every `on_update`, after `reassign_task()`, and via new whitelisted `sync_task_assignees()` endpoint; quick-bar assignment now calls the sync after `assign_to.add` succeeds, with an orange-alert fallback if assignment fails (branch: Hilton-Project-module)
+- perf(project-home): replace N+1 per-project task-count queries with a single bulk SQL `GROUP BY project`; add `get_task_heatmap()` whitelisted API returning 52-week activity counts (created/completed/updated per day) via UNION ALL SQL (branch: Hilton-Project-module)
+- feat(project-home): add GitHub-style 52-week task activity heatmap — 53-column × 7-row CSS grid, 5-level green color scale, floating tooltip with created/completed/updated/total counts, click-to-filter Task list by date, month/weekday labels, legend (branch: Hilton-Project-module)
 
 ## 2026-06-12
 
-### sbiq_provisioner v2 — Multi-Tenant Provisioning Dashboard (2026-06-12)
-
-**feat(dashboard):** Full rebuild of the SBIQ Provisioner control plane
-- New sidebar-navigation layout (5 sections: Tenants, Queue, Health, Reports, Errors)
-- 3-step wizard for new tenant creation (subdomain, apps, confirmation)
-- Add-apps slideout for post-provisioning app installation
-- Live progress bars via Frappe realtime events
-- CSS-variable-only theming (works with all Frappe themes)
-- `get_bench_health()`, `get_provisioning_report()`, `update_tenant_apps()` API functions
-
-**feat(engine):** `provision_update()` for installing apps on active tenants
-
-**feat(doctype):** `currency` and `timezone` fields on Tenant DocType
-
-**fix(security):**
-- Command injection in `delete_tenant` → `shell=False` argv list
-- Shell injection in `_setup_local_routing` → stdin-based sudo password
-- PII redaction in `seeder._run()` error messages (`-c` script args)
-- All API endpoints gated with `frappe.only_for("System Manager")`
-- XSS escaping via `frappe.utils.escape_html()` throughout dashboard JS
-- Audit log written before tenant deletion
-
-**fix(seeder):** `seed_tenant()` now passes `currency`/`timezone` from Tenant doc instead of hardcoded values; creates admin user if `admin_email` set
-
-**feat(email):** Welcome email on provisioning — sends a styled HTML welcome email to the tenant admin email address after successful provisioning. Includes site URL, login email, plan, and getting started instructions. Email failure is silently logged and never affects provisioning outcome.
-
-- [2026-06-12] feat(sbiq_provisioner): send welcome email to tenant admin after provisioning (branch: stagging-deployment)
-
-## 2026-06-11
-
-- fix(sbiq_provisioner): tenant seeding failed for multi-word client names (SyntaxError: '(' was never closed) — converted all provisioner subprocess calls in `seeder.py` and `engine.py` from shell=True f-strings to argv lists (shell=False); branding script now embeds site_name/client_name via json.dumps; closes shell-injection vector from user-supplied Tenant client_name/site_name. Compliance hardening: `engine._run` redacts `--mariadb-root-password`/`--admin-password` values via `_redact_argv` in error messages, and both `_run` functions catch `subprocess.TimeoutExpired` and re-raise a redacted RuntimeError `from None` so raw credentials can never reach Tenant.error_log / Provisioning Log / Error Log. Pipeline: Developer -> Tester PASS (end-to-end re-provision of tenant hephzibahtech: PROV-0006/0007 Completed, site live, branding applied) -> Compliance COMPLIANT (initial NON-COMPLIANT TimeoutExpired leak fixed and re-audited). NOT committed/pushed — awaiting user verification ("promote it"); app is untracked in git. Follow-up backlog: `_setup_local_routing` still shell=True with sudo_password; weak default credential fallbacks in engine.py; no site_name format validation; archived site_config.json files tracked in repo.
+- [2026-06-12] feat(projects): add Construction Progress Report, two Number Cards, and workspace shortcuts for construction project tracking (branch: Hilton-Project-module)
+- [2026-06-12] feat(projects): embed live project card grid on /app/projects workspace — status filter, search, progress bars, permission-enforced task counts (branch: Hilton-Project-module)
+- [2026-06-12] feat(projects): add All Projects page — card grid with status/search filters visible directly on the Projects workspace (branch: Hilton-Project-module)
 
 ## 2026-06-11 — Projects Module Dead-Code Cleanup (pipeline run; NOT committed, release-manager not invoked)
 

@@ -21,6 +21,7 @@
   "status",
   "priority",
   "is_blocked",
+  "blocked_by_task",
   "task_weight",
   "parent_task",
   "completed_by",
@@ -161,6 +162,14 @@
    "fieldname": "is_blocked",
    "fieldtype": "Check",
    "label": "Is Blocked"
+  },
+  {
+   "depends_on": "is_blocked",
+   "fieldname": "blocked_by_task",
+   "fieldtype": "Link",
+   "label": "Blocked By",
+   "no_copy": 1,
+   "options": "Task"
   },
   {
    "fieldname": "color",
@@ -461,7 +470,7 @@
  "is_tree": 1,
  "links": [],
  "max_attachments": 5,
- "modified": "2026-06-11 12:00:00.000000",
+ "modified": "2026-06-15 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Task",
