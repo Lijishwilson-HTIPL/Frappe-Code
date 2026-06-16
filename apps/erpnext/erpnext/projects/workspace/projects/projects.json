@@ -16,7 +16,7 @@
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "project",
+ "icon": "es-line-folder-alt",
  "idx": 0,
  "is_hidden": 0,
  "label": "Projects",
@@ -207,7 +207,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-15 15:24:04.781425",
+ "modified": "2026-06-16 13:30:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Projects",

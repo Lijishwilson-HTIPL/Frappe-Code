@@ -37,6 +37,7 @@ class TaskAssignmentBoard {
 		this._setup_menu();
 		this._inject_css();
 		this.$board = $('<div class="tab-board"></div>').appendTo($(page.body));
+		this.$board[0].__board = this;
 		this.refresh();
 	}
 
@@ -87,7 +88,7 @@ class TaskAssignmentBoard {
 		this.page.add_menu_item(__("Export to CSV"), () => this._export_csv());
 		this.page.add_menu_item(__("Clear Filters"), () => this._clear_filters());
 		this.page.add_menu_item(__("Collapse All Columns"), () => this._toggle_collapse());
-		this.page.add_menu_item(__("Show Completed Tasks"), () => this._toggle_completed());
+		this._completed_menu_item = this.page.add_menu_item(__("Show Completed Tasks"), () => this._toggle_completed());
 	}
 
 	refresh() {
@@ -111,6 +112,16 @@ class TaskAssignmentBoard {
 					this._tasks.forEach(t => this._task_map[t.name] = t);
 					this._render(this._tasks, this._users);
 				}
+			},
+			error: () => {
+				this.$board.html(
+					`<div class="tab-loading" style="color:var(--red-500,#e53e3e);">
+						${__("Failed to load board. Check your connection and try again.")}
+						<br><button class="btn btn-sm btn-default" style="margin-top:8px;" onclick="this.closest('.tab-board').__board && this.closest('.tab-board').__board.refresh()">
+							${__("Retry")}
+						</button>
+					</div>`
+				);
 			},
 		});
 	}
@@ -334,11 +345,11 @@ class TaskAssignmentBoard {
 
 	_toggle_completed() {
 		this.show_completed = !this.show_completed;
-		// update menu item label
-		const $menuItems = $(".dropdown-menu a:contains('Completed')");
-		$menuItems.filter((_, el) => $(el).text().includes("Completed")).text(
-			this.show_completed ? __("Hide Completed Tasks") : __("Show Completed Tasks")
-		);
+		if (this._completed_menu_item) {
+			this._completed_menu_item.text(
+				this.show_completed ? __("Hide Completed Tasks") : __("Show Completed Tasks")
+			);
+		}
 		this.refresh();
 	}
 

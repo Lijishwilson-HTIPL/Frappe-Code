@@ -123,13 +123,10 @@ def reassign_task(task_name, new_user):
 	if assigning and not frappe.db.exists("User", new_user):
 		frappe.throw(_("User {0} does not exist").format(new_user))
 
-	# Document API keeps the audit trail (Version records) intact.
-	doc.set("task_assignees", [])
-	if assigning:
-		doc.append("task_assignees", {"user": new_user})
-	doc.save()
-
-	# Keep Frappe's built-in _assign in sync so the Task form reflects the same assignment
+	# Update Frappe's built-in _assign field (source of truth for assignments).
+	# We do NOT call doc.save() here — doing so would trigger on_update →
+	# sync_assignees_from_assign which reads the OLD _assign and overwrites the
+	# child table before the new assignment is written.
 	clear_assignments("Task", task_name)
 	if assigning:
 		add_assignment(
@@ -140,6 +137,10 @@ def reassign_task(task_name, new_user):
 				"notify": 0,
 			}
 		)
+
+	# Sync task_assignees child table from the now-updated _assign field.
+	fresh_doc = frappe.get_doc("Task", task_name)
+	fresh_doc.sync_assignees_from_assign()
 
 	if assigning and new_user != frappe.session.user:
 		_send_assignment_notifications(doc, new_user)
