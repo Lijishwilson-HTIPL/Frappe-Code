@@ -82,7 +82,7 @@
       "label": "Site Name",
       "read_only": 1,
       "in_list_view": 1,
-      "description": "Auto-generated: subdomain.localhost (local) or subdomain.sbiqc.com (production)"
+      "description": "Auto-generated from subdomain + tenant_domain_suffix in common_site_config.json (e.g. client1.34.172.62.72.nip.io)"
     },
     {
       "fieldname": "status",

@@ -31,8 +31,10 @@ class Tenant(Document):
 		if self.subdomain in RESERVED:
 			frappe.throw(_("'{0}' is a reserved subdomain.").format(self.subdomain))
 
-		is_production = frappe.conf.get("is_production", False)
-		domain = "sbiqc.com" if is_production else "localhost"
+		domain = (
+			frappe.conf.get("tenant_domain_suffix")
+			or ("sbiqc.com" if frappe.conf.get("is_production") else "localhost")
+		)
 		self.site_name = f"{self.subdomain}.{domain}"
 
 		existing = frappe.db.get_value(
