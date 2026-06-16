@@ -23,8 +23,13 @@ def _bench_bin():
     found = shutil.which("bench")
     if found:
         return found
+    import pwd
+    try:
+        real_home = pwd.getpwuid(os.getuid()).pw_dir
+    except Exception:
+        real_home = os.path.expanduser("~")
     candidates = [
-        os.path.expanduser("~/.local/bin/bench"),
+        os.path.join(real_home, ".local", "bin", "bench"),
         "/usr/local/bin/bench",
         os.path.join(frappe.utils.get_bench_path(), "env", "bin", "bench"),
     ]
