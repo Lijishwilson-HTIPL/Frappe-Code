@@ -1,7 +1,6 @@
 {
  "background_workers": 1,
  "blocked_modules": ["Crm Unify", "FTelephony"],
- "default_site": "mysite.local",
  "file_watcher_port": 6787,
  "frappe_user": "ijish",
  "gunicorn_workers": 17,
