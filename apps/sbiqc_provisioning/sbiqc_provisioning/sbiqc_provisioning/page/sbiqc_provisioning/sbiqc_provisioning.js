@@ -2,7 +2,7 @@
 frappe.pages["sbiqc-provisioning"].on_page_load = function (wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: "SBIQ Provisioning",
+        title: "SBIQC Provisioning",
         single_column: true,
     });
     $(wrapper).find(".page-head").addClass("hide");
