@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Build a coffee shop inventory system for a manufacturing company client using ERPNext's built-in Stock module. The system tracks three categories of items, sets minimum quantity thresholds per item, and fires real-time in-app + email notifications to all users with the `Stock Manager` role the moment stock drops below the threshold.
+Build a coffee shop inventory system for a manufacturing company client using ERPNext's built-in Stock module. The system tracks three categories of items, sets minimum quantity thresholds per item, and fires real-time in-app + email notifications to all users with the `Namibian Coffee Roasters Manager` role the moment stock drops below the threshold.
 
 No new DocTypes are required. All data lives in standard ERPNext stock entities. A single Server Script provides the real-time alert logic.
 
@@ -30,8 +30,8 @@ ERPNext Stock Module
 │                   ├── reads current bin qty for that item + warehouse
 │                   ├── compares against item's reorder_level
 │                   └── if qty < reorder_level → fires Frappe Notification
-│                             ├── In-app bell (all users with "Stock Manager" role)
-│                             └── Email (all users with "Stock Manager" role)
+│                             ├── In-app bell (all users with "Namibian Coffee Roasters Manager" role)
+│                             └── Email (all users with "Namibian Coffee Roasters Manager" role)
 ```
 
 ---
@@ -71,7 +71,7 @@ Reorder levels are stored on the **Item Reorder** child table (built into ERPNex
 
 | Role Name | Purpose |
 |---|---|
-| `Stock Manager` | All users with this role receive low-stock alerts |
+| `Namibian Coffee Roasters Manager` | All users with this role receive low-stock alerts |
 
 Recipients are resolved dynamically at alert time — no hardcoded emails. Adding a new manager is done by assigning the role in user settings.
 
@@ -112,12 +112,12 @@ recent = frappe.db.exists("Notification Log", {
 if recent:
     return
 
-# 6. Find all users with "Stock Manager" role
+# 6. Find all users with "Namibian Coffee Roasters Manager" role
 recipients = frappe.db.sql("""
     SELECT u.email, u.name
     FROM `tabUser` u
     JOIN `tabHas Role` hr ON hr.parent = u.name
-    WHERE hr.role = 'Stock Manager'
+    WHERE hr.role = 'Namibian Coffee Roasters Manager'
       AND u.enabled = 1
       AND u.email IS NOT NULL
 """, as_dict=True)
@@ -197,11 +197,11 @@ Seed items to demonstrate the system:
 | 1 | Create Item Groups (3) | Groups visible under Stock → Item Groups |
 | 2 | Create Warehouse "Coffee Shop - Main" | Warehouse listed under Stock → Warehouses |
 | 3 | Create sample items with reorder levels | Items visible under Stock → Items |
-| 4 | Create role `Stock Manager`, assign to owner user | User has role in User settings |
+| 4 | Create role `Namibian Coffee Roasters Manager`, assign to owner user | User has role in User settings |
 | 5 | Add opening stock above reorder level via Stock Reconciliation | No notification fired |
 | 6 | Reduce stock below reorder level via Stock Reconciliation | In-app bell + email triggered |
 | 7 | Reduce stock again within 24 hours | No duplicate notification sent |
-| 8 | Add a second `Stock Manager` user | Both users receive the next alert |
+| 8 | Add a second `Namibian Coffee Roasters Manager` user | Both users receive the next alert |
 
 ---
 
@@ -209,10 +209,10 @@ Seed items to demonstrate the system:
 
 1. Create Item Groups in ERPNext UI
 2. Create Warehouse in ERPNext UI
-3. Create `Stock Manager` role in ERPNext UI
+3. Create `Namibian Coffee Roasters Manager` role in ERPNext UI
 4. Create sample Items with reorder levels
 5. Create Server Script (Stock Ledger Entry → after_insert) with the alert logic above
 6. Test with Stock Reconciliation
-7. Assign `Stock Manager` role to the client's owner/manager account
+7. Assign `Namibian Coffee Roasters Manager` role to the client's owner/manager account
 
 No `bench migrate` required — Server Scripts are stored in the database and take effect immediately on save.
