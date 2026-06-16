@@ -1,0 +1,94 @@
+<div class="sbiqc-app">
+
+  <!-- Sidebar -->
+  <div class="sbiqc-sidebar">
+    <div class="sbiqc-sidebar-logo">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+        <rect x="2" y="3" width="24" height="9" rx="3" fill="currentColor" opacity=".9"/>
+        <rect x="2" y="16" width="24" height="9" rx="3" fill="currentColor" opacity=".5"/>
+        <circle cx="7" cy="7.5" r="1.5" fill="#040C18"/>
+        <circle cx="7" cy="20.5" r="1.5" fill="#040C18"/>
+      </svg>
+      <div>
+        <div class="sbiqc-logo-text">Provisioner</div>
+        <div class="sbiqc-logo-sub">mysite.local</div>
+      </div>
+    </div>
+
+    <div class="sbiqc-nav-item active" data-section="tenants">
+      <span class="sbiqc-nav-icon">dns</span> Tenants
+    </div>
+    <div class="sbiqc-nav-item" data-section="queue">
+      <span class="sbiqc-nav-icon">pending_actions</span> Queue
+      <span class="sbiqc-nav-badge blue sbiqc-badge-queue"></span>
+    </div>
+    <div class="sbiqc-nav-item" data-section="health">
+      <span class="sbiqc-nav-icon">health_and_safety</span> Health
+    </div>
+    <div class="sbiqc-nav-item" data-section="reports">
+      <span class="sbiqc-nav-icon">bar_chart</span> Reports
+    </div>
+    <div class="sbiqc-nav-item" data-section="errors">
+      <span class="sbiqc-nav-icon">error_outline</span> Errors
+      <span class="sbiqc-nav-badge sbiqc-badge-errors"></span>
+    </div>
+
+    <div class="sbiqc-sidebar-bottom">
+      <span class="sbiqc-env-chip sbiqc-env-label">&#9679; Local Dev</span>
+    </div>
+  </div>
+
+  <!-- Main Area -->
+  <div class="sbiqc-main">
+
+    <!-- Topbar -->
+    <div class="sbiqc-topbar">
+      <span class="sbiqc-topbar-title sbiqc-section-title">Tenants</span>
+      <div class="sbiqc-topbar-actions">
+        <button class="sbiqc-btn-icon sbiqc-btn-refresh" title="Refresh"><span class="sbiqc-nav-icon">refresh</span></button>
+        <button class="sbiqc-btn-primary sbiqc-btn-new-tenant">+ New Tenant</button>
+      </div>
+    </div>
+
+    <!-- KPI Strip -->
+    <div class="sbiqc-kpi-row sbiqc-kpi-strip"></div>
+
+    <!-- Toolbar -->
+    <div class="sbiqc-toolbar sbiqc-toolbar-area">
+      <div class="sbiqc-search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" class="sbiqc-search-input" placeholder="Search tenants..."/>
+      </div>
+      <div class="sbiqc-chips">
+        <button class="sbiqc-chip active" data-status="">All</button>
+        <button class="sbiqc-chip" data-status="Active">Active</button>
+        <button class="sbiqc-chip" data-status="Provisioning">Running</button>
+        <button class="sbiqc-chip" data-status="Pending">Pending</button>
+        <button class="sbiqc-chip" data-status="Suspended">Suspended</button>
+        <button class="sbiqc-chip" data-status="Error">Errors</button>
+      </div>
+    </div>
+
+    <!-- Content Panels -->
+    <div class="sbiqc-panel sbiqc-panel-tenants" id="sbiqc-panel-tenants"></div>
+    <div class="sbiqc-panel sbiqc-panel-hidden" id="sbiqc-panel-queue"></div>
+    <div class="sbiqc-panel sbiqc-panel-hidden" id="sbiqc-panel-health"></div>
+    <div class="sbiqc-panel sbiqc-panel-hidden" id="sbiqc-panel-reports"></div>
+    <div class="sbiqc-panel sbiqc-panel-hidden" id="sbiqc-panel-errors"></div>
+
+  </div>
+
+  <!-- Add Apps Slideout -->
+  <div class="sbiqc-slideout-backdrop" id="sbiqc-backdrop"></div>
+  <div class="sbiqc-slideout-panel" id="sbiqc-slideout">
+    <div class="sbiqc-slideout-head">
+      <span class="sbiqc-slideout-title" id="sbiqc-slideout-title">Add Apps</span>
+      <button class="sbiqc-btn-icon sbiqc-slideout-close">close</button>
+    </div>
+    <div class="sbiqc-slideout-body" id="sbiqc-slideout-body"></div>
+    <div class="sbiqc-slideout-foot" id="sbiqc-slideout-foot"></div>
+  </div>
+
+</div>

@@ -1,0 +1,29 @@
+/* SBIQC Provisioner — Global Styles */
+
+/* Tenant list view status indicators */
+.list-row [data-field="status"] .indicator-pill.red,
+[data-doctype="Tenant"] .indicator-pill.red {
+	background: #e74c3c;
+}
+
+[data-doctype="Tenant"] .indicator-pill.blue {
+	background: #3498db;
+}
+
+[data-doctype="Tenant"] .indicator-pill.green {
+	background: #27ae60;
+}
+
+[data-doctype="Tenant"] .indicator-pill.orange {
+	background: #f39c12;
+}
+
+/* Provisioning Log timeline inside form */
+.prov-step {
+	font-size: 13px;
+}
+
+/* Tenant form dashboard enhancements */
+.tenant-dashboard .prov-timeline h6 {
+	color: var(--text-color, #1a202c);
+}

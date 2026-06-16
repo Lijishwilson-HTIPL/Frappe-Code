@@ -1,0 +1,97 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"provisioner_header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Tenant Provisioning</b></span>\",\"col\":12}},{\"id\":\"dashboard_shortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Management Console\",\"col\":12}},{\"id\":\"tenants_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Tenants\",\"col\":6}},{\"id\":\"queue_card\",\"type\":\"card\",\"data\":{\"card_name\":\"Provisioning Queue\",\"col\":6}}]",
+ "creation": "2026-06-10 00:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "setting-gear",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "SBIQC Provisioner",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tenants",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tenant",
+   "link_count": 0,
+   "link_to": "Tenant",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tenant App",
+   "link_count": 0,
+   "link_to": "Tenant App",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Provisioning Queue",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Provisioning Log",
+   "link_count": 0,
+   "link_to": "Provisioning Log",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-06-10 12:30:00",
+ "modified_by": "Administrator",
+ "module": "SBIQC Provisioner",
+ "name": "SBIQC Provisioner",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 30,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Tenants",
+   "link_to": "Tenant",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Provisioning Queue",
+   "link_to": "Provisioning Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "label": "Management Console",
+   "link_to": "sbiqc-provisioning",
+   "type": "Page"
+  }
+ ],
+ "title": "SBIQC Provisioner"
+}
