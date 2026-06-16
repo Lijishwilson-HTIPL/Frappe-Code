@@ -283,6 +283,23 @@ class Task(NestedSet):
 				"full_name": full_name,
 			}).db_insert()
 
+		# Audit trail: log assignment change as a Comment so it is traceable
+		try:
+			if users:
+				full_names = [frappe.db.get_value("User", u, "full_name") or u for u in users]
+				content = "Assignees synced: " + ", ".join(full_names)
+			else:
+				content = "All assignees removed."
+			frappe.get_doc({
+				"doctype": "Comment",
+				"comment_type": "Info",
+				"reference_doctype": "Task",
+				"reference_name": self.name,
+				"content": content,
+			}).insert(ignore_permissions=True)
+		except Exception:
+			pass  # audit log failure must never break assignment sync
+
 	def unassign_todo(self):
 		if self.status == "Completed":
 			close_all_assignments(self.doctype, self.name)
@@ -436,6 +453,16 @@ def sync_task_assignees(name):
 	task_doc = frappe.get_doc("Task", name)
 	task_doc.check_permission("write")
 	task_doc.sync_assignees_from_assign()
+
+
+def sync_task_assignees_on_todo_change(doc, method):
+	"""Sync task_assignees child table when _assign is updated via ToDo on_update."""
+	if doc.reference_type == "Task" and doc.reference_name:
+		try:
+			task = frappe.get_doc("Task", doc.reference_name)
+			task.sync_assignees_from_assign()
+		except frappe.DoesNotExistError:
+			pass  # task was deleted, nothing to sync
 
 
 @frappe.whitelist()
