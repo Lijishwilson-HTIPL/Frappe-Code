@@ -1,5 +1,13 @@
 # Changelog Draft
 
+## 2026-06-15
+
+- **feat(crm-unify) Phase 0 — Foundation:** New upgrade-safe custom app `crm_unify` (zero core edits to `erpnext`/`crm`). Ships the integration bridge join-keys as JSON fixtures so a fresh `bench migrate` reproduces them even when `ERPNext CRM Settings` is never enabled (fixes CLAUDE.md rule #1/#4 violation). Fixtures: `crm_deal` (Data, read-only) on Customer/Quotation/Sales Invoice/Prospect; `erpnext_customer`/`erpnext_invoice` on CRM Deal; new read-only write-back fields on CRM Deal (`erpnext_invoice_status`, `erpnext_invoice_outstanding`, `erpnext_quotation`, `erpnext_quotation_status`, `erpnext_last_synced`) under an "ERPNext Sync" section; `Quotation.quotation_to` Property Setter. Verified: 12 Custom Fields + 1 Property Setter import on migrate; idempotent by name. Spec: `docs/superpowers/specs/2026-06-15-crm-unification-design.md`. (branch: stagging-deployment)
+
+- [2026-06-15] feat(crm): add CRM Dashboard page — unified KPI strip, pipeline kanban, leads table, and activity timeline combining ERPNext CRM and Frappe CRM data (branch: stagging-deployment)
+
+- **feat(sbiqc-provisioner):** Rewrote provisioning dashboard from vanilla JS/HTML to Vue 3 SFC (`SBIQProvisioning.vue`) — fixes blank page render. Bundle mounts Vue app via `createApp` onto `.layout-main-section`. All `frappe.call` paths, auto-refresh timers, and `sbiqc_update` realtime wiring preserved. Tester: PASS. Compliance: COMPLIANT. Commit `8c11c92` in `apps/sbiq_provisioner` (develop branch).
+
 ## 2026-06-12
 
 ### sbiq_provisioner v2 — Multi-Tenant Provisioning Dashboard (2026-06-12)
