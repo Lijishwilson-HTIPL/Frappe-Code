@@ -10,9 +10,30 @@ import subprocess
 import frappe
 
 
+def _bench_bin():
+    """Return absolute path to bench binary (works when ~/.local/bin is absent from PATH)."""
+    found = shutil.which("bench")
+    if found:
+        return found
+    import pwd
+    try:
+        real_home = pwd.getpwuid(os.getuid()).pw_dir
+    except Exception:
+        real_home = os.path.expanduser("~")
+    candidates = [
+        os.path.join(real_home, ".local", "bin", "bench"),
+        "/usr/local/bin/bench",
+        os.path.join(frappe.utils.get_bench_path(), "env", "bin", "bench"),
+    ]
+    for c in candidates:
+        if os.path.isfile(c) and os.access(c, os.X_OK):
+            return c
+    return "bench"
+
+
 def seed_tenant(site_name, client_name, plan="Starter", currency="INR", timezone="Asia/Kolkata", admin_email=None):
     bench_path = frappe.utils.get_bench_path()
-    bench_cmd = shutil.which("bench") or "bench"
+    bench_cmd = _bench_bin()
 
     setup_data = {
         "app_name": client_name,
