@@ -62,11 +62,29 @@ def provision_tenant(tenant_name):
 		_update_status(tenant, "Provisioning")
 		update_log_step(log_name, "Initializing", 5)
 
-		# Step 1: Create the new site (skip if it already exists)
+		# Step 1: Create the new site (skip only if the site dir AND its DB exist)
 		site_path = os.path.join(bench_path, "sites", site_name)
-		if os.path.isdir(site_path):
+		site_cfg_path = os.path.join(site_path, "site_config.json")
+		site_fully_created = False
+		if os.path.isdir(site_path) and os.path.exists(site_cfg_path):
+			try:
+				import json as _json
+				with open(site_cfg_path) as _f:
+					_scfg = _json.load(_f)
+				import subprocess as _sp
+				_chk = _sp.run(
+					[_bench_bin(), "--site", site_name, "list-apps"],
+					cwd=bench_path, capture_output=True, text=True, timeout=30,
+				)
+				site_fully_created = _chk.returncode == 0
+			except Exception:
+				site_fully_created = False
+		if site_fully_created:
 			update_log_step(log_name, f"Site {site_name} already exists — reusing", 25)
 		else:
+			if os.path.isdir(site_path):
+				import shutil as _shutil
+				_shutil.rmtree(site_path)  # remove incomplete dir so new-site starts clean
 			update_log_step(log_name, "Creating site: " + site_name, 10)
 			_run(
 				[
