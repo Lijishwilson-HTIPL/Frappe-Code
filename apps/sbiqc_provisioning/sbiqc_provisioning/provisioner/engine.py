@@ -13,8 +13,8 @@ from datetime import datetime
 import frappe
 from frappe import _
 
-from sbiq_provisioner.provisioner.seeder import seed_tenant
-from sbiq_provisioner.sbiq_provisioner.doctype.provisioning_log.provisioning_log import (
+from sbiqc_provisioning.provisioner.seeder import seed_tenant
+from sbiqc_provisioning.sbiqc_provisioning.doctype.provisioning_log.provisioning_log import (
 	complete_log,
 	create_log,
 	update_log_step,

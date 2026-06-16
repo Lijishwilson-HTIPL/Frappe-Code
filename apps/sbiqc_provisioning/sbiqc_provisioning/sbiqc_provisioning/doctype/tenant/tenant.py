@@ -14,7 +14,7 @@ RESERVED = frozenset({
 	"static", "sbiqc", "localhost", "test", "staging", "prod",
 })
 
-ALWAYS_EXCLUDED = frozenset({"frappe", "sbiq_provisioner"})
+ALWAYS_EXCLUDED = frozenset({"frappe", "sbiqc_provisioning"})
 
 
 class Tenant(Document):
@@ -62,7 +62,7 @@ class Tenant(Document):
 		frappe.db.commit()
 
 		frappe.enqueue(
-			"sbiq_provisioner.provisioner.engine.provision_tenant",
+			"sbiqc_provisioning.provisioner.engine.provision_tenant",
 			tenant_name=self.name,
 			queue="long",
 			timeout=1800,
@@ -78,7 +78,7 @@ class Tenant(Document):
 
 @frappe.whitelist()
 def get_installable_apps():
-	"""Return list of apps available on the bench, excluding frappe and sbiq_provisioner."""
+	"""Return list of apps available on the bench, excluding frappe and sbiqc_provisioning."""
 	frappe.only_for("System Manager")
 	bench_path = frappe.utils.get_bench_path()
 	apps_file = os.path.join(bench_path, "sites", "apps.txt")
@@ -201,7 +201,7 @@ def update_tenant_apps(tenant_name, new_apps):
 	if isinstance(new_apps, str):
 		new_apps = json.loads(new_apps)
 	frappe.enqueue(
-		"sbiq_provisioner.provisioner.engine.provision_update",
+		"sbiqc_provisioning.provisioner.engine.provision_update",
 		tenant_name=tenant_name,
 		apps_to_add=new_apps,
 		queue="long",
@@ -363,7 +363,7 @@ def retry_provisioning(tenant_name):
 	tenant.db_set("status", "Provisioning")
 	frappe.db.commit()
 	frappe.enqueue(
-		"sbiq_provisioner.provisioner.engine.provision_tenant",
+		"sbiqc_provisioning.provisioner.engine.provision_tenant",
 		tenant_name=tenant_name,
 		queue="long",
 		timeout=1800,

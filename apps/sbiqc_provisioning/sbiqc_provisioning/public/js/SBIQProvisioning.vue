@@ -630,7 +630,7 @@ function loadStats(cb) {
   if (loading.value) { if (cb) cb(); return; }
   loading.value = true;
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
     args: { offset: 0, limit: limit },
     callback(r) {
       loading.value = false;
@@ -647,7 +647,7 @@ function loadStats(cb) {
 
 function loadMore() {
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
     args: { offset: offset.value, limit: limit },
     callback(r) {
       if (!r.message) return;
@@ -664,7 +664,7 @@ function loadMore() {
 function loadHealth() {
   healthLoading.value = true;
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_bench_health",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_bench_health",
     callback(r) {
       healthLoading.value = false;
       if (r.message) healthData.value = r.message;
@@ -679,7 +679,7 @@ function loadHealth() {
 function loadReports() {
   reportsLoading.value = true;
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_report",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_report",
     callback(r) {
       reportsLoading.value = false;
       if (r.message) reportsData.value = r.message;
@@ -746,7 +746,7 @@ function retryTenant(name) {
           return;
         }
         frappe.call({
-          method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.retry_provisioning",
+          method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.retry_provisioning",
           args: { tenant_name: name },
           callback() {
             frappe.show_alert({ message: "Provisioning re-queued", indicator: "blue" });
@@ -762,7 +762,7 @@ function retryTenant(name) {
 function deleteTenant(name) {
   frappe.confirm(`Permanently delete tenant ${name} and drop its database? This cannot be undone.`, () => {
     frappe.call({
-      method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.delete_tenant",
+      method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.delete_tenant",
       args: { tenant_name: name },
       callback(r) {
         if (r.message && r.message.status === "ok") {
@@ -776,7 +776,7 @@ function deleteTenant(name) {
 
 function cancelJob(log_name) {
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.cancel_queued_job",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.cancel_queued_job",
     args: { log_name },
     callback() { frappe.show_alert({ message: "Job cancelled", indicator: "orange" }); loadStats(); },
   });
@@ -785,7 +785,7 @@ function cancelJob(log_name) {
 // ── Wizard ─────────────────────────────────────────────────────────────────
 function wizardShow() {
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
     callback(r) {
       allApps.value = r.message || [];
       wizardData.value = { subdomain: "", client_name: "", admin_email: "", plan: "Standard", currency: "INR", timezone: "Asia/Kolkata", apps: ["erpnext"] };
@@ -878,7 +878,7 @@ function addappsOpen(tenant_name) {
   selectedAddApps.value = [];
 
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
     callback(r) {
       const all_apps = r.message || [];
       frappe.call({
@@ -909,7 +909,7 @@ function addappsSubmit() {
     return;
   }
   frappe.call({
-    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.update_tenant_apps",
+    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.update_tenant_apps",
     args: { tenant_name: slideTenant.value, new_apps: JSON.stringify(selectedAddApps.value) },
     callback(r) {
       if (r.message && r.message.status === "queued") {
@@ -979,5 +979,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* All styles come from sbiq_provisioner.css (loaded globally) — no duplication needed */
+/* All styles come from sbiqc_provisioning.css (loaded globally) — no duplication needed */
 </style>

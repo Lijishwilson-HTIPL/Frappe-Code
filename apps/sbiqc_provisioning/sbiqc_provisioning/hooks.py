@@ -1,5 +1,5 @@
-app_name = "sbiq_provisioner"
-app_title = "SBIQC Provisioner"
+app_name = "sbiqc_provisioning"
+app_title = "SBIQC Provisioning"
 app_publisher = "https://hephzibahtech.com"
 app_description = "Multi-tenant SaaS provisioning engine"
 app_email = "lijish.wilson@hephzibahtech.com"
@@ -11,12 +11,12 @@ app_license = "mit"
 # so Frappe's router falls through to the Page DocType.
 add_to_apps_screen = [
 	{
-		"name": "sbiq_provisioner",
-		"logo": "/assets/sbiq_provisioner/images/provisioner-icon.svg",
-		"title": "SBIQC Provisioner",
+		"name": "sbiqc_provisioning",
+		"logo": "/assets/sbiqc_provisioning/images/provisioner-icon.svg",
+		"title": "SBIQC Provisioning",
 		"route": "/app/sbiqc-provisioning",
 	}
 ]
 
 # ── Desk Asset Includes ──
-app_include_css = ["/assets/sbiq_provisioner/css/sbiq_provisioner.css"]
+app_include_css = ["/assets/sbiqc_provisioning/css/sbiqc_provisioning.css"]

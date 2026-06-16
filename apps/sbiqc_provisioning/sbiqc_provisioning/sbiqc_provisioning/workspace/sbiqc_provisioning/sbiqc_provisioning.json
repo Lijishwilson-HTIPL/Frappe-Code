@@ -10,7 +10,7 @@
  "icon": "setting-gear",
  "idx": 0,
  "is_hidden": 0,
- "label": "SBIQC Provisioner",
+ "label": "SBIQC Provisioning",
  "links": [
   {
    "hidden": 0,
@@ -63,8 +63,8 @@
  ],
  "modified": "2026-06-10 12:30:00",
  "modified_by": "Administrator",
- "module": "SBIQ Provisioner",
- "name": "SBIQC Provisioner",
+ "module": "SBIQC Provisioning",
+ "name": "SBIQC Provisioning",
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -93,5 +93,5 @@
    "type": "Page"
   }
  ],
- "title": "SBIQC Provisioner"
+ "title": "SBIQC Provisioning"
 }

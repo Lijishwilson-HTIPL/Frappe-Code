@@ -129,7 +129,7 @@ class SBIQCProvisioning {
         if (this.loading) return;
         this.loading = true;
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
             args: { offset: 0, limit: this.limit },
             callback: function (r) {
                 self.loading = false;
@@ -249,7 +249,7 @@ class SBIQCProvisioning {
         var self = this;
         this._loading_more = true;
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
             args: { offset: this.offset, limit: this.limit },
             callback: function (r) {
                 self._loading_more = false;
@@ -314,7 +314,7 @@ class SBIQCProvisioning {
                         return;
                     }
                     frappe.call({
-                        method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.retry_provisioning",
+                        method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.retry_provisioning",
                         args: { tenant_name: name },
                         callback: function () {
                             frappe.show_alert({ message: __("Provisioning re-queued"), indicator: "blue" });
@@ -335,7 +335,7 @@ class SBIQCProvisioning {
             __("Permanently delete tenant {0} and drop its database? This cannot be undone.", [name]),
             function () {
                 frappe.call({
-                    method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.delete_tenant",
+                    method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.delete_tenant",
                     args: { tenant_name: name },
                     callback: function (r) {
                         if (r.message && r.message.status === "ok") {
@@ -351,7 +351,7 @@ class SBIQCProvisioning {
     _cancel_job(log_name) {
         var self = this;
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.cancel_queued_job",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.cancel_queued_job",
             args: { log_name: log_name },
             callback: function () {
                 frappe.show_alert({ message: __("Job cancelled"), indicator: "orange" });
@@ -400,7 +400,7 @@ class SBIQCProvisioning {
         var $p = this.$w.find("#sbiqc-panel-health");
         $p.html('<div class="sbiqc-empty"><p>Loading health checks...</p></div>');
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_bench_health",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_bench_health",
             callback: function (r) { if (r.message) self._render_health(r.message); }
         });
         clearInterval(this._health_timer);
@@ -435,7 +435,7 @@ class SBIQCProvisioning {
         var $p = this.$w.find("#sbiqc-panel-reports");
         $p.html('<div class="sbiqc-empty"><p>Loading reports...</p></div>');
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_report",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_report",
             callback: function (r) { if (r.message) self._render_reports(r.message); }
         });
     }
@@ -524,7 +524,7 @@ class SBIQCProvisioning {
         this._wizard_step = 1;
         this._wizard_data = { subdomain: "", client_name: "", admin_email: "", plan: "Standard", currency: "INR", timezone: "Asia/Kolkata", apps: [] };
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
             callback: function (r) {
                 self._all_apps = r.message || [];
                 self._wizard_data.apps = ["erpnext"];
@@ -713,7 +713,7 @@ class SBIQCProvisioning {
         this.$w.find("#sbiqc-slideout-title").text(__("Add Apps — {0}", [t ? t.client_name : tenant_name]));
         this.$w.find("#sbiqc-slideout-body").html('<p style="color:var(--text-muted);font-size:12px;">' + __("Loading...") + '</p>');
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
             callback: function (r) {
                 var all_apps = r.message || [];
                 frappe.call({
@@ -767,7 +767,7 @@ class SBIQCProvisioning {
             return;
         }
         frappe.call({
-            method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.update_tenant_apps",
+            method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.update_tenant_apps",
             args: { tenant_name: this._slide_tenant, new_apps: JSON.stringify(selected) },
             callback: function (r) {
                 if (r.message && r.message.status === "queued") {
