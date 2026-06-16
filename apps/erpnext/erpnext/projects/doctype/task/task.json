@@ -9,6 +9,7 @@
  "field_order": [
   "subject",
   "project",
+  "sprint",
   "sb_assignees",
   "task_assignees",
   "issue",
@@ -19,10 +20,12 @@
   "column_break0",
   "status",
   "priority",
+  "is_blocked",
   "task_weight",
   "parent_task",
   "completed_by",
   "completed_on",
+  "resolution_note",
   "sb_timeline",
   "exp_start_date",
   "expected_time",
@@ -34,6 +37,8 @@
   "is_milestone",
   "sb_details",
   "description",
+  "sb_subtasks",
+  "subtasks_html",
   "sb_depends_on",
   "depends_on",
   "depends_on_tasks",
@@ -49,6 +54,7 @@
   "sb_more_info",
   "review_date",
   "closing_date",
+  "cancel_reason",
   "column_break_22",
   "department",
   "company",
@@ -82,6 +88,12 @@
    "options": "Project",
    "remember_last_selected_value": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "sprint",
+   "fieldtype": "Link",
+   "label": "Sprint",
+   "options": "Sprint"
   },
   {
    "collapsible": 1,
@@ -143,6 +155,12 @@
    "oldfieldtype": "Select",
    "options": "Low\nMedium\nHigh\nUrgent",
    "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_blocked",
+   "fieldtype": "Check",
+   "label": "Is Blocked"
   },
   {
    "fieldname": "color",
@@ -227,6 +245,18 @@
    "oldfieldtype": "Text Editor",
    "print_width": "300px",
    "width": "300px"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "is_group",
+   "fieldname": "sb_subtasks",
+   "fieldtype": "Section Break",
+   "label": "Sub Tasks"
+  },
+  {
+   "fieldname": "subtasks_html",
+   "fieldtype": "HTML",
+   "label": "Sub Tasks"
   },
   {
    "fieldname": "sb_depends_on",
@@ -317,7 +347,7 @@
    "label": "More Info"
   },
   {
-   "depends_on": "eval:doc.status == \"Closed\" || doc.status == \"Pending Review\"",
+   "depends_on": "eval:doc.status == \"Pending Review\" || doc.status == \"Completed\"",
    "fieldname": "review_date",
    "fieldtype": "Date",
    "label": "Review Date",
@@ -325,12 +355,19 @@
    "oldfieldtype": "Date"
   },
   {
-   "depends_on": "eval:doc.status == \"Closed\"",
+   "depends_on": "eval:doc.status == \"Completed\"",
    "fieldname": "closing_date",
    "fieldtype": "Date",
    "label": "Closing Date",
    "oldfieldname": "closing_date",
    "oldfieldtype": "Date"
+  },
+  {
+   "depends_on": "eval:doc.status == \"Cancelled\"",
+   "fieldname": "cancel_reason",
+   "fieldtype": "Small Text",
+   "label": "Reason for Cancellation",
+   "no_copy": 1
   },
   {
    "fieldname": "column_break_22",
@@ -406,6 +443,13 @@
    "mandatory_depends_on": "eval: doc.status == \"Completed\""
   },
   {
+   "depends_on": "eval:doc.status == \"Completed\"",
+   "fieldname": "resolution_note",
+   "fieldtype": "Small Text",
+   "label": "Resolution Note",
+   "no_copy": 1
+  },
+  {
    "fieldname": "template_task",
    "fieldtype": "Data",
    "hidden": 1,
@@ -417,7 +461,7 @@
  "is_tree": 1,
  "links": [],
  "max_attachments": 5,
- "modified": "2025-10-16 08:39:12.214577",
+ "modified": "2026-06-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Task",

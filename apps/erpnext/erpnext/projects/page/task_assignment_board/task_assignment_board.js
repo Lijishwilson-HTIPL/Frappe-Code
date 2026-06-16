@@ -24,6 +24,8 @@ class TaskAssignmentBoard {
 	constructor(page) {
 		this.page = page;
 		this.project = null;
+		this.sprint = null;
+		this.department = null;
 		this.status = null;
 		this.show_completed = false;
 		this.all_collapsed = false;
@@ -45,6 +47,22 @@ class TaskAssignmentBoard {
 			label: __("Project"),
 			options: "Project",
 			change: () => { this.project = this._project_field.get_value(); this.refresh(); },
+		});
+
+		this._sprint_field = this.page.add_field({
+			fieldtype: "Link",
+			fieldname: "sprint",
+			label: __("Sprint"),
+			options: "Sprint",
+			change: () => { this.sprint = this._sprint_field.get_value(); this.refresh(); },
+		});
+
+		this._department_field = this.page.add_field({
+			fieldtype: "Link",
+			fieldname: "department",
+			label: __("Department"),
+			options: "Department",
+			change: () => { this.department = this._department_field.get_value(); this.refresh(); },
 		});
 
 		this._status_field = this.page.add_field({
@@ -78,6 +96,8 @@ class TaskAssignmentBoard {
 			method: "erpnext.projects.page.task_assignment_board.task_assignment_board.get_board_data",
 			args: {
 				project: this.project || "",
+				sprint: this.sprint || "",
+				department: this.department || "",
 				status: this.status || "",
 				show_completed: this.show_completed ? 1 : 0,
 			},
@@ -116,7 +136,9 @@ class TaskAssignmentBoard {
 			}
 		});
 
-		const columns = [{ name: "__unassigned__", full_name: __("Unassigned"), user_image: null }, ...users];
+		const unassignedCol = { name: "__unassigned__", full_name: __("Unassigned"), user_image: null };
+		const sortedUsers = [...users].sort((a, b) => (byUser[b.name] || []).length - (byUser[a.name] || []).length);
+		const columns = [...sortedUsers, unassignedCol];
 		const $scroll = $('<div class="tab-scroll"></div>').appendTo(this.$board);
 
 		columns.forEach(user => {
@@ -160,6 +182,21 @@ class TaskAssignmentBoard {
 				this._confirm_reassign(taskName, user);
 			});
 		});
+
+		// Auto-scroll the board horizontally when dragging near edges
+		const scrollEl = $scroll[0];
+		let _scrollRAF = null;
+		const _stopScroll = () => { if (_scrollRAF) { cancelAnimationFrame(_scrollRAF); _scrollRAF = null; } };
+		const _autoScroll = (dir) => { scrollEl.scrollLeft += dir * 8; _scrollRAF = requestAnimationFrame(() => _autoScroll(dir)); };
+		scrollEl.addEventListener("dragover", e => {
+			const rect = scrollEl.getBoundingClientRect();
+			const threshold = 80;
+			if (e.clientX > rect.right - threshold) { _stopScroll(); _autoScroll(1); }
+			else if (e.clientX < rect.left + threshold) { _stopScroll(); _autoScroll(-1); }
+			else { _stopScroll(); }
+		});
+		scrollEl.addEventListener("dragleave", e => { if (!scrollEl.contains(e.relatedTarget)) _stopScroll(); });
+		scrollEl.addEventListener("drop", _stopScroll);
 
 		// restore collapsed state
 		if (this.all_collapsed) {
@@ -232,6 +269,10 @@ class TaskAssignmentBoard {
 						$(e.target).attr("class", `tab-status-select tab-status-${newStatus.toLowerCase().replace(/ /g, "-")}`);
 					}
 				},
+				error: () => {
+					// server rejected the change (validation/permission) — revert the select
+					$(e.target).val(task.status);
+				},
 			});
 		});
 
@@ -251,8 +292,10 @@ class TaskAssignmentBoard {
 	_confirm_reassign(taskName, newUser) {
 		const task = this._task_map[taskName];
 		if (!task) return;
-		const taskSubject = task.subject || taskName;
-		const displayName = newUser.name === "__unassigned__" ? __("Unassigned") : newUser.full_name;
+		const taskSubject = frappe.utils.escape_html(task.subject || taskName);
+		const displayName = frappe.utils.escape_html(
+			newUser.name === "__unassigned__" ? __("Unassigned") : newUser.full_name
+		);
 
 		frappe.confirm(
 			__(`Reassign <b>"${taskSubject}"</b> to <b>${displayName}</b>?`),
@@ -273,8 +316,12 @@ class TaskAssignmentBoard {
 
 	_clear_filters() {
 		this._project_field.set_value("");
+		this._sprint_field.set_value("");
+		this._department_field.set_value("");
 		this._status_field.set_value("");
 		this.project = null;
+		this.sprint = null;
+		this.department = null;
 		this.status = null;
 		this.refresh();
 	}
@@ -313,7 +360,7 @@ class TaskAssignmentBoard {
 				t.status || "",
 				t.priority || "",
 				`"${assigneeName.replace(/"/g, '""')}"`,
-				t.exp_end_date || "",
+				t.exp_end_date ? `"${t.exp_end_date}"` : "",
 				t.progress || 0,
 			].join(",");
 		});

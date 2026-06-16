@@ -1,5 +1,5 @@
 {
- "based_on": "creation",
+ "based_on": "completed_on",
  "chart_name": "Task Completion Trend",
  "chart_type": "Count",
  "custom_options": "{\"colors\": [\"#10b981\"], \"lineOptions\": {\"hideDots\": 0, \"dotSize\": 3}}",
