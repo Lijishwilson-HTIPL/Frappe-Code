@@ -5,6 +5,9 @@ app_description = "CRM unification layer for ERPNext + Frappe CRM"
 app_email = "lijish.wilson@hephzibahtech.com"
 app_license = "mit"
 
+# Hidden integration layer — no entry in apps drawer or sidebar
+add_to_apps_screen = []
+
 # Apps
 # ------------------
 
