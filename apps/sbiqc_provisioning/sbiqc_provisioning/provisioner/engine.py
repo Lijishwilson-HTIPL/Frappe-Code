@@ -6,6 +6,8 @@ Environment-aware: reads `is_production` from frappe.conf (default False).
 - Production mode: creates site, installs apps, writes Nginx conf (stubbed)
 """
 
+import os
+import shutil
 import subprocess
 import traceback
 from datetime import datetime
@@ -14,6 +16,22 @@ import frappe
 from frappe import _
 
 from sbiqc_provisioning.provisioner.seeder import seed_tenant
+
+
+def _bench_bin():
+    """Return the absolute path to the bench binary (works even when ~/.local/bin is not in PATH)."""
+    found = shutil.which("bench")
+    if found:
+        return found
+    candidates = [
+        os.path.expanduser("~/.local/bin/bench"),
+        "/usr/local/bin/bench",
+        os.path.join(frappe.utils.get_bench_path(), "env", "bin", "bench"),
+    ]
+    for c in candidates:
+        if os.path.isfile(c) and os.access(c, os.X_OK):
+            return c
+    return "bench"  # last-resort fallback
 from sbiqc_provisioning.sbiqc_provisioning.doctype.provisioning_log.provisioning_log import (
 	complete_log,
 	create_log,
@@ -40,7 +58,6 @@ def provision_tenant(tenant_name):
 		update_log_step(log_name, "Initializing", 5)
 
 		# Step 1: Create the new site (skip if it already exists)
-		import os
 		site_path = os.path.join(bench_path, "sites", site_name)
 		if os.path.isdir(site_path):
 			update_log_step(log_name, f"Site {site_name} already exists — reusing", 25)
@@ -48,7 +65,7 @@ def provision_tenant(tenant_name):
 			update_log_step(log_name, "Creating site: " + site_name, 10)
 			_run(
 				[
-					"bench", "new-site", site_name,
+					_bench_bin(), "new-site", site_name,
 					"--mariadb-root-password", db_root_password,
 					"--admin-password", admin_password,
 				],
@@ -102,7 +119,7 @@ def provision_tenant(tenant_name):
 
 		# Step 5: Clear cache
 		update_log_step(log_name, "Clearing cache", 95)
-		_run(["bench", "--site", site_name, "clear-cache"], cwd=bench_path)
+		_run([_bench_bin(), "--site", site_name, "clear-cache"], cwd=bench_path)
 
 		# Step 6: Mark active
 		_update_status(tenant, "Active")
@@ -249,7 +266,7 @@ def _run(argv, cwd=None, timeout=120):
 def _get_installed_apps(site_name, bench_path):
 	"""Return set of apps already installed on a site."""
 	result = subprocess.run(
-		["bench", "--site", site_name, "list-apps"],
+		[_bench_bin(), "--site", site_name, "list-apps"],
 		cwd=bench_path,
 		capture_output=True, text=True, timeout=30,
 	)
@@ -260,7 +277,6 @@ def _get_installed_apps(site_name, bench_path):
 
 def _clear_stale_locks(site_name, bench_path):
 	"""Remove stale install_app.lock left by a crashed prior run."""
-	import os
 	lock_dir = os.path.join(bench_path, "sites", site_name, "locks")
 	if not os.path.isdir(lock_dir):
 		return
@@ -272,13 +288,13 @@ def _clear_stale_locks(site_name, bench_path):
 def _install_app(site_name, app, bench_path):
 	"""Install an app on a site. Tolerates non-zero exit if the app ends up installed."""
 	result = subprocess.run(
-		["bench", "--site", site_name, "install-app", app],
+		[_bench_bin(), "--site", site_name, "install-app", app],
 		cwd=bench_path,
 		capture_output=True, text=True, timeout=300,
 	)
 	if result.returncode != 0:
 		verify = subprocess.run(
-			["bench", "--site", site_name, "list-apps"],
+			[_bench_bin(), "--site", site_name, "list-apps"],
 			cwd=bench_path,
 			capture_output=True, text=True, timeout=30,
 		)
@@ -390,10 +406,10 @@ def provision_update(tenant_name, apps_to_add):
 				_install_app(site_name, app, bench_path)
 
 		update_log_step(log_name, "Running migrations", 80)
-		_run(["bench", "--site", site_name, "migrate"], cwd=bench_path, timeout=300)
+		_run([_bench_bin(), "--site", site_name, "migrate"], cwd=bench_path, timeout=300)
 
 		update_log_step(log_name, "Clearing cache", 92)
-		_run(["bench", "--site", site_name, "clear-cache"], cwd=bench_path)
+		_run([_bench_bin(), "--site", site_name, "clear-cache"], cwd=bench_path)
 
 		# Append new apps to Tenant.apps_to_install child table
 		tenant.reload()
