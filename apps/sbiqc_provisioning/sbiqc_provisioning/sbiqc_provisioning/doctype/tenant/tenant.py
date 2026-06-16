@@ -14,7 +14,7 @@ RESERVED = frozenset({
 	"static", "sbiqc", "localhost", "test", "staging", "prod",
 })
 
-ALWAYS_EXCLUDED = frozenset({"frappe", "sbiqc_provisioning"})
+ALWAYS_EXCLUDED = frozenset({"frappe", "sbiqc_provisioning", "crm_unify", "telephony"})
 
 
 class Tenant(Document):
