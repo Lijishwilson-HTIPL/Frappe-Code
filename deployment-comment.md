@@ -96,12 +96,20 @@ ss -tlnp | grep -E '13000|11000'
 # 3. Apply DocType schema changes
 bench --site mysite.local migrate
 
-# 3b. Regenerate nginx config (REQUIRED after new tenant sites are provisioned)
-#     Without this, nginx will hardcode X-Frappe-Site-Name for only the old sites,
-#     routing all new tenant requests to mysite.local instead of the correct tenant DB.
+# 3b. Regenerate nginx config (REQUIRED on first deploy; skip for new tenants — wildcard handles them)
+#     bench setup nginx only adds sites it knows about at run time; use wildcard to cover all tenants.
 ~/.local/bin/bench setup nginx --yes
 # Fix log format (bench generates "main" log format which may not be defined on this server):
 sudo sed -i 's/access_log.*main;/access_log  \/var\/log\/nginx\/access.log;/' /etc/nginx/conf.d/frappe-bench.conf
+# Replace tenant-specific server_name entries with a wildcard so every future tenant works immediately:
+sudo python3 -c "
+conf='/etc/nginx/conf.d/frappe-bench.conf'
+c=open(conf).read()
+import re
+c=re.sub(r'(server_name\s*\n)(\t+\S+\.nip\.io\s*\n)+', r'\1\t\t*.34.172.62.72.nip.io\n', c)
+open(conf,'w').write(c)
+print('wildcard set')
+"
 # Add default_server block for bare IP access (routes 34.172.62.72 → mysite.local):
 sudo tee -a /etc/nginx/conf.d/frappe-bench.conf > /dev/null << 'NGINXEOF'
 
@@ -271,5 +279,5 @@ Generate keys: Frappe Desk → Avatar → My Profile → API Access → Generate
 | Backup database | `bench --site mysite.local backup` |
 | View error logs | `tail -f logs/worker.error.log` |
 | Restart (prod) | `sudo supervisorctl restart all` |
-| Regenerate nginx (after new tenant) | `bench setup nginx --yes && sudo nginx -s reload` |
+| Nginx wildcard (covers all tenants) | server_name `*.34.172.62.72.nip.io` — no regen needed per tenant |
 | Per-tenant cache clear | `bench --site <tenant.nip.io> clear-cache` |
