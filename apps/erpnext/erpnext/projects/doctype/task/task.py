@@ -242,7 +242,7 @@ class Task(NestedSet):
 		"""Share this task with every user listed in the project's Users table."""
 		if not self.project:
 			return
-		project_users = frappe.get_list("Project User", filters={"parent": self.project}, pluck="user")
+		project_users = frappe.get_list("Project User", filters={"parent": self.project}, pluck="user", parent_doctype="Project")
 		if not project_users:
 			return
 		already_shared = set(
