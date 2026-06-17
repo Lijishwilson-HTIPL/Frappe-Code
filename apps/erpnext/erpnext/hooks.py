@@ -660,8 +660,16 @@ export_python_type_annotations = True
 
 fields_for_group_similar_items = ["qty", "amount"]
 
-# Namibian Coffee Roasters — fixtures for version control
+# Construction Tracker + Namibian Coffee Roasters — fixtures for version control
 fixtures = [
-	{"dt": "Server Script", "filters": [["name", "like", "%Coffee Shop%"]]},
-	{"dt": "Role", "filters": [["role_name", "=", "Namibian Coffee Roasters Manager"]]},
+    {"dt": "Server Script", "filters": [["name", "like", "%Coffee Shop%"]]},
+    {"dt": "Server Script", "filters": [["name", "like", "%Construction%"]]},
+    {"dt": "Role", "filters": [["role_name", "in", [
+        "Namibian Coffee Roasters Manager",
+        "Construction Project Manager",
+        "Construction Site Supervisor",
+        "Construction Admin",
+    ]]]},
+    {"dt": "Custom Field", "filters": [["dt", "in", ["Task", "Project"]]]},
+    {"dt": "Custom DocPerm", "filters": [["role", "like", "Construction%"]]},
 ]
