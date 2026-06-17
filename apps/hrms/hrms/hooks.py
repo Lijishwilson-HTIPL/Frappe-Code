@@ -29,7 +29,7 @@ app_include_js = [
 
 app_include_css = [
 	"hrms.bundle.css",
-	"/assets/hrms/css/layout_global.css?v=28",  # full-width layout + single scrollbar — all themes
+	"/assets/hrms/css/layout_global.css?v=30",  # full-width layout + single scrollbar — all themes
 ]
 
 # website
