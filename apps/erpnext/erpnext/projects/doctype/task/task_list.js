@@ -26,6 +26,15 @@ frappe.listview_settings["Task"] = {
 			s.textContent = `
 				[data-doctype="Task"] .layout-main-section { background:#fff !important; }
 
+				/* The jira-quick-bar pushes $result down ~52px, so Frappe's dynamic
+				   set_result_height() makes the list 52px too short and clips bottom rows.
+				   Remove the max-height so .page-wrapper scroll handles everything. */
+				[data-doctype="Task"] .frappe-list,
+				[data-doctype="Task"] .list-result {
+					max-height: none !important;
+					height: auto !important;
+				}
+
 				/* indent page title to match content area — page-head container has padding:0 */
 				[data-doctype="Task"] .page-head .page-title,
 				[data-doctype="Task"] .page-head .title-area {
@@ -305,6 +314,20 @@ frappe.listview_settings["Task"] = {
 		`);
 
 		$(listview.page.main).find(".list-row-container, .frappe-list").first().before($bar);
+
+			// Frappe sets list result max-height inline via JS: window.innerHeight - $result.offsetTop - 16.
+			// The quick-bar pushes $result down, making Frappe clip the bottom rows.
+			// Inline jQuery .css() beats CSS !important, so we override the method itself.
+			if (typeof listview.set_result_height === "function") {
+				const _orig = listview.set_result_height.bind(listview);
+				listview.set_result_height = function () {
+					_orig();
+					const barEl = document.getElementById("jira-quick-bar");
+					const barH = barEl ? barEl.offsetHeight : 52;
+					const cur = parseInt(listview.$result && listview.$result.css("max-height")) || 0;
+					if (cur > 0) listview.$result.css("max-height", (cur + barH) + "px");
+				};
+			}
 
 		// Get the project ID that is currently active as a filter (URL param OR listview filter area)
 		function get_active_project_id() {
