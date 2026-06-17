@@ -106,17 +106,6 @@ frappe.listview_settings["Task"] = {
 					overflow:hidden !important;
 					text-overflow:ellipsis !important;
 					max-width:420px !important;
-					cursor:pointer;
-					transition:max-width 0.2s ease;
-				}
-				[data-doctype="Task"] .list-row:hover .level-item.bold {
-					white-space:normal !important;
-					overflow:visible !important;
-					text-overflow:unset !important;
-					max-width:none !important;
-					background:#fff;
-					position:relative;
-					z-index:2;
 				}
 
 				/* ── Quick-create bar ── */
@@ -718,9 +707,15 @@ frappe.listview_settings["Task"] = {
 				ordered.push(rowMap[n]);
 			});
 
-			// Re-insert all rows in the new order (append moves existing elements — no clone needed)
+			// Re-insert all rows in the new order (append moves existing elements — no clone needed).
+			// Disconnect observer first — appending direct children of listview.$result triggers
+			// childList mutations, which would re-fire the observer and create an infinite loop.
 			const $listBody = $containers.first().parent();
+			if (listview.__jira_observer) listview.__jira_observer.disconnect();
 			ordered.forEach(function ($el) { $listBody.append($el); });
+			if (listview.__jira_observer && listview.$result && listview.$result[0]) {
+				listview.__jira_observer.observe(listview.$result[0], { childList: true });
+			}
 		}
 
 		// Fire inject immediately on every list re-render using MutationObserver.
