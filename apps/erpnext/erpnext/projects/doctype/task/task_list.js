@@ -90,12 +90,6 @@ frappe.listview_settings["Task"] = {
 				}
 				[data-doctype="Task"] .list-row .indicator-pill { display:none !important; }
 
-					/* bottom breathing room so the last row is fully visible and clickable */
-					[data-doctype="Task"] .list-result,
-					[data-doctype="Task"] .frappe-list {
-						padding-bottom: 60px !important;
-					}
-
 				/* neaten column headings — no overflow truncation */
 				[data-doctype="Task"] .list-row-head .list-col span {
 					white-space:nowrap !important;
@@ -742,6 +736,9 @@ frappe.listview_settings["Task"] = {
 			const $listBody = $containers.first().parent();
 			if (listview.__jira_observer) listview.__jira_observer.disconnect();
 			ordered.forEach(function ($el) { $listBody.append($el); });
+			// Spacer so the last row has breathing room and is fully clickable
+			$listBody.find('.jira-bottom-spacer').remove();
+			$listBody.append('<div class="jira-bottom-spacer" style="height:60px;"></div>');
 			if (listview.__jira_observer && listview.$result && listview.$result[0]) {
 				listview.__jira_observer.observe(listview.$result[0], { childList: true });
 			}
