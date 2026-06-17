@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 from frappe.utils import nowdate, date_diff
@@ -90,7 +92,8 @@ def get_data(filters):
 			t.priority,
 			t.exp_end_date,
 			t.progress,
-			t.actual_time
+			t.actual_time,
+			t._assign
 		FROM `tabTask` t
 		WHERE t.docstatus < 2
 		{conditions}
@@ -108,18 +111,32 @@ def get_data(filters):
 
 	task_names = [t.name for t in tasks]
 
-	# Get assignees from child table
+	# Fallback source: Task Assignee child table
 	assignee_rows = frappe.get_all(
 		"Task Assignee",
-		filters={"parent": ["in", task_names]},
+		filters={"parenttype": "Task", "parent": ["in", task_names]},
 		fields=["parent", "user"],
 	)
-	assignee_map = {}
+	child_assignee_map = {}
 	for row in assignee_rows:
-		assignee_map.setdefault(row["parent"], []).append(row["user"])
+		child_assignee_map.setdefault(row["parent"], []).append(row["user"])
 
-	# Get full names for all assignee users
-	all_user_emails = list({u for users in assignee_map.values() for u in users})
+	# Primary source: Frappe's built-in _assign field (JSON list of users)
+	assign_field_map = {}
+	for task in tasks:
+		if task.get("_assign"):
+			try:
+				users = json.loads(task._assign) or []
+				if users:
+					assign_field_map[task.name] = users
+			except Exception:
+				pass
+
+	# Get full names for all assignee users (from both sources)
+	all_user_emails = list(
+		{u for users in child_assignee_map.values() for u in users}
+		| {u for users in assign_field_map.values() for u in users}
+	)
 	full_name_map = {}
 	if all_user_emails:
 		users = frappe.get_all(
@@ -136,10 +153,14 @@ def get_data(filters):
 	data = []
 
 	for task in tasks:
-		task_assignees = assignee_map.get(task.name, [])
+		assign_users = assign_field_map.get(task.name, [])
+		child_users = child_assignee_map.get(task.name, [])
 
-		# skip if assignee filter doesn't match
-		if assignee_filter and assignee_filter not in task_assignees:
+		# _assign is primary; child table is the fallback for display
+		task_assignees = assign_users or child_users
+
+		# assignee filter matches against the union of both sources
+		if assignee_filter and assignee_filter not in set(assign_users) | set(child_users):
 			continue
 
 		assignee_display = (
@@ -165,12 +186,6 @@ def get_data(filters):
 			"progress": task.progress or 0,
 			"actual_time": round(task.actual_time or 0, 2),
 		}
-
-		# red background for overdue, green for completed
-		if days_overdue > 0:
-			row["__style"] = "color: #c53030;"
-		elif task.status == "Completed":
-			row["__style"] = "color: #276749;"
 
 		data.append(row)
 

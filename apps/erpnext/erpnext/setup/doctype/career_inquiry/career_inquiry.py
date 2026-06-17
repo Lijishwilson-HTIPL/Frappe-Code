@@ -4,37 +4,30 @@ from frappe.model.document import Document
 
 class CareerInquiry(Document):
 	def after_insert(self):
-		# Skip auto-creation when a Job Applicant was already created externally
-		if not self.job_applicant_ref:
-			create_job_applicant(self)
+		if self.job_applicant_ref:
+			return
+		create_job_applicant(self)
 
 
 def create_job_applicant(doc):
 	try:
-		notes_parts = [f"Role Applying For: {doc.role_applying_for}"]
-		if doc.years_of_experience:
-			notes_parts.append(f"Years of Experience: {doc.years_of_experience}")
-		if doc.linkedin_profile_url:
-			notes_parts.append(f"LinkedIn: {doc.linkedin_profile_url}")
-		if doc.portfolio_site:
-			notes_parts.append(f"Portfolio: {doc.portfolio_site}")
-		if doc.how_did_you_hear:
-			source_text = doc.how_did_you_hear
-			if doc.other_source:
-				source_text += f" ({doc.other_source})"
-			notes_parts.append(f"How Did You Hear: {source_text}")
-
 		applicant = frappe.get_doc({
 			"doctype": "Job Applicant",
 			"applicant_name": f"{doc.first_name} {doc.last_name}".strip(),
 			"email_id": doc.email,
 			"phone_number": doc.phone_number,
-			"resume_link": doc.resume_link,
+			"resume_attachment": doc.resume_link,
 			"cover_letter": doc.tell_us_about_yourself,
-			"notes": "\n".join(notes_parts),
+			"role_applying_for": doc.role_applying_for,
+			"years_of_experience": doc.years_of_experience,
+			"linkedin_profile_url": doc.linkedin_profile_url,
+			"portfolio_site": doc.portfolio_site,
+			"how_did_you_hear": doc.how_did_you_hear,
+			"other_source": doc.other_source,
 			"status": "Open",
 		})
 		applicant.insert(ignore_permissions=True)
+		frappe.db.commit()
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Career Inquiry: Failed to create Job Applicant")
 

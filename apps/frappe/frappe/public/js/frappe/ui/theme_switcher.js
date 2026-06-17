@@ -74,6 +74,11 @@ frappe.ui.ThemeSwitcher = class ThemeSwitcher {
 					label: __("SBIQ Core"),
 					info: __("SBIQ Blue Theme"),
 				},
+				{
+					name: "vibrant-calm",
+					label: __("Vibrant but Calm"),
+					info: __("Warm cream background with orange-red accents"),
+				},
 			];
 
 			resolve(this.themes);

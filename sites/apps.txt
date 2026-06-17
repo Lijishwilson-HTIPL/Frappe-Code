@@ -4,3 +4,5 @@ crm
 helpdesk
 hrms
 erpnext
+sbiqc_provisioning
+crm_unify

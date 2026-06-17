@@ -24,7 +24,7 @@
 | ERP | `apps/erpnext` | ERP — renamed "ERP", custom logo, Career Inquiry DocType |
 | HR | `apps/hrms` | HR module — renamed "HR", custom HRv2 logo, Job Applicant extensions |
 | SBIQ CRM | `apps/crm` | CRM — SBIQ workspace, Leads Journey, status flow, auto-email on lead |
-| Helpdesk | `apps/helpdesk` | Support tickets — Ticket Journey, Ticket Data Tab, custom logo |
+| Helpdesk | `apps/helpdesk` | Support tickets — Ticket Journey, Ticket Data Tab, Support Tracker Portal, L1→L2 Escalation |
 
 > All apps are **plain tracked directories** in this repo — no git submodules. A `git pull` gets everything in one shot.
 
@@ -36,10 +36,19 @@
 - App renamed from "ERPNext" to **"ERP"** with custom blue logo
 - Career Inquiry DocType — tracks every website job application
 - `job_applicant_ref` links speculative applications to HRMS Job Applicant records
+- **Task Management Enhancements:**
+  - Jira-style task list view with type badges (Bug, Feature, Improvement, etc.)
+  - Resizable subject column with drag handle
+  - Quick-create task bar directly from list view
+  - Task Assignment Board (`/task-assignment-board`) — Kanban board grouped by assignee with project filter
+  - Task Summary Report page
+  - Cancel linked ToDo entries on task delete
+  - Subtask panel and assignment board route fixes
 
 ### HR
 - App renamed from "Frappe HR" to **"HR"** with custom HRv2 logo
 - Job Applicant extended with: `role_applying_for`, `years_of_experience`, `linkedin_profile_url`, `portfolio_site`, `how_did_you_hear`, `other_source`
+- **Theme Switcher** — 9 custom UI themes (uichange1–9) registered via `theme_switcher.js` hook in `hrms/hooks.py`; includes glassmorphism dark themes, teal/sky palettes, and the SBIQ Core blue theme
 
 ### SBIQ CRM
 - Workspace renamed to **SBIQ CRM**
@@ -53,7 +62,33 @@
 ### Helpdesk
 - Custom Helpdesk logo
 - **Ticket Journey** — `TicketJourney.vue` visualises ticket stage progression
-- **Ticket Data Tab** — `TicketDataTab.vue` consolidates ticket detail fields
+- **Ticket Data Tab** — `TicketDataTab.vue` — overhauled with expanded ticket agent UI and consolidated detail fields
+- **Support Tracker Portal** (`/support-tracker`) — customer-facing portal for ticket management:
+  - OTP-based email authentication (no Frappe login required)
+  - Password set/reset flow via OTP verification
+  - Dashboard with ticket stats (total, awaiting reply, in progress, resolved)
+  - Search and filter tickets by status
+  - Paginated ticket list with real-time status badges
+  - Raise new tickets directly from the portal
+  - View ticket details and submit replies
+  - Token-based session management with logout
+  - Built as Frappe WWW page (`helpdesk/www/support-tracker/`)
+- **Portal Dashboard View** — `DashboardView.js` Vue component for the customer-facing dashboard
+- **Portal API** (`helpdesk/helpdesk/portal_api.py`) — full REST API powering the support tracker:
+  - `check_email` / `send_otp` / `verify_otp` — OTP authentication flow
+  - `set_password` / `portal_login` / `portal_logout` — password-based auth
+  - `validate_token` — session token validation
+  - `get_my_tickets` / `get_ticket_detail` — ticket listing and details
+  - `submit_reply` / `raise_ticket` — ticket interaction
+  - `get_license_by_email` — MFT license lookup
+- **L1 → L2 Escalation Flow** — complete escalation from HD Ticket to ERPNext Issue with RCA (Root Cause Analysis) sync
+- **After-insert hook** (`hd_ticket_hooks.py`) — sends branded acknowledgment email to the ticket reporter immediately after a new ticket is created
+
+### Apps Drawer
+- **App Order DocType** — configurable app order with Logo field for the `/apps` page
+- Auto-populates App Order table when empty
+- Letter fallback when app logo is missing or broken
+- Hides apps with empty Display Title from the `/apps` page
 
 ### Website Integration
 - Website discovery call form → Node.js backend → Frappe CRM Lead creation
@@ -291,16 +326,28 @@ See [`CLAUDE.md`](./CLAUDE.md) for the full rules. Key points:
 ```
 frappe-bench/
 ├── apps/
-│   ├── frappe/           # Core framework
-│   ├── erpnext/          # ERP — custom logo, Career Inquiry DocType
-│   ├── hrms/             # HR — custom logo, Job Applicant extensions
-│   ├── crm/              # SBIQ CRM — Leads Journey, auto-email, SBIQ workspace
-│   └── helpdesk/         # Helpdesk — Ticket Journey, Ticket Data Tab
+│   ├── frappe/                        # Core framework (v15)
+│   ├── erpnext/
+│   │   └── projects/doctype/task/     # Task list (Jira-style), Assignment Board
+│   ├── hrms/
+│   │   ├── hooks.py                   # Theme switcher hook registered here
+│   │   └── public/
+│   │       ├── css/uichange1-9.css    # 9 custom UI themes (local-only, gitignored)
+│   │       └── js/theme_switcher.js   # Theme registration script (local-only)
+│   ├── crm/                           # SBIQ CRM — Leads Journey, auto-email
+│   └── helpdesk/
+│       ├── desk/src/components/       # Vue components (TicketDataTab, TicketJourney)
+│       ├── helpdesk/
+│       │   ├── helpdesk/portal_api.py # Support Tracker REST API
+│       │   ├── overrides/             # HD Ticket hooks (after_insert email)
+│       │   ├── portal/                # DashboardView.js (Vue component)
+│       │   └── www/support-tracker/   # Portal web page (index.html + index.py)
+│       └── ...
 ├── sites/
-│   └── mysite.local/     # Site data, uploads (not fully committed)
-├── .claude/agents/       # AI agent pipeline (team-lead, developer, tester, release-manager)
-├── CLAUDE.md             # Developer rules
-├── CHANGELOG_DRAFT.md    # Release changelog
+│   └── mysite.local/                  # Site data, uploads (not committed)
+├── .claude/agents/                    # AI agent pipeline (team-lead → developer → tester → release-manager)
+├── CLAUDE.md                          # Developer rules & project conventions
+├── CHANGELOG_DRAFT.md                 # Release changelog
 └── README.md
 ```
 
@@ -319,6 +366,10 @@ frappe-bench/
 | Logo not updating after pull | Run `bench build --app <appname>` then hard-refresh browser (Ctrl+Shift+R) |
 | Auto-email not sending | Check outgoing email account is configured in Frappe → Email Settings and `enable_outgoing` is checked |
 | Assets out of date after deploy | Always run `bench build` after every pull |
+| Support tracker OTP not sending | Ensure outgoing email account is configured and `enable_outgoing` is checked in Email Settings |
+| `/support-tracker` returns 404 | Run `bench --site mysite.local migrate` then `bench build --app helpdesk` — WWW pages need migration |
+| Theme switcher not showing | Theme files are local-only (gitignored). Restore from commit `3db603798^` — see CLAUDE.md Section 7 |
+| Task Assignment Board blank | Ensure project filter is set; navigate via Task List → "Assignment Board" button |
 
 ---
 

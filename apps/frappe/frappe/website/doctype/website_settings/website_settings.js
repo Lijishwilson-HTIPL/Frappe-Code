@@ -16,6 +16,21 @@ frappe.ui.form.on("Website Settings", {
 		frm.add_custom_button(__("View Website"), () => {
 			window.open("/", "_blank");
 		});
+
+		// Auto-populate App Order table if empty
+		if (frm.doc.apps_drawer_apps && frm.doc.apps_drawer_apps.length === 0) {
+			frappe.call({
+				method: "frappe.apps.get_apps",
+				callback: function (r) {
+					if (!r.message || !r.message.length) return;
+					r.message.forEach(function (app) {
+						let row = frappe.model.add_child(frm.doc, "Website Apps Drawer App", "apps_drawer_apps");
+						frappe.model.set_value(row.doctype, row.name, "app_name", app.name);
+					});
+					frm.refresh_field("apps_drawer_apps");
+				},
+			});
+		}
 	},
 
 	set_banner_from_image: function (frm) {

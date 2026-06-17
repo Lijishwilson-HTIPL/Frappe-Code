@@ -8,7 +8,14 @@ frappe.pages["task-assignment-board"].on_page_load = function (wrapper) {
 };
 
 frappe.pages["task-assignment-board"].on_page_show = function (wrapper) {
-	if (wrapper._tab) wrapper._tab.refresh();
+	if (!wrapper._tab) return;
+	const opts = frappe.route_options || {};
+	if (opts.project) {
+		wrapper._tab._project_field.set_value(opts.project);
+		wrapper._tab.project = opts.project;
+		frappe.route_options = {};
+	}
+	wrapper._tab.refresh();
 };
 
 const TASK_STATUSES = ["Open", "Working", "Pending Review", "Overdue", "Completed", "Cancelled"];
@@ -17,6 +24,8 @@ class TaskAssignmentBoard {
 	constructor(page) {
 		this.page = page;
 		this.project = null;
+		this.sprint = null;
+		this.department = null;
 		this.status = null;
 		this.show_completed = false;
 		this.all_collapsed = false;
@@ -28,6 +37,7 @@ class TaskAssignmentBoard {
 		this._setup_menu();
 		this._inject_css();
 		this.$board = $('<div class="tab-board"></div>').appendTo($(page.body));
+		this.$board[0].__board = this;
 		this.refresh();
 	}
 
@@ -38,6 +48,22 @@ class TaskAssignmentBoard {
 			label: __("Project"),
 			options: "Project",
 			change: () => { this.project = this._project_field.get_value(); this.refresh(); },
+		});
+
+		this._sprint_field = this.page.add_field({
+			fieldtype: "Link",
+			fieldname: "sprint",
+			label: __("Sprint"),
+			options: "Sprint",
+			change: () => { this.sprint = this._sprint_field.get_value(); this.refresh(); },
+		});
+
+		this._department_field = this.page.add_field({
+			fieldtype: "Link",
+			fieldname: "department",
+			label: __("Department"),
+			options: "Department",
+			change: () => { this.department = this._department_field.get_value(); this.refresh(); },
 		});
 
 		this._status_field = this.page.add_field({
@@ -62,7 +88,7 @@ class TaskAssignmentBoard {
 		this.page.add_menu_item(__("Export to CSV"), () => this._export_csv());
 		this.page.add_menu_item(__("Clear Filters"), () => this._clear_filters());
 		this.page.add_menu_item(__("Collapse All Columns"), () => this._toggle_collapse());
-		this.page.add_menu_item(__("Show Completed Tasks"), () => this._toggle_completed());
+		this._completed_menu_item = this.page.add_menu_item(__("Show Completed Tasks"), () => this._toggle_completed());
 	}
 
 	refresh() {
@@ -71,6 +97,8 @@ class TaskAssignmentBoard {
 			method: "erpnext.projects.page.task_assignment_board.task_assignment_board.get_board_data",
 			args: {
 				project: this.project || "",
+				sprint: this.sprint || "",
+				department: this.department || "",
 				status: this.status || "",
 				show_completed: this.show_completed ? 1 : 0,
 			},
@@ -85,6 +113,16 @@ class TaskAssignmentBoard {
 					this._render(this._tasks, this._users);
 				}
 			},
+			error: () => {
+				this.$board.html(
+					`<div class="tab-loading" style="color:var(--red-500,#e53e3e);">
+						${__("Failed to load board. Check your connection and try again.")}
+						<br><button class="btn btn-sm btn-default" style="margin-top:8px;" onclick="this.closest('.tab-board').__board && this.closest('.tab-board').__board.refresh()">
+							${__("Retry")}
+						</button>
+					</div>`
+				);
+			},
 		});
 	}
 
@@ -98,13 +136,20 @@ class TaskAssignmentBoard {
 			if (!t.assignees || t.assignees.length === 0) {
 				byUser["__unassigned__"].push(t);
 			} else {
-				const uid = t.assignees[0];
-				if (!byUser[uid]) byUser[uid] = [];
-				byUser[uid].push(t);
+				let placed = false;
+				t.assignees.forEach(uid => {
+					if (byUser[uid] !== undefined) {
+						byUser[uid].push(t);
+						placed = true;
+					}
+				});
+				if (!placed) byUser["__unassigned__"].push(t);
 			}
 		});
 
-		const columns = [{ name: "__unassigned__", full_name: __("Unassigned"), user_image: null }, ...users];
+		const unassignedCol = { name: "__unassigned__", full_name: __("Unassigned"), user_image: null };
+		const sortedUsers = [...users].sort((a, b) => (byUser[b.name] || []).length - (byUser[a.name] || []).length);
+		const columns = [...sortedUsers, unassignedCol];
 		const $scroll = $('<div class="tab-scroll"></div>').appendTo(this.$board);
 
 		columns.forEach(user => {
@@ -136,7 +181,11 @@ class TaskAssignmentBoard {
 
 			// drag-drop
 			$body[0].addEventListener("dragover", e => { e.preventDefault(); $body.addClass("tab-drop-target"); });
-			$body[0].addEventListener("dragleave", () => $body.removeClass("tab-drop-target"));
+			$body[0].addEventListener("dragleave", (e) => {
+				if (!$body[0].contains(e.relatedTarget)) {
+					$body.removeClass("tab-drop-target");
+				}
+			});
 			$body[0].addEventListener("drop", e => {
 				e.preventDefault();
 				$body.removeClass("tab-drop-target");
@@ -144,6 +193,21 @@ class TaskAssignmentBoard {
 				this._confirm_reassign(taskName, user);
 			});
 		});
+
+		// Auto-scroll the board horizontally when dragging near edges
+		const scrollEl = $scroll[0];
+		let _scrollRAF = null;
+		const _stopScroll = () => { if (_scrollRAF) { cancelAnimationFrame(_scrollRAF); _scrollRAF = null; } };
+		const _autoScroll = (dir) => { scrollEl.scrollLeft += dir * 8; _scrollRAF = requestAnimationFrame(() => _autoScroll(dir)); };
+		scrollEl.addEventListener("dragover", e => {
+			const rect = scrollEl.getBoundingClientRect();
+			const threshold = 80;
+			if (e.clientX > rect.right - threshold) { _stopScroll(); _autoScroll(1); }
+			else if (e.clientX < rect.left + threshold) { _stopScroll(); _autoScroll(-1); }
+			else { _stopScroll(); }
+		});
+		scrollEl.addEventListener("dragleave", e => { if (!scrollEl.contains(e.relatedTarget)) _stopScroll(); });
+		scrollEl.addEventListener("drop", _stopScroll);
 
 		// restore collapsed state
 		if (this.all_collapsed) {
@@ -169,9 +233,9 @@ class TaskAssignmentBoard {
 		const progress = task.progress || 0;
 		const progress_color = progress >= 100 ? "#38a169" : progress >= 50 ? "#d69e2e" : "#4490f1";
 
-		// assignee avatar on card
+		// assignee avatars on card (all assignees)
 		const assigneeAvatar = task.assignees && task.assignees.length
-			? this._mini_avatar(task.assignees[0])
+			? task.assignees.map(uid => this._mini_avatar(uid)).join("")
 			: "";
 
 		// status dropdown
@@ -216,6 +280,10 @@ class TaskAssignmentBoard {
 						$(e.target).attr("class", `tab-status-select tab-status-${newStatus.toLowerCase().replace(/ /g, "-")}`);
 					}
 				},
+				error: () => {
+					// server rejected the change (validation/permission) — revert the select
+					$(e.target).val(task.status);
+				},
 			});
 		});
 
@@ -235,8 +303,10 @@ class TaskAssignmentBoard {
 	_confirm_reassign(taskName, newUser) {
 		const task = this._task_map[taskName];
 		if (!task) return;
-		const taskSubject = task.subject || taskName;
-		const displayName = newUser.name === "__unassigned__" ? __("Unassigned") : newUser.full_name;
+		const taskSubject = frappe.utils.escape_html(task.subject || taskName);
+		const displayName = frappe.utils.escape_html(
+			newUser.name === "__unassigned__" ? __("Unassigned") : newUser.full_name
+		);
 
 		frappe.confirm(
 			__(`Reassign <b>"${taskSubject}"</b> to <b>${displayName}</b>?`),
@@ -257,8 +327,12 @@ class TaskAssignmentBoard {
 
 	_clear_filters() {
 		this._project_field.set_value("");
+		this._sprint_field.set_value("");
+		this._department_field.set_value("");
 		this._status_field.set_value("");
 		this.project = null;
+		this.sprint = null;
+		this.department = null;
 		this.status = null;
 		this.refresh();
 	}
@@ -271,11 +345,11 @@ class TaskAssignmentBoard {
 
 	_toggle_completed() {
 		this.show_completed = !this.show_completed;
-		// update menu item label
-		const $menuItems = $(".dropdown-menu a:contains('Completed')");
-		$menuItems.filter((_, el) => $(el).text().includes("Completed")).text(
-			this.show_completed ? __("Hide Completed Tasks") : __("Show Completed Tasks")
-		);
+		if (this._completed_menu_item) {
+			this._completed_menu_item.text(
+				this.show_completed ? __("Hide Completed Tasks") : __("Show Completed Tasks")
+			);
+		}
 		this.refresh();
 	}
 
@@ -291,13 +365,13 @@ class TaskAssignmentBoard {
 				? (this._user_map[t.assignees[0]] ? this._user_map[t.assignees[0]].full_name : t.assignees[0])
 				: "Unassigned";
 			return [
-				t.name,
+				`"${(t.name || "").replace(/"/g, '""')}"`,
 				`"${(t.subject || "").replace(/"/g, '""')}"`,
 				`"${(t.project || "").replace(/"/g, '""')}"`,
 				t.status || "",
 				t.priority || "",
 				`"${assigneeName.replace(/"/g, '""')}"`,
-				t.exp_end_date || "",
+				t.exp_end_date ? `"${t.exp_end_date}"` : "",
 				t.progress || 0,
 			].join(",");
 		});

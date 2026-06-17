@@ -56,7 +56,28 @@ frappe.ui.form.on("Task", {
 	},
 
 	is_blocked: function (frm) {
-		erpnext.projects.render_blocked_banner(frm);
+		if (frm.doc.is_blocked) {
+			const query_filters = { name: ["!=", frm.doc.name] };
+			if (frm.doc.project) query_filters.project = frm.doc.project;
+			frappe.prompt([{
+				fieldname: "blocked_by_task",
+				fieldtype: "Link",
+				options: "Task",
+				label: __("Which task is blocking this?"),
+				reqd: 1,
+				get_query: () => ({ filters: query_filters }),
+			}], (v) => {
+				frm.set_value("blocked_by_task", v.blocked_by_task);
+				erpnext.projects.render_blocked_banner(frm);
+			}, __("Task is Blocked"), __("Confirm"),
+			() => {
+				// EC-2: cancelled — uncheck so form isn't saved in inconsistent state
+				frm.set_value("is_blocked", 0);
+			});
+		} else {
+			frm.set_value("blocked_by_task", null);
+			erpnext.projects.render_blocked_banner(frm);
+		}
 	},
 
 	status: function (frm) {
@@ -90,6 +111,7 @@ frappe.ui.form.on("Task", {
 				frm.set_value("status", "Completed");
 				frm.set_value("completed_by", values.completed_by);
 				frm.set_value("completed_on", values.completed_on);
+				frm.set_value("resolution_note", values.resolution_note);
 				frm._prev_status = "Completed";
 			}, __("Mark Task as Completed"), __("Confirm"));
 			return;
@@ -163,17 +185,88 @@ frappe.ui.form.on("Task", {
 });
 
 erpnext.projects.render_blocked_banner = function (frm) {
+	if (!frm || !frm.$wrapper) return;
 	frm.$wrapper.find(".blocked-banner").remove();
-	if (frm.doc.is_blocked) {
+	if (!frm.doc.is_blocked) return;
+
+	const taskId = frm.doc.blocked_by_task;
+
+	if (!taskId) {
 		frm.$wrapper.find(".page-form.row").before(`
 			<div class="blocked-banner" style="
 				background:#fef2f2;border:1px solid #fecaca;border-radius:6px;
 				padding:10px 16px;margin:0 0 12px 0;display:flex;
 				align-items:center;gap:10px;font-weight:600;color:#dc2626;">
 				<span>&#9940;</span>
-				<span>${__("This task is blocked. Resolve blockers before proceeding.")}</span>
+				<span>${__("This task is blocked. Set the blocking task in the field above.")}</span>
 			</div>`);
+		return;
 	}
+
+	// EC-6: generation counter prevents stale async callback from injecting
+	// a second banner if render_blocked_banner is called again before the
+	// frappe.db.get_value callback fires
+	frm._banner_gen = (frm._banner_gen || 0) + 1;
+	const myGen = frm._banner_gen;
+
+	frappe.db.get_value("Task", taskId, ["subject", "status", "priority", "exp_end_date"],
+		(details) => {
+			if (frm._banner_gen !== myGen) return;
+
+			// EC-3: blocking task was deleted
+			if (!details || !details.subject) {
+				frm.$wrapper.find(".page-form.row").before(`
+					<div class="blocked-banner" style="
+						background:#fef2f2;border:1px solid #fecaca;border-radius:6px;
+						padding:10px 16px;margin:0 0 12px 0;display:flex;
+						align-items:center;gap:10px;font-weight:600;color:#dc2626;">
+						<span>&#9940;</span>
+						<span>${__("This task is blocked by")}
+							<code>${frappe.utils.escape_html(taskId)}</code>
+							${__("(task not found — may have been deleted).")}</span>
+					</div>`);
+				return;
+			}
+
+			const tooltipLines = [
+				`<b>${frappe.utils.escape_html(taskId)}</b>`,
+				frappe.utils.escape_html(details.subject),
+				`${__("Status")}: ${__(details.status)}`,
+				details.priority ? `${__("Priority")}: ${__(details.priority)}` : "",
+				details.exp_end_date
+					? `${__("Due")}: ${frappe.datetime.str_to_user(details.exp_end_date)}`
+					: "",
+			].filter(Boolean).join("<br>");
+
+			frm.$wrapper.find(".page-form.row").before(`
+				<div class="blocked-banner" style="
+					background:#fef2f2;border:1px solid #fecaca;border-radius:6px;
+					padding:10px 16px;margin:0 0 12px 0;display:flex;
+					align-items:center;gap:10px;font-weight:600;color:#dc2626;position:relative;">
+					<span>&#9940;</span>
+					<span>${__("This task is blocked by")}&nbsp;</span>
+					<span class="blocked-task-link" style="
+						text-decoration:underline;cursor:pointer;font-family:monospace;
+						position:relative;">
+						${frappe.utils.escape_html(taskId)}
+						<div class="blocked-task-tooltip" style="
+							display:none;position:absolute;top:100%;left:0;z-index:1000;
+							background:#1e293b;color:#f1f5f9;font-size:12px;font-weight:400;
+							padding:10px 14px;border-radius:6px;min-width:220px;
+							box-shadow:0 4px 16px rgba(0,0,0,0.25);line-height:1.6;
+							white-space:normal;max-width:300px;margin-top:4px;">
+							${tooltipLines}
+						</div>
+					</span>
+					<span>&nbsp;${__("— resolve it before proceeding.")}</span>
+				</div>`);
+
+			frm.$wrapper.find(".blocked-task-link")
+				.on("mouseenter", function () { $(this).find(".blocked-task-tooltip").show(); })
+				.on("mouseleave", function () { $(this).find(".blocked-task-tooltip").hide(); })
+				.on("click",      function () { frappe.set_route("Form", "Task", taskId); });
+		}
+	);
 };
 
 erpnext.projects.render_subtasks = function (frm) {
@@ -189,7 +282,7 @@ erpnext.projects.render_subtasks = function (frm) {
 
 	frappe.db.get_list("Task", {
 		filters: { parent_task: frm.doc.name },
-		fields: ["name", "subject", "status", "priority", "assigned_to", "progress", "exp_end_date"],
+		fields: ["name", "subject", "status", "priority", "progress", "exp_end_date"],
 		limit: 100,
 		order_by: "creation asc",
 	}).then(tasks => {

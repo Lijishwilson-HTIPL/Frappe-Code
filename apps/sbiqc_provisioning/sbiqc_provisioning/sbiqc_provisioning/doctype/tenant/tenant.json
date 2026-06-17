@@ -1,0 +1,156 @@
+{
+  "actions": [],
+  "autoname": "field:subdomain",
+  "creation": "2026-06-09 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "field_order": [
+    "subdomain",
+    "client_name",
+    "plan",
+    "currency",
+    "timezone",
+    "admin_email",
+    "column_break_1",
+    "site_name",
+    "status",
+    "provisioned_at",
+    "section_apps",
+    "apps_to_install",
+    "section_logs",
+    "error_log"
+  ],
+  "fields": [
+    {
+      "fieldname": "subdomain",
+      "fieldtype": "Data",
+      "label": "Subdomain",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Lowercase alphanumeric and hyphens only (e.g. acme-corp)"
+    },
+    {
+      "fieldname": "client_name",
+      "fieldtype": "Data",
+      "label": "Client Name",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "plan",
+      "fieldtype": "Select",
+      "label": "Plan",
+      "options": "Starter\nStandard\nEnterprise",
+      "default": "Starter",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Select",
+      "label": "Currency",
+      "options": "INR\nUSD\nEUR\nGBP",
+      "default": "INR",
+      "in_list_view": 0,
+      "reqd": 0
+    },
+    {
+      "fieldname": "timezone",
+      "fieldtype": "Select",
+      "label": "Timezone",
+      "options": "Asia/Kolkata\nUTC\nAmerica/New_York\nEurope/London\nAsia/Dubai",
+      "default": "Asia/Kolkata",
+      "in_list_view": 0,
+      "reqd": 0
+    },
+    {
+      "fieldname": "admin_email",
+      "fieldtype": "Data",
+      "label": "Admin Email",
+      "options": "Email"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "site_name",
+      "fieldtype": "Data",
+      "label": "Site Name",
+      "read_only": 1,
+      "in_list_view": 1,
+      "description": "Auto-generated from subdomain + tenant_domain_suffix in common_site_config.json (e.g. client1.34.172.62.72.nip.io)"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Pending\nProvisioning\nActive\nSuspended\nError\nTerminated",
+      "default": "Pending",
+      "read_only": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "provisioned_at",
+      "fieldtype": "Datetime",
+      "label": "Provisioned At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_apps",
+      "fieldtype": "Section Break",
+      "label": "Apps to Install"
+    },
+    {
+      "fieldname": "apps_to_install",
+      "fieldtype": "Table",
+      "label": "Apps",
+      "options": "Tenant App"
+    },
+    {
+      "fieldname": "section_logs",
+      "fieldtype": "Section Break",
+      "label": "Logs",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "error_log",
+      "fieldtype": "Small Text",
+      "label": "Error Log",
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-06-12 12:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "SBIQC Provisioning",
+  "name": "Tenant",
+  "naming_rule": "By fieldname",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1,
+      "cancel": 1,
+      "amend": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
