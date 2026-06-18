@@ -1063,29 +1063,33 @@ erpnext.item.render_qr = function (frm) {
 	}
 
 	const img_url = frm.doc.qr_code;
-	const print_html = `
-		<html><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh">
-		<div style="text-align:center;font-family:sans-serif;padding:20px">
-			<img src="${img_url}" style="width:280px;height:280px"/>
-			<p style="font-size:18px;font-weight:bold;margin:10px 0 4px">${frm.doc.item_code}</p>
-			<p style="font-size:14px;color:#555;margin:0">${frm.doc.item_name || ""}</p>
-			<p style="font-size:12px;color:#888;margin:4px 0 0">${frm.doc.stock_uom || ""}</p>
-		</div></body></html>`;
 
 	// Render in Details tab QR section
-	frm.get_field("qr_code_display").$wrapper.html(`
+	const $qr_wrapper = frm.get_field("qr_code_display").$wrapper;
+	$qr_wrapper.html(`
 		<div style="text-align:center;padding:12px 0">
 			<img src="${img_url}" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px;background:#fff;padding:4px"/>
 			<div style="margin-top:8px;font-size:12px;color:#888">${frm.doc.item_code}</div>
 			<div style="margin-top:8px">
-				<button class="btn btn-xs btn-default" onclick="
-					var w=window.open('','_blank','width=400,height=500');
-					w.document.write(\`${print_html.replace(/`/g, "\\`")}\`);
-					w.print();
-				">&#128424; ${__("Print Label")}</button>
+				<button class="btn btn-xs btn-default qr-print-btn">&#128424; ${__("Print Label")}</button>
 			</div>
 		</div>
 	`);
+
+	$qr_wrapper.find(".qr-print-btn").on("click", function () {
+		const w = window.open("", "_blank", "width=400,height=500");
+		w.document.write(
+			"<html><body style='margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh'>" +
+			"<div style='text-align:center;font-family:sans-serif;padding:20px'>" +
+			"<img src='" + img_url + "' style='width:280px;height:280px'/>" +
+			"<p style='font-size:18px;font-weight:bold;margin:10px 0 4px'>" + frm.doc.item_code + "</p>" +
+			"<p style='font-size:14px;color:#555;margin:0'>" + (frm.doc.item_name || "") + "</p>" +
+			"<p style='font-size:12px;color:#888;margin:4px 0 0'>" + (frm.doc.stock_uom || "") + "</p>" +
+			"</div></body></html>"
+		);
+		w.document.close();
+		w.print();
+	});
 
 	// Inject small QR thumbnail into the top image panel (where "MM" avatar is)
 	const $form_image = frm.layout.wrapper.find(".form-image-wrapper, .row-index-0 .col-sm-2").first();
