@@ -1062,7 +1062,8 @@ erpnext.item.render_qr = function (frm) {
 		return;
 	}
 
-	const img_url = frm.doc.qr_code;
+	// Append timestamp to bust browser cache after regeneration
+	const img_url = frm.doc.qr_code + "?v=" + (frm.doc.modified || Date.now());
 
 	// Render in Details tab QR section
 	const $qr_wrapper = frm.get_field("qr_code_display").$wrapper;
