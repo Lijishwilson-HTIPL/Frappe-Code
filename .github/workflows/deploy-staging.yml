@@ -61,6 +61,9 @@ jobs:
             echo "=== Running migrations ==="
             docker compose exec -T frappe bench --site mysite.local migrate
 
+            echo "=== Setting host_name so email links use the real GCP URL ==="
+            docker compose exec -T frappe bench --site mysite.local set-config host_name "http://34.172.62.72"
+
             echo "=== Clearing cache ==="
             docker compose exec -T frappe bench --site mysite.local clear-cache
             docker compose exec -T frappe bench --site mysite.local clear-website-cache
