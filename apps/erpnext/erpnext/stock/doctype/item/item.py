@@ -1,7 +1,9 @@
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import base64
 import copy
+import io
 import json
 
 import frappe
@@ -224,6 +226,12 @@ class Item(Document):
 	def on_update(self):
 		self.update_variants()
 		self.update_item_price()
+		# Auto-regenerate QR if one already exists (keeps it current after any item edit)
+		if self.qr_code:
+			try:
+				generate_qr_code(self.item_code)
+			except Exception:
+				pass
 
 	def validate_description(self):
 		"""Clean HTML description if set"""
@@ -1323,6 +1331,143 @@ def set_item_default(item_code, company, fieldname, value):
 	d = item.append("item_defaults", {fieldname: value, "company": company})
 	d.db_insert()
 	item.clear_cache()
+
+
+@frappe.whitelist()
+def generate_qr_code(item_code):
+	"""Generate a QR code for the item encoding a full SBIQ JSON payload.
+
+	The payload carries warehouse, stock qty, price, UOM, batch/serial info
+	and a deep-link URL so scanning the QR from any device (mobile app,
+	HID scanner, or browser) can populate Sales Order / Purchase Order /
+	Delivery Note / Stock Entry automatically.
+	"""
+	import qrcode
+	from qrcode.image.pil import PilImage
+
+	item = frappe.get_cached_doc("Item", item_code)
+
+	# ── Warehouse & stock qty ────────────────────────────────────────────
+	default_warehouse = None
+	for d in item.item_defaults:
+		if d.default_warehouse:
+			default_warehouse = d.default_warehouse
+			break
+
+	if not default_warehouse:
+		bin_row = frappe.db.get_value(
+			"Bin", {"item_code": item_code}, ["warehouse", "actual_qty"],
+			as_dict=True, order_by="actual_qty desc"
+		)
+		if bin_row:
+			default_warehouse = bin_row.warehouse
+
+	available_qty = 0
+	warehouse_short_code = ""
+	if default_warehouse:
+		available_qty = flt(
+			frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": default_warehouse}, "actual_qty") or 0
+		)
+		warehouse_short_code = frappe.db.get_value("Warehouse", default_warehouse, "warehouse_name") or ""
+
+	# ── Batch / Serial (most recent active) ─────────────────────────────
+	batch_no = ""
+	if item.has_batch_no:
+		batch_no = frappe.db.get_value(
+			"Batch", {"item": item_code, "disabled": 0}, "name", order_by="creation desc"
+		) or ""
+
+	serial_no = ""
+	if item.has_serial_no:
+		serial_no = frappe.db.get_value(
+			"Serial No", {"item_code": item_code, "status": "Active"}, "name", order_by="creation desc"
+		) or ""
+
+	# ── Build payload ────────────────────────────────────────────────────
+	site_url = frappe.utils.get_url()
+	payload = {
+		"app": "SBIQ",
+		"type": "WAREHOUSE_ITEM",
+		"site": frappe.local.site,
+		"item_code": item_code,
+		"item_name": item.item_name or item_code,
+		"action": "stock_entry",
+		"url": f"{site_url}/app/item/{frappe.utils.cstr(item_code)}",
+		"meta": {
+			"warehouse": default_warehouse or "",
+			"warehouse_code": warehouse_short_code,
+			"category": item.item_group or "",
+			"price": flt(item.valuation_rate),
+			"currency": erpnext.get_default_currency() or "INR",
+			"uom": item.stock_uom or "",
+			"batch_no": batch_no,
+			"serial_no": serial_no,
+			"available_qty": available_qty,
+		},
+	}
+
+	qr = qrcode.QRCode(
+		version=None,
+		error_correction=qrcode.constants.ERROR_CORRECT_M,
+		box_size=10,
+		border=2,
+	)
+	qr.add_data(json.dumps(payload, separators=(",", ":")))
+	qr.make(fit=True)
+	img = qr.make_image(fill_color="black", back_color="white", image_factory=PilImage)
+
+	buf = io.BytesIO()
+	img.save(buf, format="PNG")
+	buf.seek(0)
+
+	# Delete old QR file if one exists
+	old_qr = frappe.db.get_value("Item", item_code, "qr_code")
+	if old_qr:
+		old_file = frappe.db.get_value("File", {"file_url": old_qr, "attached_to_name": item_code})
+		if old_file:
+			frappe.delete_doc("File", old_file, ignore_permissions=True)
+
+	filename = f"qr_{frappe.scrub(item_code)}.png"
+	file_doc = frappe.get_doc({
+		"doctype": "File",
+		"file_name": filename,
+		"attached_to_doctype": "Item",
+		"attached_to_name": item_code,
+		"attached_to_field": "qr_code",
+		"content": buf.read(),
+		"is_private": 0,
+	})
+	file_doc.save(ignore_permissions=True)
+
+	frappe.db.set_value("Item", item_code, "qr_code", file_doc.file_url)
+	frappe.db.commit()
+	return file_doc.file_url
+
+
+@frappe.whitelist()
+def get_item_by_barcode_or_code(code):
+	"""Look up item by item_code, SBIQ QR JSON payload, or barcode."""
+	fields = ["item_code", "item_name", "item_group", "stock_uom", "standard_rate", "description", "qr_code"]
+
+	# Handle SBIQ JSON QR payload — extract item_code from it
+	try:
+		payload = json.loads(code)
+		if isinstance(payload, dict) and payload.get("item_code"):
+			code = payload["item_code"]
+	except (json.JSONDecodeError, TypeError):
+		pass
+
+	# Try direct item_code match
+	item = frappe.db.get_value("Item", code, fields, as_dict=True)
+	if item:
+		return item
+
+	# Try barcode table
+	barcode_row = frappe.db.get_value("Item Barcode", {"barcode": code}, "parent")
+	if barcode_row:
+		return frappe.db.get_value("Item", barcode_row, fields, as_dict=True)
+
+	return None
 
 
 @frappe.whitelist()

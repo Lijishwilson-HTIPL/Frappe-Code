@@ -219,6 +219,30 @@ frappe.ui.form.on("Item", {
 			frappe.set_route("Form", "Item", new_item.name);
 		});
 
+		// QR Code button — always visible for saved items
+		if (!frm.is_new()) {
+			const qr_label = frm.doc.qr_code ? __("Regenerate QR Code") : __("Generate QR Code");
+			frm.add_custom_button(qr_label, function () {
+				frappe.call({
+					method: "erpnext.stock.doctype.item.item.generate_qr_code",
+					args: { item_code: frm.doc.item_code },
+					freeze: true,
+					freeze_message: __("Generating QR Code..."),
+					callback: function (r) {
+						if (r.message) {
+							frm.reload_doc();
+						}
+					},
+				});
+			}, __("Actions"));
+
+			// Render QR in HTML field + top image area
+			erpnext.item.render_qr(frm);
+		}
+
+		// Global barcode/QR scan listener — shows full item details dialog
+		erpnext.item.init_barcode_listener();
+
 		const stock_exists = frm.doc.__onload && frm.doc.__onload.stock_exists ? 1 : 0;
 
 		["is_stock_item", "has_serial_no", "has_batch_no", "has_variants"].forEach((fieldname) => {
@@ -1024,3 +1048,143 @@ function open_form(frm, doctype, child_doctype, parentfield) {
 		]);
 	});
 }
+
+// ── QR Code helpers ──────────────────────────────────────────────────────────
+
+erpnext.item.render_qr = function (frm) {
+	if (!frm.doc.qr_code) {
+		frm.get_field("qr_code_display").$wrapper.html(
+			`<div style="text-align:center;padding:20px;color:#aaa;font-size:13px">
+				<span style="font-size:32px">&#x25A1;</span><br>
+				No QR Code yet — click <b>Actions → Generate QR Code</b>
+			</div>`
+		);
+		return;
+	}
+
+	const img_url = frm.doc.qr_code;
+	const print_html = `
+		<html><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh">
+		<div style="text-align:center;font-family:sans-serif;padding:20px">
+			<img src="${img_url}" style="width:280px;height:280px"/>
+			<p style="font-size:18px;font-weight:bold;margin:10px 0 4px">${frm.doc.item_code}</p>
+			<p style="font-size:14px;color:#555;margin:0">${frm.doc.item_name || ""}</p>
+			<p style="font-size:12px;color:#888;margin:4px 0 0">${frm.doc.stock_uom || ""}</p>
+		</div></body></html>`;
+
+	// Render in Details tab QR section
+	frm.get_field("qr_code_display").$wrapper.html(`
+		<div style="text-align:center;padding:12px 0">
+			<img src="${img_url}" style="width:160px;height:160px;border:2px solid #e0e0e0;border-radius:6px;background:#fff;padding:4px"/>
+			<div style="margin-top:8px;font-size:12px;color:#888">${frm.doc.item_code}</div>
+			<div style="margin-top:8px">
+				<button class="btn btn-xs btn-default" onclick="
+					var w=window.open('','_blank','width=400,height=500');
+					w.document.write(\`${print_html.replace(/`/g, "\\`")}\`);
+					w.print();
+				">&#128424; ${__("Print Label")}</button>
+			</div>
+		</div>
+	`);
+
+	// Inject small QR thumbnail into the top image panel (where "MM" avatar is)
+	const $form_image = frm.layout.wrapper.find(".form-image-wrapper, .row-index-0 .col-sm-2").first();
+	frm.layout.wrapper.find(".qr-top-thumb").remove();
+	frm.layout.wrapper.find(".form-sidebar .sidebar-image-section, .form-page").first()
+		.before(`<div class="qr-top-thumb" style="
+			position:absolute;right:12px;top:12px;z-index:10;
+			background:#fff;border:1px solid #ddd;border-radius:6px;
+			padding:4px;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer"
+			title="${__("QR Code — scan to add to orders")}"
+			onclick="frappe.msgprint({title:'${__("Item QR Code")}', message:'<div style=text-align:center><img src=${img_url} style=width:220px;height:220px/><p style=font-size:14px;font-weight:bold;margin-top:8px>${frm.doc.item_code}</p></div>', indicator:\'blue\'})">
+			<img src="${img_url}" style="width:52px;height:52px;display:block"/>
+			<div style="font-size:9px;text-align:center;color:#888;margin-top:2px">QR</div>
+		</div>`);
+};
+
+
+// Global barcode/QR scan listener — detect fast keyboard input (scanner) and show item details
+erpnext.item.init_barcode_listener = function () {
+	if (window._qr_scan_listener_active) return;
+	window._qr_scan_listener_active = true;
+
+	let _buf = "", _last = 0;
+
+	$(document).on("keypress.qr_scan", function (e) {
+		const now = Date.now();
+		// Reset buffer if gap > 100ms (human typing). Buffer limit 2048 to accommodate JSON QR payload.
+		if (now - _last > 100 || _buf.length > 2048) _buf = "";
+		_last = now;
+
+		if (e.which === 13 && _buf.length >= 3) {
+			const scanned = _buf.trim();
+			_buf = "";
+			erpnext.item.show_scanned_item(scanned);
+		} else {
+			_buf += String.fromCharCode(e.which);
+		}
+	});
+};
+
+erpnext.item.show_scanned_item = function (code) {
+	// Parse SBIQ JSON QR payload if present
+	let qr_payload = null;
+	let lookup_code = code;
+	try {
+		const parsed = JSON.parse(code);
+		if (parsed && parsed.item_code) {
+			qr_payload = parsed;
+			lookup_code = parsed.item_code;
+		}
+	} catch(e) {}
+
+	frappe.call({
+		method: "erpnext.stock.doctype.item.item.get_item_by_barcode_or_code",
+		args: { code: lookup_code },
+		callback: function (r) {
+			if (!r.message) {
+				frappe.show_alert({ message: __("No item found for: ") + lookup_code, indicator: "red" });
+				return;
+			}
+			const d = r.message;
+			const m = qr_payload && qr_payload.meta || {};
+			const qr_img = d.qr_code
+				? `<img src="${d.qr_code}" style="width:120px;height:120px;border:1px solid #eee;border-radius:4px"/>`
+				: "";
+
+			// Build extra warehouse/stock rows from QR payload if available
+			const extra_rows = qr_payload ? `
+				<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Warehouse")}</b></td><td>${m.warehouse || "-"}</td></tr>
+				<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Available Qty")}</b></td><td>${m.available_qty !== undefined ? m.available_qty + " " + (m.uom || "") : "-"}</td></tr>
+				<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Price")}</b></td><td>${m.price !== undefined ? frappe.format(m.price, {fieldtype:"Currency"}) + " " + (m.currency || "") : "-"}</td></tr>
+				${m.batch_no ? `<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Batch No")}</b></td><td>${m.batch_no}</td></tr>` : ""}
+				${m.serial_no ? `<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Serial No")}</b></td><td>${m.serial_no}</td></tr>` : ""}
+			` : "";
+
+			const action_buttons = `
+				<a href="/app/item/${d.item_code}" class="btn btn-xs btn-primary" style="margin-right:6px">${__("Open Item")}</a>
+				<a href="/app/sales-order/new-sales-order-1?item_code=${encodeURIComponent(d.item_code)}" class="btn btn-xs btn-default" style="margin-right:6px">${__("New Sales Order")}</a>
+				<a href="/app/purchase-order/new-purchase-order-1?item_code=${encodeURIComponent(d.item_code)}" class="btn btn-xs btn-default" style="margin-right:6px">${__("New Purchase Order")}</a>
+				<a href="/app/delivery-note/new-delivery-note-1?item_code=${encodeURIComponent(d.item_code)}" class="btn btn-xs btn-default">${__("New Delivery Note")}</a>
+			`;
+
+			frappe.msgprint({
+				title: __("Item Details"),
+				message: `
+					<div style="display:flex;gap:16px;align-items:flex-start">
+						<div style="min-width:120px;text-align:center">${qr_img}</div>
+						<table style="font-size:13px;border-collapse:collapse;flex:1">
+							<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Item Code")}</b></td><td>${d.item_code}</td></tr>
+							<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Item Name")}</b></td><td>${d.item_name || "-"}</td></tr>
+							<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("Category")}</b></td><td>${d.item_group || "-"}</td></tr>
+							<tr><td style="color:#888;padding:3px 8px 3px 0"><b>${__("UOM")}</b></td><td>${d.stock_uom || "-"}</td></tr>
+							${extra_rows}
+						</table>
+					</div>
+					<div style="margin-top:12px;text-align:right">${action_buttons}</div>`,
+				indicator: "blue",
+				wide: true,
+			});
+		},
+	});
+};
