@@ -306,6 +306,26 @@
    "options": "Item Barcode"
   },
   {
+   "fieldname": "sb_qr_code",
+   "fieldtype": "Section Break",
+   "label": "QR Code"
+  },
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Attach Image",
+   "label": "QR Code",
+   "read_only": 1,
+   "hidden": 1,
+   "in_list_view": 0,
+   "print_hide": 0
+  },
+  {
+   "fieldname": "qr_code_display",
+   "fieldtype": "HTML",
+   "label": "QR Code Display",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
    "collapsible_depends_on": "is_stock_item",
    "depends_on": "is_stock_item",

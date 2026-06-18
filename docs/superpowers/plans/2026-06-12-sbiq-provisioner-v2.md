@@ -4,11 +4,11 @@
 
 **Goal:** Rebuild the SBIQ Provisioner dashboard with a sidebar-navigation layout (5 sections), 3-step new-tenant wizard, post-provisioning app updates, Frappe-theme-aware CSS, and install it on mysite.local as the dev control plane.
 
-**Architecture:** The `sbiq_provisioner` Frappe app is installed on `mysite.local` only. The Page `sbiqc-provisioning` is rebuilt as a sidebar shell with five swappable content sections rendered in pure JS. All backend APIs live in `tenant.py` as `@frappe.whitelist()` functions. The engine gains a new `provision_update()` function for post-provisioning app installs.
+**Architecture:** The `sbiqc_provisioning` Frappe app is installed on `mysite.local` only. The Page `sbiqc-provisioning` is rebuilt as a sidebar shell with five swappable content sections rendered in pure JS. All backend APIs live in `tenant.py` as `@frappe.whitelist()` functions. The engine gains a new `provision_update()` function for post-provisioning app installs.
 
 **Tech Stack:** Frappe v15, Python 3.10, MariaDB, RQ (Redis Queue), plain JS (no frameworks), Frappe CSS variables for theming.
 
-**App path:** `apps/sbiq_provisioner/sbiq_provisioner/`  
+**App path:** `apps/sbiqc_provisioning/sbiqc_provisioning/`  
 **All paths below are relative to the bench root** `~/frappe-bench/` unless stated otherwise.
 
 ---
@@ -17,26 +17,26 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.json` | Modify | Add `currency`, `timezone` fields |
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py` | Modify | Fix injection bug; add `get_bench_health`, `get_provisioning_report`, `update_tenant_apps`, `cancel_queued_job` |
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.js` | Delete | Replaced by page JS |
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.html` | Rewrite | Sidebar shell HTML only |
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.js` | Rewrite | Full dashboard controller |
-| `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.css` | Create | All CSS using Frappe variables only |
-| `apps/sbiq_provisioner/sbiq_provisioner/hooks.py` | Modify | Include page CSS |
-| `apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py` | Modify | Add `provision_update()` |
-| `apps/sbiq_provisioner/sbiq_provisioner/provisioner/seeder.py` | Modify | Accept currency/timezone; create admin user |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.json` | Modify | Add `currency`, `timezone` fields |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py` | Modify | Fix injection bug; add `get_bench_health`, `get_provisioning_report`, `update_tenant_apps`, `cancel_queued_job` |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.js` | Delete | Replaced by page JS |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.html` | Rewrite | Sidebar shell HTML only |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.js` | Rewrite | Full dashboard controller |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.css` | Create | All CSS using Frappe variables only |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/hooks.py` | Modify | Include page CSS |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py` | Modify | Add `provision_update()` |
+| `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/seeder.py` | Modify | Accept currency/timezone; create admin user |
 
 ---
 
 ## Task 1: Fix command injection bug in `delete_tenant`
 
 **Files:**
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py`
 
 - [ ] **Step 1: Open the file and locate the bug**
 
-  Open `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py`.  
+  Open `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py`.  
   Find the `delete_tenant` function (around line 150). It contains:
   ```python
   subprocess.run(
@@ -62,7 +62,7 @@
 
   ```bash
   cd ~/frappe-bench
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py
   git commit -m "fix(provisioner): remove shell=True command injection in delete_tenant"
   ```
 
@@ -71,7 +71,7 @@
 ## Task 2: Add `currency` and `timezone` fields to Tenant DocType
 
 **Files:**
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.json`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.json`
 
 - [ ] **Step 1: Add fields to `field_order`**
 
@@ -133,7 +133,7 @@
 - [ ] **Step 6: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.json
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.json
   git commit -m "feat(tenant): add currency and timezone fields"
   ```
 
@@ -142,7 +142,7 @@
 ## Task 3: Update `seeder.py` — currency, timezone, admin user creation
 
 **Files:**
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/provisioner/seeder.py`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/seeder.py`
 
 - [ ] **Step 1: Update `seed_tenant` signature and setup_data**
 
@@ -206,7 +206,7 @@
 
 - [ ] **Step 3: Update `engine.py` to pass new seeder args**
 
-  Open `apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py`.  
+  Open `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py`.  
   Find the `seed_tenant` call (around line 83) and replace:
   ```python
   seed_tenant(
@@ -230,8 +230,8 @@
 - [ ] **Step 4: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/provisioner/seeder.py \
-          apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/seeder.py \
+          apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py
   git commit -m "feat(seeder): pass currency/timezone from tenant; create admin user"
   ```
 
@@ -240,11 +240,11 @@
 ## Task 4: Add `provision_update()` to engine.py
 
 **Files:**
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py`
 
 - [ ] **Step 1: Add the function at the end of `engine.py`**
 
-  Append to `apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py`:
+  Append to `apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py`:
   ```python
   def provision_update(tenant_name, apps_to_add):
       """Install additional apps on an already-Active tenant site."""
@@ -310,7 +310,7 @@
 - [ ] **Step 2: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/provisioner/engine.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/provisioner/engine.py
   git commit -m "feat(engine): add provision_update for post-provisioning app installs"
   ```
 
@@ -319,7 +319,7 @@
 ## Task 5: Add new API functions to `tenant.py`
 
 **Files:**
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py`
 
 - [ ] **Step 1: Add required imports at the top of `tenant.py`**
 
@@ -340,7 +340,7 @@
       if isinstance(new_apps, str):
           new_apps = json.loads(new_apps)
       frappe.enqueue(
-          "sbiq_provisioner.provisioner.engine.provision_update",
+          "sbiqc_provisioning.provisioner.engine.provision_update",
           tenant_name=tenant_name,
           apps_to_add=new_apps,
           queue="long",
@@ -567,7 +567,7 @@
 - [ ] **Step 7: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py
   git commit -m "feat(tenant): add update_tenant_apps, get_bench_health, get_provisioning_report, cancel_queued_job; paginate get_provisioning_stats"
   ```
 
@@ -576,12 +576,12 @@
 ## Task 6: Build the dashboard CSS
 
 **Files:**
-- Create: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.css`
-- Modify: `apps/sbiq_provisioner/sbiq_provisioner/hooks.py`
+- Create: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.css`
+- Modify: `apps/sbiqc_provisioning/sbiqc_provisioning/hooks.py`
 
 - [ ] **Step 1: Create the CSS file**
 
-  Create `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.css` with the following content. Every value uses a Frappe CSS variable — no hardcoded hex:
+  Create `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.css` with the following content. Every value uses a Frappe CSS variable — no hardcoded hex:
 
   ```css
   /* ── Layout ── */
@@ -1025,16 +1025,16 @@
 
 - [ ] **Step 2: Register CSS in hooks.py**
 
-  Open `apps/sbiq_provisioner/sbiq_provisioner/hooks.py`.  
+  Open `apps/sbiqc_provisioning/sbiqc_provisioning/hooks.py`.  
   The existing line:
   ```python
-  app_include_css = "/assets/sbiq_provisioner/css/sbiq_provisioner.css"
+  app_include_css = "/assets/sbiqc_provisioning/css/sbiqc_provisioning.css"
   ```
   Change to a list so both files load:
   ```python
   app_include_css = [
-      "/assets/sbiq_provisioner/css/sbiq_provisioner.css",
-      "/assets/sbiq_provisioner/css/sbiqc_provisioning.css",
+      "/assets/sbiqc_provisioning/css/sbiqc_provisioning.css",
+      "/assets/sbiqc_provisioning/css/sbiqc_provisioning.css",
   ]
   ```
 
@@ -1043,8 +1043,8 @@
 - [ ] **Step 3: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.css \
-          apps/sbiq_provisioner/sbiq_provisioner/hooks.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.css \
+          apps/sbiqc_provisioning/sbiqc_provisioning/hooks.py
   git commit -m "feat(dashboard): add CSS-variable-only sidebar stylesheet"
   ```
 
@@ -1053,7 +1053,7 @@
 ## Task 7: Rewrite the dashboard HTML shell
 
 **Files:**
-- Rewrite: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.html`
+- Rewrite: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.html`
 
 - [ ] **Step 1: Replace entire file content**
 
@@ -1157,7 +1157,7 @@
 - [ ] **Step 2: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.html
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.html
   git commit -m "feat(dashboard): rebuild HTML as sidebar shell"
   ```
 
@@ -1166,7 +1166,7 @@
 ## Task 8: Rewrite the dashboard JavaScript — core + Tenants section
 
 **Files:**
-- Rewrite: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.js`
+- Rewrite: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.js`
 
 - [ ] **Step 1: Write the full JS file**
 
@@ -1332,7 +1332,7 @@
           if (this.loading) return;
           this.loading = true;
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
               args: { offset: 0, limit: this.limit },
               callback: function (r) {
                   self.loading = false;
@@ -1460,7 +1460,7 @@
       _load_more() {
           var self = this;
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_stats",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_stats",
               args: { offset: this.offset, limit: this.limit },
               callback: function (r) {
                   if (!r.message) return;
@@ -1518,7 +1518,7 @@
                   callback: function (r) {
                       if (r.message && r.message.docstatus === 1) {
                           frappe.call({
-                              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.retry_provisioning",
+                              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.retry_provisioning",
                               args: { tenant_name: name },
                               callback: function () {
                                   frappe.show_alert({ message: __("Provisioning re-queued"), indicator: "blue" });
@@ -1537,7 +1537,7 @@
               __("Permanently delete tenant {0} and drop its database? This cannot be undone.", [name]),
               function () {
                   frappe.call({
-                      method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.delete_tenant",
+                      method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.delete_tenant",
                       args: { tenant_name: name },
                       callback: function (r) {
                           if (r.message && r.message.status === "ok") {
@@ -1553,7 +1553,7 @@
       _cancel_job(log_name) {
           var self = this;
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.cancel_queued_job",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.cancel_queued_job",
               args: { log_name: log_name },
               callback: function () {
                   frappe.show_alert({ message: __("Job cancelled"), indicator: "orange" });
@@ -1606,7 +1606,7 @@
           var $p = this.$w.find("#sbiqc-panel-health");
           $p.html('<div class="sbiqc-empty"><p>Loading health checks...</p></div>');
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_bench_health",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_bench_health",
               callback: function (r) {
                   if (!r.message) return;
                   self._render_health(r.message);
@@ -1645,7 +1645,7 @@
           var $p = this.$w.find("#sbiqc-panel-reports");
           $p.html('<div class="sbiqc-empty"><p>Loading reports...</p></div>');
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_provisioning_report",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_provisioning_report",
               callback: function (r) {
                   if (!r.message) return;
                   self._render_reports(r.message);
@@ -1744,7 +1744,7 @@
           this._wizard_data = { subdomain: "", client_name: "", admin_email: "", plan: "Standard", currency: "INR", timezone: "Asia/Kolkata", apps: [] };
           // Load apps list
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
               callback: function (r) {
                   self._all_apps = r.message || [];
                   self._wizard_data.apps = ["erpnext"];
@@ -1952,7 +1952,7 @@
 
           // Get installed apps for this site
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.get_installable_apps",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.get_installable_apps",
               callback: function (r) {
                   var all_apps = r.message || [];
                   // Get installed via child table
@@ -2014,7 +2014,7 @@
               return;
           }
           frappe.call({
-              method: "sbiq_provisioner.sbiq_provisioner.doctype.tenant.tenant.update_tenant_apps",
+              method: "sbiqc_provisioning.sbiqc_provisioning.doctype.tenant.tenant.update_tenant_apps",
               args: { tenant_name: this._slide_tenant, new_apps: JSON.stringify(selected) },
               callback: function (r) {
                   if (r.message && r.message.status === "queued") {
@@ -2068,7 +2068,7 @@
       tenant.db_set("status", "Provisioning")
       frappe.db.commit()
       frappe.enqueue(
-          "sbiq_provisioner.provisioner.engine.provision_tenant",
+          "sbiqc_provisioning.provisioner.engine.provision_tenant",
           tenant_name=tenant_name,
           queue="long",
           timeout=1800,
@@ -2080,8 +2080,8 @@
 - [ ] **Step 3: Commit**
 
   ```bash
-  git add apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.js \
-          apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py
+  git add apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.js \
+          apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py
   git commit -m "feat(dashboard): full JS rewrite — sidebar nav, wizard, add-apps, queue, health, reports, errors"
   ```
 
@@ -2090,13 +2090,13 @@
 ## Task 9: Delete the old `tenant.js`
 
 **Files:**
-- Delete: `apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.js`
+- Delete: `apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.js`
 
 - [ ] **Step 1: Remove the file**
 
   ```bash
   cd ~/frappe-bench
-  git rm apps/sbiq_provisioner/sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.js
+  git rm apps/sbiqc_provisioning/sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.js
   git commit -m "chore(tenant): remove old tenant.js (replaced by page JS)"
   ```
 
@@ -2108,16 +2108,16 @@
 
   ```bash
   cd ~/frappe-bench
-  bench build --app sbiq_provisioner
+  bench build --app sbiqc_provisioning
   ```
-  Expected: Build completes without errors. CSS and JS files appear under `sites/assets/sbiq_provisioner/`.
+  Expected: Build completes without errors. CSS and JS files appear under `sites/assets/sbiqc_provisioning/`.
 
 - [ ] **Step 2: Install app on mysite.local**
 
   ```bash
-  bench --site mysite.local install-app sbiq_provisioner
+  bench --site mysite.local install-app sbiqc_provisioning
   ```
-  Expected output: `Installing sbiq_provisioner...` followed by success message. If already installed: `App sbiq_provisioner already installed`.
+  Expected output: `Installing sbiqc_provisioning...` followed by success message. If already installed: `App sbiqc_provisioning already installed`.
 
 - [ ] **Step 3: Migrate**
 
@@ -2158,8 +2158,8 @@
   Only commit app files — never `common_site_config.json`, `Procfile`, or `config/redis_*.conf`:
   ```bash
   git status
-  # Confirm only sbiq_provisioner app files are staged
-  git add apps/sbiq_provisioner/
+  # Confirm only sbiqc_provisioning app files are staged
+  git add apps/sbiqc_provisioning/
   git commit -m "chore(provisioner): post-install verification — all sections live on mysite.local"
   ```
 

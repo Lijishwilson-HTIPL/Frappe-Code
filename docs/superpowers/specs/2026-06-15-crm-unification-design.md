@@ -120,7 +120,7 @@ Every write-back sets `erpnext_last_synced` (Datetime) on the Deal and only writ
 ## 5. Frontend Architecture (Phase 4)
 
 - **Stack:** Vue 3 (Composition API) + Vite + frappe-ui + Pinia + vue-router (`createWebHistory('/crm-unify')`).
-- **Mount:** `<app>.bundle.js` built via `bench build --app crm_unify`, **explicitly** loaded through `hooks.page_js` (or `app_include_js`) and mounted onto `.layout-main-section` in `on_page_load`. *(The orphaned `sbiq_provisioner.bundle.js` proves a bundle that is built but not wired never loads.)*
+- **Mount:** `<app>.bundle.js` built via `bench build --app crm_unify`, **explicitly** loaded through `hooks.page_js` (or `app_include_js`) and mounted onto `.layout-main-section` in `on_page_load`. *(The orphaned `sbiqc_provisioning.bundle.js` proves a bundle that is built but not wired never loads.)*
 - **Auth/realtime:** free — same `sid` cookie + `window.csrf_token`; replicate `socket.js` wiring (`socketio_port` from `common_site_config`) to subscribe to `crm_customer_created`, `crm_invoice_created`, and new write-back events.
 - **Upgrade safety:** depend on the **frappe-ui library** only; never import CRM Pinia stores, the `@` alias, or CRM `.vue` composites (unpinned internal `frappe-ui 0.1.261`, ~92 `createResource` calls coupled to CRM doctypes).
 - **Reusable components:** `CRMStatCard`, `LeadJourneyTimeline`, `PipelineBoard` (drag via `sortablejs`), `Customer360Panel`, `ActivityFeed`, `CommunicationPanel`, `AnalyticsWidgets`, `FollowUpWidget`, `LeadSummaryDrawer`.

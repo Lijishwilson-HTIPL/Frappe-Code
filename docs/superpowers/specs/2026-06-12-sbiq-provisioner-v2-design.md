@@ -1,13 +1,13 @@
 # SBIQ Provisioner v2 — Design Spec
 **Date:** 2026-06-12  
 **Status:** Approved  
-**Scope:** Full rebuild of the sbiq_provisioner dashboard + engine enhancements, installed on mysite.local as the dev control plane.
+**Scope:** Full rebuild of the sbiqc_provisioning dashboard + engine enhancements, installed on mysite.local as the dev control plane.
 
 ---
 
 ## 1. Goals
 
-1. Install `sbiq_provisioner` on `mysite.local` so developers provision client sites (`client.localhost`, `acme.localhost`, etc.) from the dev environment.
+1. Install `sbiqc_provisioning` on `mysite.local` so developers provision client sites (`client.localhost`, `acme.localhost`, etc.) from the dev environment.
 2. Replace the existing tab-based dashboard page with a sidebar-navigation layout (5 sections).
 3. Theme via Frappe's native theme switcher (SBIQ Core, Frappe Light, Timeless Night) — CSS variables only, no hardcoded colours.
 4. New Tenant creation via a 3-step wizard inside the dashboard.
@@ -21,13 +21,13 @@
 
 ### 2.1 Control Plane
 
-`mysite.local` is the control plane site. `sbiq_provisioner` is installed on it and only it. Client sites (`*.localhost`) are provisioned by the engine and live on the same bench — they do **not** have `sbiq_provisioner` installed.
+`mysite.local` is the control plane site. `sbiqc_provisioning` is installed on it and only it. Client sites (`*.localhost`) are provisioned by the engine and live on the same bench — they do **not** have `sbiqc_provisioning` installed.
 
 ```
 Browser → mysite.local:8000/app/sbiqc-provisioning
               │
               ▼
-         sbiq_provisioner Page
+         sbiqc_provisioning Page
               │
               ├── frappe.enqueue → long worker
               │         │
@@ -54,9 +54,9 @@ Frappe routes requests by the `Host` header. With this set, an unknown hostname 
 ### 2.3 Installation Steps (one-time)
 
 ```bash
-bench --site mysite.local install-app sbiq_provisioner
+bench --site mysite.local install-app sbiqc_provisioning
 bench --site mysite.local migrate
-bench build --app sbiq_provisioner
+bench build --app sbiqc_provisioning
 bench restart
 ```
 
@@ -288,7 +288,7 @@ New whitelisted function `get_provisioning_report()` in `tenant.py`:
 
 ### 11.1 Command Injection in `delete_tenant` (Critical)
 
-**File:** `sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py:165`
+**File:** `sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py:165`
 
 Replace:
 ```python
@@ -344,15 +344,15 @@ Executed via `python -c script` in the bench env (same pattern as `_set_site_bra
 
 | File | Change |
 |---|---|
-| `sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.json` | Add `currency`, `timezone` fields |
-| `sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.py` | Fix `delete_tenant` injection; add `get_bench_health`, `get_provisioning_report`, `update_tenant_apps` |
-| `sbiq_provisioner/sbiq_provisioner/doctype/tenant/tenant.js` | Remove (replaced by dashboard page JS) |
-| `sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.html` | Rebuild as sidebar shell |
-| `sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.js` | Full rewrite: SBIQCProvisioning class with 5 sections, wizard, add-apps slideout, realtime |
-| `sbiq_provisioner/sbiq_provisioner/page/sbiqc_provisioning/sbiqc_provisioning.css` | New: CSS-variable-only styles for sidebar layout |
-| `sbiq_provisioner/sbiq_provisioner/hooks.py` | Add CSS include for new page CSS |
-| `sbiq_provisioner/provisioner/engine.py` | Add `provision_update()` function |
-| `sbiq_provisioner/provisioner/seeder.py` | Accept `currency`, `timezone`; create admin user |
+| `sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.json` | Add `currency`, `timezone` fields |
+| `sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.py` | Fix `delete_tenant` injection; add `get_bench_health`, `get_provisioning_report`, `update_tenant_apps` |
+| `sbiqc_provisioning/sbiqc_provisioning/doctype/tenant/tenant.js` | Remove (replaced by dashboard page JS) |
+| `sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.html` | Rebuild as sidebar shell |
+| `sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.js` | Full rewrite: SBIQCProvisioning class with 5 sections, wizard, add-apps slideout, realtime |
+| `sbiqc_provisioning/sbiqc_provisioning/page/sbiqc_provisioning/sbiqc_provisioning.css` | New: CSS-variable-only styles for sidebar layout |
+| `sbiqc_provisioning/sbiqc_provisioning/hooks.py` | Add CSS include for new page CSS |
+| `sbiqc_provisioning/provisioner/engine.py` | Add `provision_update()` function |
+| `sbiqc_provisioning/provisioner/seeder.py` | Accept `currency`, `timezone`; create admin user |
 | `sites/common_site_config.json` | `serve_default_site: false` — **not committed** (machine-specific) |
 
 ---
