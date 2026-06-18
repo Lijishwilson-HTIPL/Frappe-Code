@@ -1383,6 +1383,24 @@ def generate_qr_code(item_code):
 			"Serial No", {"item_code": item_code, "status": "Active"}, "name", order_by="creation desc"
 		) or ""
 
+	# ── Price — prefer Item Price (selling), fall back to standard_rate / valuation_rate ──
+	price = 0.0
+	currency = erpnext.get_default_currency() or "INR"
+	item_price_row = frappe.db.get_value(
+		"Item Price",
+		{"item_code": item_code, "selling": 1},
+		["price_list_rate", "currency"],
+		as_dict=True,
+		order_by="modified desc",
+	)
+	if item_price_row and item_price_row.price_list_rate:
+		price = flt(item_price_row.price_list_rate)
+		currency = item_price_row.currency or currency
+	elif flt(item.standard_rate):
+		price = flt(item.standard_rate)
+	elif flt(item.valuation_rate):
+		price = flt(item.valuation_rate)
+
 	# ── Build payload ────────────────────────────────────────────────────
 	site_url = frappe.utils.get_url()
 	payload = {
@@ -1397,8 +1415,8 @@ def generate_qr_code(item_code):
 			"warehouse": default_warehouse or "",
 			"warehouse_code": warehouse_short_code,
 			"category": item.item_group or "",
-			"price": flt(item.valuation_rate),
-			"currency": erpnext.get_default_currency() or "INR",
+			"price": price,
+			"currency": currency,
 			"uom": item.stock_uom or "",
 			"batch_no": batch_no,
 			"serial_no": serial_no,
