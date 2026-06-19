@@ -20,7 +20,6 @@ from frappe.utils import (
 	nowdate,
 )
 
-from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import daterange
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
 import hrms
@@ -36,6 +35,12 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
+
+
+def daterange(start_date, end_date):
+	"""Yield each date from start_date to end_date inclusive."""
+	for n in range(int((end_date - start_date).days) + 1):
+		yield start_date + datetime.timedelta(n)
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
