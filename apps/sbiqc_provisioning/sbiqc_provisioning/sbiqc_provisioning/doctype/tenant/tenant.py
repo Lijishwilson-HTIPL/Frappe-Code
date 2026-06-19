@@ -66,7 +66,7 @@ class Tenant(Document):
 			tenant_name=self.name,
 			queue="long",
 			timeout=1800,
-			now=frappe.flags.in_test,
+			now=frappe.in_test,
 		)
 		frappe.msgprint(
 			_("Provisioning job queued for {0}. Status will update automatically.").format(
@@ -206,7 +206,7 @@ def update_tenant_apps(tenant_name, new_apps):
 		apps_to_add=new_apps,
 		queue="long",
 		timeout=1800,
-		now=frappe.flags.in_test,
+		now=frappe.in_test,
 	)
 	return {"status": "queued", "apps": new_apps}
 
@@ -367,6 +367,6 @@ def retry_provisioning(tenant_name):
 		tenant_name=tenant_name,
 		queue="long",
 		timeout=1800,
-		now=frappe.flags.in_test,
+		now=frappe.in_test,
 	)
 	return {"status": "queued"}
