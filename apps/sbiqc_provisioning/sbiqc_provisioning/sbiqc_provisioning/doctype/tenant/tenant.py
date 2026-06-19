@@ -59,7 +59,6 @@ class Tenant(Document):
 
 	def on_submit(self):
 		self.db_set("status", "Provisioning")
-		frappe.db.commit()
 
 		frappe.enqueue(
 			"sbiqc_provisioning.provisioner.engine.provision_tenant",
@@ -67,6 +66,7 @@ class Tenant(Document):
 			queue="long",
 			timeout=1800,
 			now=frappe.in_test,
+			enqueue_after_commit=True,
 		)
 		frappe.msgprint(
 			_("Provisioning job queued for {0}. Status will update automatically.").format(
