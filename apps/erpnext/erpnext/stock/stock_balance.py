@@ -16,7 +16,7 @@ def repost(only_actual=False, allow_negative_stock=False, allow_zero_rate=False,
 	frappe.db.auto_commit_on_many_writes = 1
 
 	if allow_negative_stock:
-		existing_allow_negative_stock = frappe.db.get_value("Stock Settings", None, "allow_negative_stock")
+		existing_allow_negative_stock = frappe.get_single_value("Stock Settings", "allow_negative_stock")
 		frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
 
 	item_warehouses = frappe.db.sql(
@@ -31,7 +31,8 @@ def repost(only_actual=False, allow_negative_stock=False, allow_zero_rate=False,
 	for d in item_warehouses:
 		try:
 			repost_stock(d[0], d[1], allow_zero_rate, only_actual, only_bin, allow_negative_stock)
-			frappe.db.commit()
+			if not frappe.in_test:
+				frappe.db.commit()
 		except Exception:
 			frappe.db.rollback()
 
@@ -283,7 +284,7 @@ def set_stock_balance_as_per_serial_no(
 	if not posting_time:
 		posting_time = nowtime()
 
-	condition = " and item.name='%s'" % item_code.replace("'", "'") if item_code else ""
+	condition = " and item.name=%s" % frappe.db.escape(item_code, percent=False) if item_code else ""
 
 	bin = frappe.db.sql(
 		"""select bin.item_code, bin.warehouse, bin.actual_qty, item.stock_uom

@@ -56,7 +56,7 @@ class AuthorizationControl(TransactionBase):
 			if not has_common(appr_roles, frappe.get_roles()) and not has_common(
 				appr_users, [session["user"]]
 			):
-				frappe.msgprint(_("Not authroized since {0} exceeds limits").format(_(based_on)))
+				frappe.msgprint(_("Not authorized since {0} exceeds limits").format(_(based_on)))
 				frappe.throw(_("Can be approved by {0}").format(comma_or(appr_roles + appr_users)))
 
 	def validate_auth_rule(self, doctype_name, total, based_on, cond, company, master_name=""):
@@ -120,7 +120,9 @@ class AuthorizationControl(TransactionBase):
 		if val == 1:
 			add_cond += " and system_user = {}".format(frappe.db.escape(session["user"]))
 		elif val == 2:
-			add_cond += " and system_role IN %s" % ("('" + "','".join(frappe.get_roles()) + "')")
+			add_cond += " and system_role IN (%s)" % ", ".join(
+				frappe.db.escape(r) for r in frappe.get_roles()
+			)
 		else:
 			add_cond += " and ifnull(system_user,'') = '' and ifnull(system_role,'') = ''"
 
@@ -189,7 +191,10 @@ class AuthorizationControl(TransactionBase):
 
 		# Remove user specific rules from global authorization rules
 		for r in based_on:
-			if r in final_based_on and r not in ["Itemwise Discount", "Item Group wise Discount"]:
+			if r in final_based_on and r not in [
+				"Itemwise Discount",
+				"Item Group wise Discount",
+			]:
 				final_based_on.remove(r)
 
 		# Check for authorization set on particular roles
@@ -203,8 +208,8 @@ class AuthorizationControl(TransactionBase):
 			and docstatus != 2
 		""".format(
 					"%s",
-					"'" + "','".join(frappe.get_roles()) + "'",
-					"'" + "','".join(final_based_on) + "'",
+					", ".join(frappe.db.escape(r) for r in frappe.get_roles()),
+					", ".join(frappe.db.escape(b) for b in final_based_on),
 					"%s",
 				),
 				(doctype_name, company),
@@ -216,7 +221,10 @@ class AuthorizationControl(TransactionBase):
 
 		# Remove role specific rules from global authorization rules
 		for r in based_on:
-			if r in final_based_on and r not in ["Itemwise Discount", "Item Group wise Discount"]:
+			if r in final_based_on and r not in [
+				"Itemwise Discount",
+				"Item Group wise Discount",
+			]:
 				final_based_on.remove(r)
 
 		# Check for global authorization

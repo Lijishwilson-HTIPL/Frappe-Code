@@ -202,7 +202,7 @@ frappe.form.formatters = {
 		} else if (docfield && doctype) {
 			if (frappe.model.can_read(doctype)) {
 				const a = document.createElement("a");
-				a.href = `/app/${encodeURIComponent(
+				a.href = `/desk/${encodeURIComponent(
 					frappe.router.slug(doctype)
 				)}/${encodeURIComponent(original_value)}`;
 				a.dataset.doctype = doctype;
@@ -388,20 +388,25 @@ frappe.form.formatters = {
 		return formatted_values.join(", ");
 	},
 	Color: (value) => {
-		return value
-			? `<div>
-			<div class="selected-color" style="background-color: ${value}"></div>
-			<span class="color-value">${value}</span>
-		</div>`
-			: "";
+		if (!value) return "";
+		let escaped_value = frappe.utils.escape_html(value);
+		return `<div>
+			<div class="selected-color" style="background-color: ${escaped_value}"></div>
+			<span class="color-value">${escaped_value}</span>
+		</div>`;
 	},
 	Icon: (value) => {
-		return value
-			? `<div>
-			<div class="selected-icon">${frappe.utils.icon(value, "md")}</div>
-			<span class="icon-value">${value}</span>
-		</div>`
-			: "";
+		if (!value) return "";
+		let escaped_value = frappe.utils.escape_html(value);
+		if (frappe.utils.is_emoji(value)) {
+			return `<div class='flex' style='gap: 8px;'>
+				<span class="icon-value">${escaped_value}</span>
+			</div>`;
+		}
+		return `<div class='flex' style='gap: 8px;'>
+			<div class="selected-icon">${frappe.utils.icon(escaped_value, "md")}</div>
+			<span class="icon-value">${escaped_value}</span>
+		</div>`;
 	},
 	Attach: format_attachment_url,
 	AttachImage: format_attachment_url,
@@ -418,7 +423,13 @@ frappe.form.get_formatter = function (fieldtype) {
 };
 
 frappe.format = function (value, df, options, doc) {
-	if (!df) df = { fieldtype: "Data" };
+	let mask_readonly = false;
+	if (df?.parent) {
+		const mask_fields = frappe.get_meta(df.parent)?.masked_fields;
+		mask_readonly = mask_fields?.includes(df.fieldname);
+	}
+
+	if (!df || mask_readonly) df = { fieldtype: "Data" };
 	if (df.fieldname == "_user_tags") df = { ...df, fieldtype: "Tag" };
 	var fieldtype = df.fieldtype || "Data";
 

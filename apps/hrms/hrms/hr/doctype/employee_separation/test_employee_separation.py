@@ -2,13 +2,12 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
-test_dependencies = ["Employee Onboarding"]
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestEmployeeSeparation(FrappeTestCase):
+class TestEmployeeSeparation(HRMSTestSuite):
 	def test_employee_separation(self):
 		separation = create_employee_separation()
 
@@ -25,13 +24,6 @@ class TestEmployeeSeparation(FrappeTestCase):
 
 		separation.cancel()
 		self.assertEqual(separation.project, "")
-
-	def tearDown(self):
-		for entry in frappe.get_all("Employee Separation"):
-			doc = frappe.get_doc("Employee Separation", entry.name)
-			if doc.docstatus == 1:
-				doc.cancel()
-			doc.delete()
 
 
 def create_employee_separation():

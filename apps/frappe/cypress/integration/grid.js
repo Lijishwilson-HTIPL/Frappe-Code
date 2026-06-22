@@ -1,11 +1,11 @@
 context("Grid", () => {
 	beforeEach(() => {
 		cy.login();
-		cy.visit("/app/website");
+		cy.visit("/desk/website");
 	});
 	before(() => {
 		cy.login();
-		cy.visit("/app/website");
+		cy.visit("/desk/website");
 		return cy
 			.window()
 			.its("frappe")
@@ -16,7 +16,7 @@ context("Grid", () => {
 			});
 	});
 	it("update docfield property using update_docfield_property", () => {
-		cy.visit("/app/contact/Test Contact");
+		cy.visit("/desk/contact/Test Contact");
 		cy.window()
 			.its("cur_frm")
 			.then((frm) => {
@@ -40,7 +40,7 @@ context("Grid", () => {
 			});
 	});
 	it("update docfield property using toggle_display", () => {
-		cy.visit("/app/contact/Test Contact");
+		cy.visit("/desk/contact/Test Contact");
 		cy.window()
 			.its("cur_frm")
 			.then((frm) => {
@@ -64,7 +64,7 @@ context("Grid", () => {
 			});
 	});
 	it("update docfield property using toggle_enable", () => {
-		cy.visit("/app/contact/Test Contact");
+		cy.visit("/desk/contact/Test Contact");
 		cy.window()
 			.its("cur_frm")
 			.then((frm) => {
@@ -88,7 +88,7 @@ context("Grid", () => {
 			});
 	});
 	it("update docfield property using toggle_reqd", () => {
-		cy.visit("/app/contact/Test Contact");
+		cy.visit("/desk/contact/Test Contact");
 		cy.window()
 			.its("cur_frm")
 			.then((frm) => {
@@ -110,5 +110,91 @@ context("Grid", () => {
 				cy.get("@phone-field").should("not.have.class", "has-error");
 				cy.get("@table-form").find(".grid-footer-toolbar").click();
 			});
+	});
+
+	it("shows edit button only when child table allow_bulk_edit is enabled", () => {
+		cy.visit("/desk/contact/Test Contact");
+		cy.get('.frappe-control[data-fieldname="phone_nos"]').as("table");
+
+		cy.window()
+			.its("cur_frm")
+			.then((frm) => {
+				const grid = frm.get_field("phone_nos").grid;
+				grid.meta.allow_bulk_edit = false;
+				grid.refresh_edit_rows_button();
+			});
+
+		cy.get("@table").find('.grid-row[data-idx="1"] .grid-row-check').click({ force: true });
+		cy.get("@table").find(".grid-edit-rows").should("have.class", "hidden");
+
+		cy.window()
+			.its("cur_frm")
+			.then((frm) => {
+				const grid = frm.get_field("phone_nos").grid;
+				grid.meta.allow_bulk_edit = true;
+				grid.refresh_edit_rows_button();
+			});
+
+		cy.get("@table").find(".grid-edit-rows").should("not.have.class", "hidden");
+	});
+
+	it("bulk edit updates only selected child rows", () => {
+		const updated_phone = `99999${Date.now().toString().slice(-5)}`;
+
+		cy.visit("/desk/contact/Test Contact");
+		cy.get('.frappe-control[data-fieldname="phone_nos"]').as("table");
+
+		cy.window()
+			.its("cur_frm")
+			.then((frm) => {
+				const grid = frm.get_field("phone_nos").grid;
+				grid.meta.allow_bulk_edit = true;
+				grid.refresh_edit_rows_button();
+
+				expect(frm.doc.phone_nos.length).to.be.greaterThan(1);
+				const phone_df = grid.docfields.find((df) => df.fieldname === "phone");
+				expect(phone_df).to.exist;
+				cy.wrap(phone_df.label).as("phoneFieldLabel");
+				cy.wrap(frm.doc.phone_nos[1].phone || "").as("secondRowPhoneBefore");
+			});
+
+		cy.get("@table").find('.grid-row[data-idx="1"] .grid-row-check').click({ force: true });
+		cy.get("@table").find(".grid-edit-rows").click({ force: true });
+
+		cy.window()
+			.its("cur_dialog")
+			.then((dialog) => {
+				cy.get("@phoneFieldLabel").then((phoneFieldLabel) => {
+					return dialog
+						.set_value("field", phoneFieldLabel)
+						.then(() => dialog.set_value("value", updated_phone))
+						.then(() => {
+							dialog.get_primary_btn().click();
+						});
+				});
+			});
+
+		cy.window().its("cur_frm.doc.phone_nos.0.phone").should("eq", updated_phone);
+		cy.window()
+			.its("cur_frm")
+			.then((frm) => {
+				cy.get("@secondRowPhoneBefore").then((secondRowPhoneBefore) => {
+					expect(frm.doc.phone_nos[1].phone || "").to.equal(secondRowPhoneBefore);
+				});
+			});
+	});
+
+	it("hides add-row and add-multiple-rows buttons when rows are selected", () => {
+		cy.visit("/desk/contact/Test Contact");
+		cy.get('.frappe-control[data-fieldname="phone_nos"]').as("table");
+
+		cy.get("@table").find('.grid-row[data-idx="1"] .grid-row-check').click({ force: true });
+
+		cy.get("@table").find(".grid-add-row").should("have.class", "hidden");
+		cy.get("@table").find(".grid-add-multiple-rows").should("have.class", "hidden");
+
+		cy.get("@table").find('.grid-row[data-idx="1"] .grid-row-check').click({ force: true });
+
+		cy.get("@table").find(".grid-add-row").should("not.have.class", "hidden");
 	});
 });

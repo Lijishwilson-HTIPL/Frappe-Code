@@ -31,6 +31,7 @@ class Account(NestedSet):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		account_category: DF.Link | None
 		account_currency: DF.Link | None
 		account_name: DF.Data
 		account_number: DF.Data | None
@@ -92,10 +93,10 @@ class Account(NestedSet):
 			super().on_update()
 
 	def onload(self):
-		frozen_accounts_modifier = frappe.db.get_value(
-			"Accounts Settings", "Accounts Settings", "frozen_accounts_modifier"
+		role_allowed_for_frozen_entries = frappe.db.get_value(
+			"Company", self.company, "role_allowed_for_frozen_entries"
 		)
-		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.get_roles():
+		if not role_allowed_for_frozen_entries or role_allowed_for_frozen_entries in frappe.get_roles():
 			self.set_onload("can_freeze_account", True)
 
 	def autoname(self):
@@ -304,10 +305,10 @@ class Account(NestedSet):
 		if not doc_before_save or doc_before_save.freeze_account == self.freeze_account:
 			return
 
-		frozen_accounts_modifier = frappe.get_cached_value(
-			"Accounts Settings", "Accounts Settings", "frozen_accounts_modifier"
+		role_allowed_for_frozen_entries = frappe.get_cached_value(
+			"Company", self.company, "role_allowed_for_frozen_entries"
 		)
-		if not frozen_accounts_modifier or frozen_accounts_modifier not in frappe.get_roles():
+		if not role_allowed_for_frozen_entries or role_allowed_for_frozen_entries not in frappe.get_roles():
 			throw(_("You are not authorized to set Frozen value"))
 
 	def validate_balance_must_be_debit_or_credit(self):
@@ -517,6 +518,7 @@ def get_account_autoname(account_number, account_name, company):
 def update_account_number(name, account_name, account_number=None, from_descendant=False):
 	_ensure_idle_system()
 	account = frappe.get_cached_doc("Account", name)
+	account.check_permission("write")
 	if not account:
 		return
 
@@ -578,9 +580,11 @@ def update_account_number(name, account_name, account_number=None, from_descenda
 @frappe.whitelist()
 def merge_account(old, new):
 	_ensure_idle_system()
-	# Validate properties before merging
 	new_account = frappe.get_cached_doc("Account", new)
 	old_account = frappe.get_cached_doc("Account", old)
+
+	new_account.check_permission("write")
+	old_account.check_permission("write")
 
 	if not new_account:
 		throw(_("Account {0} does not exist").format(new))
@@ -638,7 +642,7 @@ def _ensure_idle_system():
 	# 1. Correctness: It's next to impossible to ensure that renamed account is not being used *right now*.
 	# 2. Performance: Renaming requires locking out many tables entirely and severely degrades performance.
 
-	if frappe.flags.in_test:
+	if frappe.in_test:
 		return
 
 	last_gl_update = None

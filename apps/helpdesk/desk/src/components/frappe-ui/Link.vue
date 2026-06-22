@@ -4,6 +4,7 @@
       {{ attrs.label }}
     </label>
     <Autocomplete
+      class="w-full"
       ref="autocomplete"
       :options="options.data"
       v-model="value"
@@ -225,9 +226,9 @@ const labelClasses = computed(() => {
       sm: "text-xs",
       md: "text-base",
     }[attrs.size || "sm"],
-    "text-gray-600",
+    "text-ink-gray-5",
     ...(attrs.required
-      ? ["after:content-['*']", "after:ml-0.5", "after:text-red-500"]
+      ? ["after:content-['*']", "after:ms-0.5", "after:text-ink-red-3"]
       : []),
   ];
 });

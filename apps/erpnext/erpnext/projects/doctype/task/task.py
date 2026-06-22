@@ -6,9 +6,10 @@ import json
 
 import frappe
 from frappe import _, throw
-from frappe.desk.form.assign_to import add as add_assignment, clear, close_all_assignments, remove as remove_assignment
+from frappe.desk.form.assign_to import clear, close_all_assignments
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import add_days, cstr, date_diff, flt, get_link_to_form, getdate, today
+from frappe.query_builder.functions import Max, Min, Sum
+from frappe.utils import add_days, add_to_date, cstr, date_diff, flt, get_link_to_form, getdate, today
 from frappe.utils.data import format_date
 from frappe.utils.nestedset import NestedSet
 
@@ -30,13 +31,11 @@ class Task(NestedSet):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from erpnext.projects.doctype.task_assignee.task_assignee import TaskAssignee
 		from erpnext.projects.doctype.task_depends_on.task_depends_on import TaskDependsOn
 
 		act_end_date: DF.Date | None
 		act_start_date: DF.Date | None
 		actual_time: DF.Float
-		cancel_reason: DF.SmallText | None
 		closing_date: DF.Date | None
 		color: DF.Color | None
 		company: DF.Link | None
@@ -47,10 +46,9 @@ class Task(NestedSet):
 		depends_on_tasks: DF.Code | None
 		description: DF.TextEditor | None
 		duration: DF.Int
-		exp_end_date: DF.Date | None
-		exp_start_date: DF.Date | None
+		exp_end_date: DF.Datetime | None
+		exp_start_date: DF.Datetime | None
 		expected_time: DF.Float
-		is_blocked: DF.Check
 		is_group: DF.Check
 		is_milestone: DF.Check
 		is_template: DF.Check
@@ -61,16 +59,13 @@ class Task(NestedSet):
 		priority: DF.Literal["Low", "Medium", "High", "Urgent"]
 		progress: DF.Percent
 		project: DF.Link | None
-		resolution_note: DF.SmallText | None
 		review_date: DF.Date | None
 		rgt: DF.Int
-		sprint: DF.Link | None
 		start: DF.Int
 		status: DF.Literal[
 			"Open", "Working", "Pending Review", "Overdue", "Template", "Completed", "Cancelled"
 		]
 		subject: DF.Data
-		task_assignees: DF.Table[TaskAssignee]
 		task_weight: DF.Float
 		template_task: DF.Data | None
 		total_billing_amount: DF.Currency
@@ -80,22 +75,31 @@ class Task(NestedSet):
 
 	nsm_parent_field = "parent_task"
 
+	def get_customer_details(self):
+		cust = frappe.db.sql("select customer_name from `tabCustomer` where name=%s", self.customer)
+		if cust:
+			ret = {"customer_name": cust and cust[0][0] or ""}
+			return ret
+
 	def validate(self):
-		self.compute_progress_from_subtasks()   # must be before validate_progress
 		self.validate_dates()
 		self.validate_progress()
 		self.validate_status()
 		self.update_depends_on()
 		self.validate_dependencies_for_template_task()
 		self.validate_completed_on()
+		self.set_default_end_date_if_missing()
 		self.validate_parent_is_group()
-		self.validate_blocked()
 
 	def validate_dates(self):
 		self.validate_from_to_dates("exp_start_date", "exp_end_date")
 		self.validate_from_to_dates("act_start_date", "act_end_date")
 		self.validate_parent_expected_end_date()
 		self.validate_parent_project_dates()
+
+	def set_default_end_date_if_missing(self):
+		if self.exp_start_date and self.expected_time and not self.exp_end_date:
+			self.exp_end_date = add_to_date(self.exp_start_date, hours=self.expected_time)
 
 	def validate_parent_expected_end_date(self):
 		if not self.parent_task or not self.exp_end_date:
@@ -114,7 +118,7 @@ class Task(NestedSet):
 			)
 
 	def validate_parent_project_dates(self):
-		if not self.project or frappe.flags.in_test:
+		if not self.project or frappe.in_test:
 			return
 
 		if project_end_date := frappe.db.get_value("Project", self.project, "expected_end_date"):
@@ -134,6 +138,8 @@ class Task(NestedSet):
 	def validate_status(self):
 		if self.is_template and self.status != "Template":
 			self.status = "Template"
+		if self.status == "Template" and not self.is_template:
+			self.status = "Open"
 		if self.status != self.get_db_value("status") and self.status == "Completed":
 			for d in self.depends_on:
 				if frappe.db.get_value("Task", d.task, "status") not in ("Completed", "Cancelled"):
@@ -190,29 +196,6 @@ class Task(NestedSet):
 					ParentIsGroupError,
 				)
 
-	def validate_blocked(self):
-		if self.is_blocked and not self.blocked_by_task:
-			frappe.throw(_("Please specify which task is blocking this one (Blocked By field)."))
-		if self.is_blocked and self.blocked_by_task == self.name:
-			frappe.throw(_("A task cannot be blocked by itself."))
-
-	def compute_progress_from_subtasks(self):
-		"""Auto-compute progress of a group task from its children (weighted average)."""
-		if not self.is_group or not self.name:
-			return
-		children = frappe.get_all(
-			"Task",
-			filters={"parent_task": self.name, "status": ["!=", "Cancelled"]},
-			fields=["progress", "task_weight"],
-		)
-		if not children:
-			return
-		total_weight = sum(float(c.task_weight or 1) for c in children)
-		if not total_weight:
-			return
-		weighted = sum(float(c.progress or 0) * float(c.task_weight or 1) for c in children)
-		self.progress = round(weighted / total_weight, 1)
-
 	def update_depends_on(self):
 		depends_on_tasks = ""
 		for d in self.depends_on:
@@ -223,82 +206,13 @@ class Task(NestedSet):
 	def update_nsm_model(self):
 		frappe.utils.nestedset.update_nsm(self)
 
-	def after_insert(self):
-		self.share_with_project_members()
-
 	def on_update(self):
 		self.update_nsm_model()
 		self.check_recursion()
 		self.reschedule_dependent_tasks()
 		self.update_project()
 		self.unassign_todo()
-		self.sync_assignees_from_assign()
 		self.populate_depends_on()
-		if self.has_value_changed("project"):
-			self.share_with_project_members()
-		frappe.cache().delete_key("task_heatmap_data")
-
-	def share_with_project_members(self):
-		"""Share this task with every user listed in the project's Users table."""
-		if not self.project:
-			return
-		project_users = frappe.get_list("Project User", filters={"parent": self.project}, pluck="user", parent_doctype="Project")
-		if not project_users:
-			return
-		already_shared = set(
-			frappe.get_list(
-				"DocShare",
-				filters={
-					"share_doctype": "Task",
-					"share_name": self.name,
-					"user": ["in", project_users],
-				},
-				pluck="user",
-			)
-		)
-		for user in project_users:
-			if user in already_shared:
-				continue
-			frappe.share.add("Task", self.name, user, read=1, write=1, notify=0)
-
-	def sync_assignees_from_assign(self):
-		import json
-		if not self.name:
-			return
-		if self.flags.get("ignore_sync_assignees"):
-			return
-		_assign = self.get("_assign") or frappe.db.get_value("Task", self.name, "_assign") or "[]"
-		users = json.loads(_assign)
-		frappe.db.delete("Task Assignee", {"parent": self.name})
-		for idx, user in enumerate(users, start=1):
-			full_name = frappe.db.get_value("User", user, "full_name") or user
-			frappe.get_doc({
-				"doctype": "Task Assignee",
-				"name": frappe.generate_hash(length=10),
-				"parent": self.name,
-				"parenttype": "Task",
-				"parentfield": "task_assignees",
-				"idx": idx,
-				"user": user,
-				"full_name": full_name,
-			}).db_insert()
-
-		# Audit trail: log assignment change as a Comment so it is traceable
-		try:
-			if users:
-				full_names = [frappe.db.get_value("User", u, "full_name") or u for u in users]
-				content = "Assignees synced: " + ", ".join(full_names)
-			else:
-				content = "All assignees removed."
-			frappe.get_doc({
-				"doctype": "Comment",
-				"comment_type": "Info",
-				"reference_doctype": "Task",
-				"reference_name": self.name,
-				"content": content,
-			}).insert(ignore_permissions=True)
-		except Exception:
-			pass  # audit log failure must never break assignment sync
 
 	def unassign_todo(self):
 		if self.status == "Completed":
@@ -307,17 +221,22 @@ class Task(NestedSet):
 			clear(self.doctype, self.name)
 
 	def update_time_and_costing(self):
-		tl = frappe.db.sql(
-			"""select min(from_time) as start_date, max(to_time) as end_date,
-			sum(billing_amount) as total_billing_amount, sum(costing_amount) as total_costing_amount,
-			sum(hours) as time from `tabTimesheet Detail` where task = %s and docstatus=1""",
-			self.name,
-			as_dict=1,
-		)[0]
-		if self.status == "Open":
-			self.status = "Working"
-		self.total_costing_amount = tl.total_costing_amount
-		self.total_billing_amount = tl.total_billing_amount
+		TimesheetDetail = frappe.qb.DocType("Timesheet Detail")
+		tl = (
+			frappe.qb.from_(TimesheetDetail)
+			.select(
+				Min(TimesheetDetail.from_time).as_("start_date"),
+				Max(TimesheetDetail.to_time).as_("end_date"),
+				Sum(TimesheetDetail.billing_amount).as_("total_billing_amount"),
+				Sum(TimesheetDetail.costing_amount).as_("total_costing_amount"),
+				Sum(TimesheetDetail.hours).as_("time"),
+				Sum(TimesheetDetail.base_costing_amount).as_("base_costing_amount"),
+				Sum(TimesheetDetail.base_billing_amount).as_("base_billing_amount"),
+			)
+			.where((TimesheetDetail.task == self.name) & (TimesheetDetail.docstatus == 1))
+		).run(as_dict=True)[0]
+		self.total_costing_amount = tl.base_costing_amount
+		self.total_billing_amount = tl.base_billing_amount
 		self.actual_time = tl.time
 		self.act_start_date = tl.start_date
 		self.act_end_date = tl.end_date
@@ -365,14 +284,13 @@ class Task(NestedSet):
 				if (
 					task.exp_start_date
 					and task.exp_end_date
-					and task.exp_start_date < getdate(end_date)
+					and task.exp_start_date < end_date
 					and task.status == "Open"
 				):
 					task_duration = date_diff(task.exp_end_date, task.exp_start_date)
 					task.exp_start_date = add_days(end_date, 1)
 					task.exp_end_date = add_days(task.exp_start_date, task_duration)
 					task.flags.ignore_recursion_check = True
-					task.flags.ignore_sync_assignees = True
 					task.save()
 
 	def has_webform_permission(self):
@@ -395,79 +313,23 @@ class Task(NestedSet):
 		if check_if_child_exists(self.name):
 			throw(_("Child Task exists for this Task. You can not delete this Task."))
 
-		clear(self.doctype, self.name, ignore_permissions=True)
 		self.update_nsm_model()
 
 	def after_delete(self):
 		self.update_project()
-		frappe.cache().delete_key("task_heatmap_data")
 
 	def update_status(self):
 		if self.status not in ("Cancelled", "Completed") and self.exp_end_date:
 			from datetime import datetime
 
-			if self.exp_end_date < datetime.now().date():
+			if self.exp_end_date < datetime.now():
 				self.db_set("status", "Overdue", update_modified=False)
 				self.update_project()
 
 
 @frappe.whitelist()
-def reassign_task(name, user, note=None):
-	"""Reassign a task to a User. Accepts a User email/ID directly."""
-	user_doc = frappe.db.get_value("User", user, ["enabled", "user_type"], as_dict=1)
-	if not user_doc:
-		frappe.throw(_("User {0} does not exist.").format(frappe.bold(user)))
-	if not user_doc.enabled:
-		frappe.throw(_("User {0} is disabled.").format(frappe.bold(user)))
-	if user_doc.user_type != "System User":
-		frappe.throw(_("User {0} is not a System User.").format(frappe.bold(user)))
-
-	frappe.get_doc("Task", name).check_permission("write")
-
-	previous_assign = frappe.db.get_value("Task", name, "_assign")
-	if previous_assign:
-		for prev_user in json.loads(previous_assign):
-			try:
-				remove_assignment("Task", name, prev_user)
-			except Exception:
-				frappe.log_error(f"Could not remove {prev_user} from Task {name} during reassignment")
-
-	add_assignment(
-		{
-			"doctype": "Task",
-			"name": name,
-			"assign_to": [user],
-			"notify": 1,
-			"description": note or _("Task has been reassigned to you."),
-		}
-	)
-
-	# Sync task_assignees child table
-	task_doc = frappe.get_doc("Task", name)
-	task_doc.sync_assignees_from_assign()
-
-
-@frappe.whitelist()
-def sync_task_assignees(name):
-	"""Called by the quick-bar after frappe.desk.form.assign_to.add succeeds."""
-	task_doc = frappe.get_doc("Task", name)
-	task_doc.check_permission("write")
-	task_doc.sync_assignees_from_assign()
-
-
-def sync_task_assignees_on_todo_change(doc, method):
-	"""Sync task_assignees child table when _assign is updated via ToDo on_update."""
-	if doc.reference_type == "Task" and doc.reference_name:
-		try:
-			task = frappe.get_doc("Task", doc.reference_name)
-			task.sync_assignees_from_assign()
-		except frappe.DoesNotExistError:
-			pass  # task was deleted, nothing to sync
-
-
-@frappe.whitelist()
 def check_if_child_exists(name):
-	child_tasks = frappe.get_list("Task", filters={"parent_task": name})
+	child_tasks = frappe.get_all("Task", filters={"parent_task": name})
 	child_tasks = [get_link_to_form("Task", task.name) for task in child_tasks]
 	return child_tasks
 
@@ -508,53 +370,17 @@ def set_multiple_status(names, status):
 		task.save()
 
 
-@frappe.whitelist()
-def set_multiple_fields(names, priority=None, due_date=None):
-	"""Bulk-update priority and/or due date on a list of tasks."""
-	names = json.loads(names)
-	if not names:
-		return
-	for name in names:
-		task = frappe.get_doc("Task", name)
-		task.check_permission("write")
-		changed = False
-		if priority:
-			task.priority = priority
-			changed = True
-		if due_date:
-			task.exp_end_date = due_date
-			changed = True
-		if changed:
-			task.save()
-
-
 def set_tasks_as_overdue():
 	tasks = frappe.get_all(
 		"Task",
-		filters={
-			"status": ["not in", ["Cancelled", "Completed", "Template"]],
-			"exp_end_date": ["<", today()],
-		},
-		fields=["name", "status", "review_date", "project"],
+		filters={"status": ["not in", ["Cancelled", "Completed"]]},
+		fields=["name", "status", "review_date"],
 	)
-
-	overdue_tasks = []
-	projects = set()
 	for task in tasks:
-		if task.status == "Pending Review" and getdate(task.review_date) > getdate(today()):
-			continue
-		overdue_tasks.append(task.name)
-		if task.project:
-			projects.add(task.project)
-
-	if not overdue_tasks:
-		return
-
-	TaskDT = frappe.qb.DocType("Task")
-	(frappe.qb.update(TaskDT).set(TaskDT.status, "Overdue").where(TaskDT.name.isin(overdue_tasks))).run()
-
-	for project in projects:
-		frappe.get_cached_doc("Project", project).update_project()
+		if task.status == "Pending Review":
+			if getdate(task.review_date) > getdate(today()):
+				continue
+		frappe.get_doc("Task", task.name).update_status()
 
 
 @frappe.whitelist()
@@ -593,7 +419,9 @@ def get_children(doctype, parent, task=None, project=None, is_root=False):
 		# via expand child
 		filters.append(["parent_task", "=", parent])
 	else:
-		filters.append(['ifnull(`parent_task`, "")', "=", ""])
+		from frappe.query_builder import Field, functions
+
+		filters.append(functions.IfNull(Field("parent_task"), "") == "")
 
 	if project:
 		filters.append(["project", "=", project])

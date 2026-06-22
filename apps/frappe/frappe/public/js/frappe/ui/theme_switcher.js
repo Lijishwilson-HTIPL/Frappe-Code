@@ -69,16 +69,6 @@ frappe.ui.ThemeSwitcher = class ThemeSwitcher {
 					label: __("Automatic"),
 					info: __("Uses system's theme to switch between light and dark mode"),
 				},
-				{
-					name: "sbiq",
-					label: __("SBIQ Core"),
-					info: __("SBIQ Blue Theme"),
-				},
-				{
-					name: "vibrant-calm",
-					label: __("Vibrant but Calm"),
-					info: __("Warm cream background with orange-red accents"),
-				},
 			];
 
 			resolve(this.themes);
@@ -95,14 +85,12 @@ frappe.ui.ThemeSwitcher = class ThemeSwitcher {
 
 	get_preview_html(theme) {
 		const is_auto_theme = theme.name === "automatic";
-		const preview_theme = is_auto_theme ? "light" : theme.name;
-		const check_theme = is_auto_theme ? "dark" : theme.name;
 		const preview = $(`<div class="${this.current_theme == theme.name ? "selected" : ""}">
-			<div data-theme=${preview_theme}
+			<div data-theme=${is_auto_theme ? "light" : theme.name}
 				data-is-auto-theme="${is_auto_theme}" title="${theme.info}">
 				<div class="background">
 					<div>
-						<div class="preview-check" data-theme=${check_theme}>
+						<div class="preview-check" data-theme=${is_auto_theme ? "dark" : theme.name}>
 							${frappe.utils.icon("tick", "xs")}
 						</div>
 					</div>
@@ -139,7 +127,6 @@ frappe.ui.ThemeSwitcher = class ThemeSwitcher {
 	toggle_theme(theme) {
 		this.current_theme = theme.toLowerCase();
 		document.documentElement.setAttribute("data-theme-mode", this.current_theme);
-		frappe.ui.set_theme(this.current_theme);
 		frappe.show_alert(__("Theme Changed"), 3);
 
 		frappe.xcall("frappe.core.doctype.user.user.switch_theme", {
@@ -172,6 +159,9 @@ frappe.ui.set_theme = (theme) => {
 			theme = frappe.ui.dark_theme_media_query.matches ? "dark" : "light";
 		}
 	}
-	const resolved = theme || theme_mode;
-	root.setAttribute("data-theme", resolved);
+	root.setAttribute("data-theme", theme || theme_mode);
+};
+
+frappe.ui.get_current_theme = () => {
+	return document.documentElement.getAttribute("data-theme");
 };

@@ -99,15 +99,6 @@ frappe.ui.form.on("Project", {
 
 			if (frappe.model.can_read("Task")) {
 				frm.add_custom_button(
-					__("View Tasks"),
-					function () {
-						frappe.route_options = { project: frm.doc.name };
-						frappe.set_route("List", "Task", "List");
-					},
-					__("View")
-				);
-
-				frm.add_custom_button(
 					__("Gantt Chart"),
 					function () {
 						frappe.route_options = {
@@ -214,7 +205,7 @@ frappe.ui.form.on("Project", {
 
 	collect_progress: function (frm) {
 		if (frm.doc.collect_progress && !frm.doc.subject) {
-			frm.set_value("subject", __("For project {0}, update your status", [frm.doc.name]));
+			frm.set_value("subject", __("For project - {0}, update your status", [frm.doc.project_name]));
 		}
 	},
 });

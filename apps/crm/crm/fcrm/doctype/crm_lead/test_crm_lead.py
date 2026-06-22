@@ -2,12 +2,12 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from crm.fcrm.doctype.crm_lead.crm_lead import convert_to_deal
 
 
-class TestCRMLead(IntegrationTestCase):
+class TestCRMLead(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		"""Set up test records once for all tests"""

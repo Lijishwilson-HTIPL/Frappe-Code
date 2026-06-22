@@ -19,11 +19,6 @@ const routes = [
     component: () => import('@/pages/Dashboard.vue'),
   },
   {
-    path: '/leads-journey',
-    name: 'LeadsJourney',
-    component: () => import('@/pages/LeadsJourneyPage.vue'),
-  },
-  {
     alias: '/leads',
     path: '/leads/view/:viewType?',
     name: 'Leads',
@@ -88,11 +83,6 @@ const routes = [
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
     component: () => import('@/pages/CallLogs.vue'),
-  },
-  {
-    path: '/calendar',
-    name: 'Calendar',
-    component: () => import('@/pages/Calendar.vue'),
   },
   {
     path: '/data-import',

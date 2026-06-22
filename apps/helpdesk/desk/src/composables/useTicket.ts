@@ -1,3 +1,4 @@
+import { __ } from "@/translation";
 import type {
   DocumentResource,
   RecentSimilarTicket,
@@ -19,8 +20,7 @@ interface MapValue {
 
 const ticketMap: Record<string, MapValue> = reactive({});
 
-export const useTicket = (ticketId: string): MapValue => {
-  let err = false;
+export const useTicket = (ticketId: string | number): MapValue => {
   if (!ticketMap[ticketId]) {
     ticketMap[ticketId] = {
       ticket: createDocumentResource<HDTicket>({
@@ -31,12 +31,9 @@ export const useTicket = (ticketId: string): MapValue => {
         },
         setValue: {
           onSuccess: () => {
-            toast.success(__("Ticket updated"));
-            err = false;
+            toast.success(__("Ticket updated successfully."));
           },
           onError: (error) => {
-            if (err) return;
-            err = true;
             const msg = error.exc_type
               ? (error.messages || error.message || []).join(", ")
               : error.message;
@@ -75,3 +72,11 @@ export const useTicket = (ticketId: string): MapValue => {
 
   return ticketMap[ticketId];
 };
+
+export function reloadTicket(ticketId: string) {
+  const ticketData = ticketMap[ticketId];
+  if (!ticketData) return;
+  ticketData.ticket.reload();
+  ticketData.assignees.reload();
+  ticketData.activities.reload();
+}

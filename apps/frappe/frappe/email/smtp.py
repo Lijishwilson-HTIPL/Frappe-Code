@@ -92,6 +92,10 @@ class SMTPServer:
 				if res[0] != 235:
 					frappe.msgprint(res[1], raise_exception=frappe.OutgoingEmailError)
 
+			# Re-issue EHLO after AUTH to refresh server capabilities
+			if not frappe.conf.smtp_no_ehlo_after_auth:
+				_session.ehlo()
+
 			self._session = _session
 			self._enqueue_connection_closure()
 			return self._session
@@ -111,7 +115,7 @@ class SMTPServer:
 			frappe.request.after_response.add(self.quit)
 		elif frappe.job:
 			frappe.job.after_job.add(self.quit)
-		elif not frappe.flags.in_test:
+		elif not frappe.in_test:
 			# Console?
 			import atexit
 

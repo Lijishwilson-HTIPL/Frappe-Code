@@ -23,8 +23,8 @@ class Reminder(Document):
 		reminder_docname: DF.DynamicLink | None
 		reminder_doctype: DF.Link | None
 		user: DF.Link
-
 	# end: auto-generated types
+
 	@staticmethod
 	def clear_old_logs(days=30):
 		from frappe.query_builder import Interval

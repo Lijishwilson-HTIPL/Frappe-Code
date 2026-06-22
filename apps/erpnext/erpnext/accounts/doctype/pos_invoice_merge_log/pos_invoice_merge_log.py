@@ -9,7 +9,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import map_child_doc, map_doc
-from frappe.query_builder import DocType
 from frappe.utils import cint, flt, get_time, getdate, nowdate, nowtime
 from frappe.utils.background_jobs import enqueue, is_job_enqueued
 from frappe.utils.scheduler import is_scheduler_inactive
@@ -17,6 +16,7 @@ from frappe.utils.scheduler import is_scheduler_inactive
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_checks_for_pl_and_bs_accounts,
 )
+from erpnext.controllers.sales_and_purchase_return import get_sales_invoice_item_from_consolidated_invoice
 
 
 class POSInvoiceMergeLog(Document):
@@ -146,7 +146,6 @@ class POSInvoiceMergeLog(Document):
 
 		sales_invoice.is_consolidated = 1
 		sales_invoice.set_posting_time = 1
-		sales_invoice.update_stock = 1
 
 		if not sales_invoice.posting_date:
 			sales_invoice.posting_date = getdate(self.posting_date)
@@ -156,7 +155,6 @@ class POSInvoiceMergeLog(Document):
 
 		sales_invoice.save()
 		sales_invoice.submit()
-
 		self.consolidated_invoice = sales_invoice.name
 
 		return sales_invoice
@@ -175,7 +173,6 @@ class POSInvoiceMergeLog(Document):
 
 			credit_note.is_consolidated = 1
 			credit_note.set_posting_time = 1
-			credit_note.update_stock = 1
 			credit_note.posting_date = getdate(self.posting_date)
 			credit_note.posting_time = get_time(self.posting_time)
 			# TODO: return could be against multiple sales invoice which could also have been consolidated?
@@ -208,7 +205,7 @@ class POSInvoiceMergeLog(Document):
 		return return_invoices
 
 	def merge_pos_invoice_into(self, invoice, data):
-		items, payments, taxes = [], [], []
+		items, payments, taxes, item_tax_details = [], [], [], []
 
 		loyalty_amount_sum, loyalty_points_sum = 0, 0
 
@@ -218,6 +215,8 @@ class POSInvoiceMergeLog(Document):
 		loyalty_amount_sum, loyalty_points_sum, idx = 0, 0, 1
 
 		for doc in data:
+			old_new_item_map = frappe._dict()
+			old_new_tax_map = frappe._dict()
 			map_doc(doc, invoice, table_map={"doctype": invoice.doctype})
 
 			if doc.get("posting_date"):
@@ -239,12 +238,13 @@ class POSInvoiceMergeLog(Document):
 				si_item.pos_invoice = doc.name
 				si_item.pos_invoice_item = item.name
 				if doc.is_return:
-					si_item.sales_invoice_item = get_sales_invoice_item(
+					si_item.sales_invoice_item = get_sales_invoice_item_from_consolidated_invoice(
 						doc.return_against, item.pos_invoice_item
 					)
 				if item.serial_and_batch_bundle:
 					si_item.serial_and_batch_bundle = item.serial_and_batch_bundle
 				items.append(si_item)
+				old_new_item_map[item.name] = si_item
 
 			for tax in doc.get("taxes"):
 				found = False
@@ -254,7 +254,7 @@ class POSInvoiceMergeLog(Document):
 						t.base_tax_amount = flt(t.base_tax_amount) + flt(
 							tax.base_tax_amount_after_discount_amount
 						)
-						update_item_wise_tax_detail(t, tax)
+						old_new_tax_map[tax.name] = t
 						found = True
 				if not found:
 					tax.charge_type = "Actual"
@@ -264,8 +264,9 @@ class POSInvoiceMergeLog(Document):
 					tax.included_in_print_rate = 0
 					tax.tax_amount = tax.tax_amount_after_discount_amount
 					tax.base_tax_amount = tax.base_tax_amount_after_discount_amount
-					tax.item_wise_tax_detail = tax.item_wise_tax_detail
+					tax.dont_recompute_tax = 1
 					taxes.append(tax)
+					old_new_tax_map[tax.name] = tax
 
 			for payment in doc.get("payments"):
 				found = False
@@ -281,6 +282,16 @@ class POSInvoiceMergeLog(Document):
 			rounded_total += doc.rounded_total
 			base_rounding_adjustment += doc.base_rounding_adjustment
 			base_rounded_total += doc.base_rounded_total
+
+			for d in doc.get("item_wise_tax_details") or []:
+				row = frappe._dict(
+					item=old_new_item_map[d.item_row],
+					tax=old_new_tax_map[d.tax_row],
+					amount=d.amount,
+					rate=d.rate,
+					taxable_amount=d.taxable_amount,
+				)
+				item_tax_details.append(row)
 
 		if loyalty_points_sum:
 			invoice.redeem_loyalty_points = 1
@@ -343,6 +354,7 @@ class POSInvoiceMergeLog(Document):
 		invoice.set("sales_partner", None)
 		invoice.set("commission_rate", 0)
 		invoice.set("total_commission", 0)
+		invoice._item_wise_tax_details = item_tax_details
 
 		return invoice
 
@@ -420,25 +432,6 @@ class POSInvoiceMergeLog(Document):
 			si.cancel()
 
 
-def update_item_wise_tax_detail(consolidate_tax_row, tax_row):
-	consolidated_tax_detail = json.loads(consolidate_tax_row.item_wise_tax_detail)
-	tax_row_detail = json.loads(tax_row.item_wise_tax_detail)
-
-	if not consolidated_tax_detail:
-		consolidated_tax_detail = {}
-
-	for item_code, tax_data in tax_row_detail.items():
-		if consolidated_tax_detail.get(item_code):
-			consolidated_tax_data = consolidated_tax_detail.get(item_code)
-			consolidated_tax_detail.update(
-				{item_code: [consolidated_tax_data[0], consolidated_tax_data[1] + tax_data[1]]}
-			)
-		else:
-			consolidated_tax_detail.update({item_code: [tax_data[0], tax_data[1]]})
-
-	consolidate_tax_row.item_wise_tax_detail = json.dumps(consolidated_tax_detail, separators=(",", ":"))
-
-
 def get_all_unconsolidated_invoices():
 	filters = {
 		"consolidated_invoice": ["in", ["", None]],
@@ -498,8 +491,8 @@ def split_invoices_by_accounting_dimension(pos_invoices):
 
 
 def consolidate_pos_invoices(pos_invoices=None, closing_entry=None):
-	invoices = pos_invoices or (closing_entry and closing_entry.get("pos_transactions"))
-	if frappe.flags.in_test and not invoices:
+	invoices = pos_invoices or (closing_entry and closing_entry.get("pos_invoices"))
+	if frappe.in_test and not invoices:
 		invoices = get_all_unconsolidated_invoices()
 
 	invoice_by_customer = get_invoice_customer_map(invoices)
@@ -516,7 +509,7 @@ def unconsolidate_pos_invoices(closing_entry):
 		"POS Invoice Merge Log", filters={"pos_closing_entry": closing_entry.name}, pluck="name"
 	)
 
-	if len(merge_logs) >= 10:
+	if len(closing_entry.pos_invoices) >= 10:
 		closing_entry.set_status(update=True, status="Queued")
 		enqueue_job(cancel_merge_logs, merge_logs=merge_logs, closing_entry=closing_entry)
 	else:
@@ -579,7 +572,7 @@ def split_invoices(invoices):
 
 
 def create_merge_logs(invoice_by_customer, closing_entry=None):
-	try:
+	def merge_and_close():
 		for customer, invoices_acc_dim in invoice_by_customer.items():
 			for invoices in invoices_acc_dim.values():
 				for _invoices in split_invoices(invoices):
@@ -601,25 +594,30 @@ def create_merge_logs(invoice_by_customer, closing_entry=None):
 			closing_entry.db_set("error_message", "")
 			closing_entry.update_opening_entry()
 
-	except Exception as e:
-		frappe.db.rollback()
-		message_log = frappe.message_log.pop() if frappe.message_log else str(e)
-		error_message = get_error_message(message_log)
+	if frappe.in_test:
+		merge_and_close()
+	else:
+		try:
+			merge_and_close()
+		except Exception as e:
+			frappe.db.rollback()
+			message_log = frappe.message_log.pop() if frappe.message_log else str(e)
+			error_message = get_error_message(message_log)
 
-		if closing_entry:
-			closing_entry.set_status(update=True, status="Failed")
-			if isinstance(error_message, list):
-				error_message = json.dumps(error_message)
-			closing_entry.db_set("error_message", error_message)
-		raise
+			if closing_entry:
+				closing_entry.set_status(update=True, status="Failed")
+				if isinstance(error_message, list):
+					error_message = json.dumps(error_message)
+				closing_entry.db_set("error_message", error_message)
+			raise
 
-	finally:
-		frappe.db.commit()
-		frappe.publish_realtime("closing_process_complete", user=frappe.session.user)
+		finally:
+			frappe.db.commit()
+			frappe.publish_realtime("closing_process_complete", user=frappe.session.user)
 
 
 def cancel_merge_logs(merge_logs, closing_entry=None):
-	try:
+	def merge_cancel_and_close():
 		for log in merge_logs:
 			merge_log = frappe.get_doc("POS Invoice Merge Log", log)
 			if merge_log.docstatus == 2:
@@ -633,19 +631,24 @@ def cancel_merge_logs(merge_logs, closing_entry=None):
 			closing_entry.db_set("error_message", "")
 			closing_entry.update_opening_entry(for_cancel=True)
 
-	except Exception as e:
-		frappe.db.rollback()
-		message_log = frappe.message_log.pop() if frappe.message_log else str(e)
-		error_message = get_error_message(message_log)
+	if frappe.flags.in_test:
+		merge_cancel_and_close()
+	else:
+		try:
+			merge_cancel_and_close()
+		except Exception as e:
+			frappe.db.rollback()
+			message_log = frappe.message_log.pop() if frappe.message_log else str(e)
+			error_message = get_error_message(message_log)
 
-		if closing_entry:
-			closing_entry.set_status(update=True, status="Submitted")
-			closing_entry.db_set("error_message", error_message)
-		raise
+			if closing_entry:
+				closing_entry.set_status(update=True, status="Submitted")
+				closing_entry.db_set("error_message", error_message)
+			raise
 
-	finally:
-		frappe.db.commit()
-		frappe.publish_realtime("closing_process_complete", user=frappe.session.user)
+		finally:
+			frappe.db.commit()
+			frappe.publish_realtime("closing_process_complete", user=frappe.session.user)
 
 
 def enqueue_job(job, **kwargs):
@@ -662,7 +665,7 @@ def enqueue_job(job, **kwargs):
 			timeout=10000,
 			event="processing_merge_logs",
 			job_id=job_id,
-			now=frappe.conf.developer_mode or frappe.flags.in_test,
+			now=frappe.conf.developer_mode or frappe.in_test,
 		)
 
 		if job == create_merge_logs:
@@ -674,7 +677,7 @@ def enqueue_job(job, **kwargs):
 
 
 def check_scheduler_status():
-	if is_scheduler_inactive() and not frappe.flags.in_test:
+	if is_scheduler_inactive() and not frappe.in_test:
 		frappe.throw(_("Scheduler is inactive. Cannot enqueue job."), title=_("Scheduler Inactive"))
 
 
@@ -683,27 +686,3 @@ def get_error_message(message) -> str:
 		return message["message"]
 	except Exception:
 		return str(message)
-
-
-def get_sales_invoice_item(return_against_pos_invoice, pos_invoice_item):
-	try:
-		SalesInvoice = DocType("Sales Invoice")
-		SalesInvoiceItem = DocType("Sales Invoice Item")
-
-		query = (
-			frappe.qb.from_(SalesInvoice)
-			.from_(SalesInvoiceItem)
-			.select(SalesInvoiceItem.name)
-			.where(
-				(SalesInvoice.name == SalesInvoiceItem.parent)
-				& (SalesInvoice.is_return == 0)
-				& (SalesInvoiceItem.pos_invoice == return_against_pos_invoice)
-				& (SalesInvoiceItem.pos_invoice_item == pos_invoice_item)
-				& (SalesInvoice.docstatus == 1)
-			)
-		)
-
-		result = query.run(as_dict=True)
-		return result[0].name if result else None
-	except Exception:
-		return None

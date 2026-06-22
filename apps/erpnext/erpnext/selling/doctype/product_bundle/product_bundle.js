@@ -9,13 +9,5 @@ frappe.ui.form.on("Product Bundle", {
 				query: "erpnext.selling.doctype.product_bundle.product_bundle.get_new_item_code",
 			};
 		});
-
-		frm.set_query("item_code", "items", () => {
-			return {
-				filters: {
-					has_variants: 0,
-				},
-			};
-		});
 	},
 });

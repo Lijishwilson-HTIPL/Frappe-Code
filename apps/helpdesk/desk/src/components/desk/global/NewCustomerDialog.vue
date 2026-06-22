@@ -1,13 +1,10 @@
 <template>
   <div>
-    <Dialog
-      v-model="model"
-      :options="{ title: 'Add New Customer', size: 'sm' }"
-    >
-      <template #body-content>
+    <Dialog v-model:open="model" title="Add New Customer" size="sm">
+      <template #default>
         <div class="space-y-4">
           <div class="space-y-1">
-            <Input
+            <TextInput
               v-model="state.customer"
               label="Customer Name"
               type="text"
@@ -15,7 +12,7 @@
             />
           </div>
           <div class="space-y-1">
-            <Input
+            <TextInput
               v-model="state.domain"
               label="Domain"
               type="text"
@@ -37,7 +34,8 @@
 </template>
 
 <script setup lang="ts">
-import { Dialog, Input, createResource, toast } from "frappe-ui";
+import { __ } from "@/translation";
+import { Dialog, TextInput, createResource, toast } from "frappe-ui";
 import { reactive } from "vue";
 
 const emit = defineEmits(["customerCreated"]);
@@ -61,7 +59,7 @@ const customerResource = createResource({
   onSuccess: () => {
     state.customer = "";
     state.domain = "";
-    toast.success("Customer created");
+    toast.success(__("Customer created successfully."));
     emit("customerCreated");
   },
   onError: (err) => {

@@ -1,6 +1,7 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import datetime
 import json
 
 from dateutil.relativedelta import relativedelta
@@ -34,6 +35,16 @@ from hrms.payroll.doctype.salary_withholding.salary_withholding import link_bank
 
 class PayrollEntry(Document):
 	def onload(self):
+		if self.docstatus == 0 and not self.salary_slips_created and self.employees:
+			[employees_eligible_for_overtime, unsubmitted_overtime_slips] = self.get_overtime_slip_details()
+			overtime_step = None
+			if unsubmitted_overtime_slips:
+				overtime_step = "Submit"
+			elif employees_eligible_for_overtime:
+				overtime_step = "Create"
+
+			self.overtime_step = overtime_step
+
 		if not self.docstatus == 1 or self.salary_slips_submitted:
 			return
 
@@ -97,11 +108,17 @@ class PayrollEntry(Document):
 			)
 
 	def validate_payroll_payable_account(self):
-		if frappe.db.get_value("Account", self.payroll_payable_account, "account_type"):
+		payroll_payable_account_type = frappe.db.get_value(
+			"Account", self.payroll_payable_account, "account_type"
+		)
+		if payroll_payable_account_type != "Payable":
 			frappe.throw(
 				_(
-					"Account type cannot be set for payroll payable account {0}, please remove and try again"
-				).format(frappe.bold(get_link_to_form("Account", self.payroll_payable_account)))
+					"Account type should be set {0} for payroll payable account {1}, please set and try again"
+				).format(
+					frappe.bold("Payable"),
+					frappe.bold(get_link_to_form("Account", self.payroll_payable_account)),
+				)
 			)
 
 	def on_cancel(self):
@@ -109,12 +126,16 @@ class PayrollEntry(Document):
 
 		self.delete_linked_salary_slips()
 		self.cancel_linked_journal_entries()
+		self.cancel_linked_payment_ledger_entries()
 
 		# reset flags & update status
 		self.db_set("salary_slips_created", 0)
 		self.db_set("salary_slips_submitted", 0)
 		self.set_status(update=True, status="Cancelled")
 		self.db_set("error_message", "")
+
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 	def cancel(self):
 		if len(self.get_linked_salary_slips()) > 50:
@@ -151,7 +172,33 @@ class PayrollEntry(Document):
 
 		# cancel Journal Entries
 		for je in journal_entries:
-			frappe.get_doc("Journal Entry", je).cancel()
+			journal_entry_payment_ledgers = frappe.get_all(
+				"Payment Ledger Entry",
+				{"voucher_type": "Journal Entry", "voucher_no": je, "docstatus": 1},
+				distinct=True,
+			)
+			# cancel linked payment ledger entry
+			for pl in journal_entry_payment_ledgers:
+				payment_ledger_entry = frappe.get_doc("Payment Ledger Entry", pl)
+				payment_ledger_entry.flags.ignore_permissions = True
+				payment_ledger_entry.cancel()
+
+			journal_entry = frappe.get_doc("Journal Entry", je)
+			journal_entry.flags.ignore_permissions = True
+			journal_entry.cancel()
+
+	def cancel_linked_payment_ledger_entries(self):
+		payment_ledgers = frappe.get_all(
+			"Payment Ledger Entry",
+			{"against_voucher_type": self.doctype, "against_voucher_no": self.name, "docstatus": 1},
+			distinct=True,
+		)
+
+		# cancel payment ledger entry
+		for pl in payment_ledgers:
+			payment_ledger_entry = frappe.get_doc("Payment Ledger Entry", pl)
+			payment_ledger_entry.flags.ignore_permissions = True
+			payment_ledger_entry.cancel()
 
 	def get_linked_salary_slips(self):
 		return frappe.get_all("Salary Slip", {"payroll_entry": self.name}, ["name", "docstatus"])
@@ -176,7 +223,7 @@ class PayrollEntry(Document):
 		return filters
 
 	@frappe.whitelist()
-	def fill_employee_details(self):
+	def fill_employee_details(self) -> list[dict] | None:
 		filters = self.make_filters()
 		employees = get_employee_list(filters=filters, as_dict=True, ignore_match_conditions=True)
 		self.set("employees", [])
@@ -215,7 +262,7 @@ class PayrollEntry(Document):
 				employee.is_salary_withheld = 1
 
 	@frappe.whitelist()
-	def create_salary_slips(self):
+	def create_salary_slips(self) -> None:
 		"""
 		Creates salary slip for selected employees if already not created
 		"""
@@ -231,7 +278,6 @@ class PayrollEntry(Document):
 					"end_date": self.end_date,
 					"company": self.company,
 					"posting_date": self.posting_date,
-					"deduct_tax_for_unclaimed_employee_benefits": self.deduct_tax_for_unclaimed_employee_benefits,
 					"deduct_tax_for_unsubmitted_tax_exemption_proof": self.deduct_tax_for_unsubmitted_tax_exemption_proof,
 					"payroll_entry": self.name,
 					"exchange_rate": self.exchange_rate,
@@ -279,7 +325,7 @@ class PayrollEntry(Document):
 		return ss_list
 
 	@frappe.whitelist()
-	def submit_salary_slips(self):
+	def submit_salary_slips(self) -> None:
 		self.check_permission("write")
 		salary_slips = self.get_sal_slip_list(ss_status=0)
 
@@ -362,9 +408,6 @@ class PayrollEntry(Document):
 			component_dict = {}
 
 			for item in salary_components:
-				if not self.should_add_component_to_accrual_jv(component_type, item):
-					continue
-
 				employee_cost_centers = self.get_payroll_cost_centers_for_employee(
 					item.employee, item.salary_structure
 				)
@@ -389,17 +432,6 @@ class PayrollEntry(Document):
 			account_details = self.get_account(component_dict=component_dict)
 
 			return account_details
-
-	def should_add_component_to_accrual_jv(self, component_type: str, item: dict) -> bool:
-		add_component_to_accrual_jv = True
-		if component_type == "earnings":
-			is_flexible_benefit, only_tax_impact = frappe.get_cached_value(
-				"Salary Component", item["salary_component"], ["is_flexible_benefit", "only_tax_impact"]
-			)
-			if cint(is_flexible_benefit) and cint(only_tax_impact):
-				add_component_to_accrual_jv = False
-
-		return add_component_to_accrual_jv
 
 	def get_advance_deduction(self, component_type: str, item: dict) -> str | None:
 		if component_type == "deductions" and item.additional_salary:
@@ -570,6 +602,7 @@ class PayrollEntry(Document):
 				accounting_dimensions,
 				precision,
 				payable_amount,
+				employee_wise_accounting_enabled,
 			)
 
 			payable_amount = self.set_accounting_entries_for_advance_deductions(
@@ -592,6 +625,7 @@ class PayrollEntry(Document):
 				employee_wise_accounting_enabled,
 			)
 
+			# when party is not required, skip the validation in journal & gl entry
 			self.make_journal_entry(
 				accounts,
 				currencies,
@@ -661,6 +695,7 @@ class PayrollEntry(Document):
 		accounting_dimensions,
 		precision,
 		payable_amount,
+		employee_wise_accounting_enabled,
 	):
 		# Earnings
 		for acc_cc, amount in earnings.items():
@@ -879,7 +914,7 @@ class PayrollEntry(Document):
 		}
 
 	@frappe.whitelist()
-	def make_bank_entry(self, for_withheld_salaries=False):
+	def make_bank_entry(self, for_withheld_salaries: bool = False) -> Document | None:
 		self.check_permission("write")
 		self.employee_based_payroll_payable_entries = {}
 		employee_wise_accounting_enabled = frappe.db.get_single_value(
@@ -890,61 +925,29 @@ class PayrollEntry(Document):
 		salary_details = self.get_salary_slip_details(for_withheld_salaries)
 
 		for salary_detail in salary_details:
-			if salary_detail.parentfield == "earnings":
-				(
-					is_flexible_benefit,
-					only_tax_impact,
-					create_separate_je,
-					statistical_component,
-				) = frappe.db.get_value(
-					"Salary Component",
-					salary_detail.salary_component,
-					(
-						"is_flexible_benefit",
-						"only_tax_impact",
-						"create_separate_payment_entry_against_benefit_claim",
-						"statistical_component",
-					),
-					cache=True,
-				)
-
-				if only_tax_impact != 1 and statistical_component != 1:
-					if is_flexible_benefit == 1 and create_separate_je == 1:
-						self.set_accounting_entries_for_bank_entry(
-							salary_detail.amount,
-							salary_detail.salary_component,
-							employee_wise_accounting_enabled,
-						)
-					else:
-						if employee_wise_accounting_enabled:
-							self.set_employee_based_payroll_payable_entries(
-								"earnings",
-								salary_detail.employee,
-								salary_detail.amount,
-								salary_detail.salary_structure,
-							)
-						salary_slip_total += salary_detail.amount
-
-			if salary_detail.parentfield == "deductions":
-				statistical_component = frappe.db.get_value(
-					"Salary Component", salary_detail.salary_component, "statistical_component", cache=True
-				)
-
-				if not statistical_component:
+			statistical_component = frappe.db.get_value(
+				"Salary Component", salary_detail.salary_component, "statistical_component", cache=True
+			)
+			if not statistical_component:
+				parent_field = salary_detail.parentfield
+				if parent_field in ("earnings", "deductions"):
 					if employee_wise_accounting_enabled:
 						self.set_employee_based_payroll_payable_entries(
-							"deductions",
+							salary_detail.parentfield,
 							salary_detail.employee,
 							salary_detail.amount,
 							salary_detail.salary_structure,
 						)
-
-					salary_slip_total -= salary_detail.amount
+					if parent_field == "earnings":
+						salary_slip_total += salary_detail.amount
+					elif parent_field == "deductions":
+						salary_slip_total -= salary_detail.amount
 
 		total_loan_repayment = self.process_loan_repayments_for_bank_entry(salary_details) or 0
 		salary_slip_total -= total_loan_repayment
 
 		bank_entry = None
+
 		if salary_slip_total > 0:
 			remark = "withheld salaries" if for_withheld_salaries else "salaries"
 			bank_entry = self.set_accounting_entries_for_bank_entry(
@@ -1213,13 +1216,102 @@ class PayrollEntry(Document):
 		holidays = frappe.db.get_all(
 			"Holiday",
 			filters={"parent": holiday_list, "holiday_date": ("between", [start_date, end_date])},
-			fields=["COUNT(*) as holidays_count"],
+			fields=[{"COUNT": "*", "as": "holidays_count"}],
 		)[0]
 
 		if holidays:
 			self._holidays_between_dates[key] = holidays.holidays_count
 
 		return self._holidays_between_dates.get(key) or 0
+
+	@frappe.whitelist()
+	def create_overtime_slips(self) -> None:
+		from hrms.hr.doctype.overtime_slip.overtime_slip import (
+			create_overtime_slips_for_employees,
+			filter_employees_for_overtime_slip_creation,
+		)
+
+		employee_list = [emp.employee for emp in self.employees]
+		employees = filter_employees_for_overtime_slip_creation(self.start_date, self.end_date, employee_list)
+
+		if employees:
+			args = frappe._dict(
+				{
+					"posting_date": self.posting_date,
+					"start_date": self.start_date,
+					"end_date": self.end_date,
+					"company": self.company,
+					"currency": self.currency,
+					"payroll_entry": self.name,
+				}
+			)
+			if len(employees) > 30 or frappe.flags.enqueue_payroll_entry:
+				self.db_set("status", "Queued")
+				frappe.enqueue(
+					create_overtime_slips_for_employees,
+					timeout=3000,
+					employees=employees,
+					args=args,
+				)
+				frappe.msgprint(
+					_("Overtime Slip creation is queued. It may take a few minutes"),
+					alert=True,
+					indicator="blue",
+				)
+			else:
+				create_overtime_slips_for_employees(employees, args)
+
+	@frappe.whitelist()
+	def submit_overtime_slips(self) -> None:
+		from hrms.hr.doctype.overtime_slip.overtime_slip import (
+			submit_overtime_slips_for_employees,
+		)
+
+		overtime_slips = self.get_unsubmitted_overtime_slips()
+		if overtime_slips:
+			if len(overtime_slips) > 30 or frappe.flags.enqueue_payroll_entry:
+				self.db_set("status", "Queued")
+				frappe.enqueue(
+					submit_overtime_slips_for_employees,
+					timeout=3000,
+					overtime_slips=overtime_slips,
+					payroll_entry=self.name,
+				)
+				frappe.msgprint(
+					_("Overtime Slip submission is queued. It may take a few minutes"),
+					alert=True,
+					indicator="blue",
+				)
+			else:
+				submit_overtime_slips_for_employees(overtime_slips, self.name)
+
+	@frappe.whitelist()
+	def get_unsubmitted_overtime_slips(self, limit: int | None = None) -> list[str]:
+		OvertimeSlip = frappe.qb.DocType("Overtime Slip")
+		query = (
+			frappe.qb.from_(OvertimeSlip)
+			.select(OvertimeSlip.name)
+			.where((OvertimeSlip.docstatus == 0) & (OvertimeSlip.payroll_entry == self.name))
+		)
+		if limit:
+			query = query.limit(limit)
+
+		return query.run(pluck="name")
+
+	@frappe.whitelist()
+	def get_overtime_slip_details(self) -> list[bool]:
+		from hrms.hr.doctype.overtime_slip.overtime_slip import filter_employees_for_overtime_slip_creation
+
+		employee_eligible_for_overtime = unsubmitted_overtime_slips = []
+
+		if frappe.db.get_single_value("Payroll Settings", "create_overtime_slip"):
+			employees = [emp.employee for emp in self.employees]
+			employee_eligible_for_overtime = filter_employees_for_overtime_slip_creation(
+				self.start_date, self.end_date, employees
+			)
+			unsubmitted_overtime_slips = self.get_unsubmitted_overtime_slips(limit=1)
+
+		return [len(employee_eligible_for_overtime) > 0, len(unsubmitted_overtime_slips) > 0]
 
 
 def get_salary_structure(
@@ -1355,7 +1447,9 @@ def remove_payrolled_employees(emp_list, start_date, end_date):
 
 
 @frappe.whitelist()
-def get_start_end_dates(payroll_frequency, start_date=None, company=None):
+def get_start_end_dates(
+	payroll_frequency: str, start_date: str | datetime.date | None = None, company: str | None = None
+) -> frappe._dict:
 	"""Returns dict of start and end dates for given payroll frequency based on start_date"""
 
 	if payroll_frequency == "Monthly" or payroll_frequency == "Bimonthly" or payroll_frequency == "":
@@ -1396,7 +1490,7 @@ def get_frequency_kwargs(frequency_name):
 
 
 @frappe.whitelist()
-def get_end_date(start_date, frequency):
+def get_end_date(start_date: str | datetime.date, frequency: str) -> dict:
 	start_date = getdate(start_date)
 	frequency = frequency.lower() if frequency else "monthly"
 	kwargs = get_frequency_kwargs(frequency) if frequency != "bimonthly" else get_frequency_kwargs("monthly")
@@ -1490,11 +1584,13 @@ def create_salary_slips_for_employees(employees, args, publish_progress=True):
 			)
 
 	except Exception as e:
-		frappe.db.rollback()
+		if not frappe.in_test:
+			frappe.db.rollback()
 		log_payroll_failure("creation", payroll_entry, e)
 
 	finally:
-		frappe.db.commit()  # nosemgrep
+		if not frappe.in_test:
+			frappe.db.commit()  # nosemgrep
 		frappe.publish_realtime("completed_salary_slip_creation", user=frappe.session.user)
 
 
@@ -1573,11 +1669,13 @@ def submit_salary_slips_for_employees(payroll_entry, salary_slips, publish_progr
 		show_payroll_submission_status(submitted, unsubmitted, payroll_entry)
 
 	except Exception as e:
-		frappe.db.rollback()
+		if not frappe.in_test:
+			frappe.db.rollback()
 		log_payroll_failure("submission", payroll_entry, e)
 
 	finally:
-		frappe.db.commit()  # nosemgrep
+		if not frappe.in_test:
+			frappe.db.commit()  # nosemgrep
 		frappe.publish_realtime("completed_salary_slip_submission", user=frappe.session.user)
 
 	frappe.flags.via_payroll_entry = False
@@ -1585,7 +1683,9 @@ def submit_salary_slips_for_employees(payroll_entry, salary_slips, publish_progr
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def get_payroll_entries_for_jv(doctype, txt, searchfield, start, page_len, filters):
+def get_payroll_entries_for_jv(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
+) -> list:
 	# nosemgrep: frappe-semgrep-rules.rules.frappe-using-db-sql
 	return frappe.db.sql(
 		f"""
@@ -1641,7 +1741,9 @@ def get_employee_list(
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def employee_query(doctype, txt, searchfield, start, page_len, filters):
+def employee_query(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
+) -> list:
 	filters = frappe._dict(filters)
 
 	if not filters.payroll_frequency:

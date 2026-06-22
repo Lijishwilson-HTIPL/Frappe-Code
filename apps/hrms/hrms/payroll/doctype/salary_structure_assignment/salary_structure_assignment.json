@@ -22,6 +22,7 @@
   "currency",
   "section_break_7",
   "base",
+  "ctc",
   "column_break_9",
   "variable",
   "amended_from",
@@ -31,6 +32,9 @@
   "taxable_earnings_till_date",
   "column_break_20",
   "tax_deducted_till_date",
+  "employee_benefits_section",
+  "max_benefits",
+  "employee_benefits",
   "section_break_17",
   "payroll_cost_centers"
  ],
@@ -210,17 +214,46 @@
    "label": "Opening Balances"
   },
   {
+   "fieldname": "employee_benefits_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Benefits"
+  },
+  {
+   "fieldname": "employee_benefits",
+   "fieldtype": "Table",
+   "label": "Flexible Benefits",
+   "options": "Employee Benefit Detail"
+  },
+  {
+   "fetch_from": "salary_structure.max_benefits",
+   "fetch_if_empty": 1,
+   "fieldname": "max_benefits",
+   "fieldtype": "Currency",
+   "label": "Maximum Benefit Amount",
+   "options": "currency"
+  },
+  {
+   "fieldname": "column_break_kjvm",
+   "fieldtype": "Column Break"
+  },
+  {
    "fetch_from": "salary_structure.leave_encashment_amount_per_day",
    "fetch_if_empty": 1,
    "fieldname": "leave_encashment_amount_per_day",
    "fieldtype": "Currency",
    "label": "Leave Encashment Amount Per Day",
    "options": "currency"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "ctc",
+   "fieldtype": "Currency",
+   "label": "Total Cost To Company (CTC)"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-09 11:52:07.106968",
+ "modified": "2026-05-14 13:33:55.869281",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Salary Structure Assignment",
@@ -267,8 +300,9 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "employee_name, salary_structure",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",

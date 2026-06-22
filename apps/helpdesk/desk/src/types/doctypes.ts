@@ -13,23 +13,10 @@ interface DocType {
     idx?: number;
   }
   
-// Last updated: 2025-08-25 12:29:02.646874
+// Last updated: 2026-02-02 17:22:11.094897
 export interface HDTicketStatus extends DocType {
   /** Color: Select */
-  color?:
-    | "Black"
-    | "Gray"
-    | "Blue"
-    | "Green"
-    | "Red"
-    | "Pink"
-    | "Orange"
-    | "Amber"
-    | "Yellow"
-    | "Cyan"
-    | "Teal"
-    | "Violet"
-    | "purple";
+  color?: 'Black' | 'Gray' | 'Blue' | 'Green' | 'Red' | 'Pink' | 'Orange' | 'Amber' | 'Yellow' | 'Cyan' | 'Teal' | 'Violet' | 'purple';
   /** Label: Data */
   label_agent: string;
   /** Show end users a different view: Check */
@@ -37,7 +24,7 @@ export interface HDTicketStatus extends DocType {
   /** Label (customer view): Data */
   label_customer?: string;
   /** Category: Select */
-  category: "Open" | "Paused" | "Resolved";
+  category: 'Open' | 'Paused' | 'Resolved';
   /** Order: Int */
   order?: number;
   /** Enabled: Check */
@@ -45,7 +32,7 @@ export interface HDTicketStatus extends DocType {
   parsed_color?: string;
 }
 
-// Last updated: 2025-09-04 19:44:36.006061
+// Last updated: 2026-05-11 18:25:54.352721
 export interface HDTicket extends DocType {
   /** Subject: Data */
   subject: string;
@@ -125,4 +112,182 @@ export interface HDTicket extends DocType {
   key?: string;
   /** Status Category: Data */
   status_category?: string;
+  /** Last Agent Response: Datetime */
+  last_agent_response?: string;
+  /** Last Customer Response: Datetime */
+  last_customer_response?: string;
+  /** Ticket raised outside working hours: Check */
+  raised_outside_working_hours: 0 | 1;
+  /** First Response Failed By: Duration */
+  first_response_failed_by?: number;
+  /** Resolution Failed By: Duration */
+  resolution_failed_by?: number;
+}
+
+// Last updated: 2026-03-03 12:30:01.394107
+export interface AssignmentRuleUser extends ChildDocType {
+  /** User: Link (User) */
+  user: string;
+  /** Weight: Int */
+  weight?: number;
+}
+
+// Last updated: 2024-03-23 16:01:27.759155
+export interface AssignmentRuleDay extends ChildDocType {
+  /** Day: Select */
+  day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+}
+
+// Last updated: 2026-03-03 13:08:12.561504
+export interface AssignmentRule extends DocType {
+  /** Document Type: Link (DocType) */
+  document_type: string;
+  /** Priority: Int */
+  priority?: number;
+  /** Disabled: Check */
+  disabled: 0 | 1;
+  /** Description: Small Text */
+  description: string;
+  /** Assign Condition: Code */
+  assign_condition: string;
+  /** Unassign Condition: Code */
+  unassign_condition?: string;
+  /** Rule: Select */
+  rule: 'Round Robin' | 'Load Balancing' | 'Based on Field' | 'Weighted Distribution';
+  /** Users: Table MultiSelect (Assignment Rule User) */
+  users: AssignmentRuleUser[];
+  /** Last User: Link (User) */
+  last_user?: string;
+  /** Close Condition: Code */
+  close_condition?: string;
+  /** Assignment Days: Table (Assignment Rule Day) */
+  assignment_days: AssignmentRuleDay[];
+  /** Due Date Based On: Select */
+  due_date_based_on?: any;
+  /** Field: Select */
+  field?: any;
+  /** Current Index: Int */
+  current_index?: number;
+  /** Users: Table (Assignment Rule User) */
+  weighted_users: AssignmentRuleUser[];
+}
+
+// Last updated: 2021-12-23 19:03:23.507845
+export interface HDHoliday extends ChildDocType {
+  /** Date: Date */
+  holiday_date: string;
+  /** Description: Text Editor */
+  description: string;
+  /** Weekly Off: Check */
+  weekly_off: 0 | 1;
+}
+
+// Last updated: 2026-02-02 12:46:20.573677
+export interface HDServiceHolidayList extends DocType {
+  /** Holiday List Name: Data */
+  holiday_list_name: string;
+  /** From Date: Date */
+  from_date: string;
+  /** To Date: Date */
+  to_date: string;
+  /** Total Holidays: Int */
+  total_holidays?: number;
+  /** Weekly Off: Select */
+  weekly_off?: '' | 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  /** Holidays: Table (HD Holiday) */
+  holidays: HDHoliday[];
+  /** Color: Color */
+  color?: string;
+  /** Description: Data */
+  description?: string;
+  /** Recurring holidays: JSON */
+  recurring_holidays?: any;
+}
+
+// Last updated: 2021-10-21 14:27:08.190239
+export interface HDServiceDay extends ChildDocType {
+  /** Workday: Select */
+  workday: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  /** Start Time: Time */
+  start_time: any;
+  /** End Time: Time */
+  end_time: any;
+}
+
+// Last updated: 2023-03-26 22:41:29.978960
+export interface HDServiceLevelPriority extends ChildDocType {
+  /** Priority: Link (HD Ticket Priority) */
+  priority: string;
+  /** Resolution Time: Duration */
+  resolution_time?: any;
+  /** Default Priority: Check */
+  default_priority: 0 | 1;
+  /** First Response Time: Duration */
+  response_time: any;
+}
+
+// Last updated: 2026-04-30 20:00:06.247098
+export interface HDServiceLevelAgreement extends DocType {
+  /** Service Level Name: Data */
+  service_level: string;
+  /** Holiday List: Link (HD Service Holiday List) */
+  holiday_list: string;
+  /** Start Date: Date */
+  start_date?: string;
+  /** End Date: Date */
+  end_date?: string;
+  /** Working Hours: Table (HD Service Day) */
+  support_and_resolution: HDServiceDay[];
+  /** Priorities: Table (HD Service Level Priority) */
+  priorities: HDServiceLevelPriority[];
+  /** Default SLA: Check */
+  default_sla: 0 | 1;
+  /** Default Priority: Link (HD Ticket Priority) */
+  default_priority?: string;
+  /** Enabled: Check */
+  enabled: 0 | 1;
+  /** Apply SLA for Resolution Time: Check */
+  apply_sla_for_resolution: 0 | 1;
+  /** Condition: Code */
+  condition?: string;
+  /** Description: Data */
+  description?: string;
+  /** Condition: Code */
+  condition_json?: string;
+  /** Ticket Reopen status: Link (HD Ticket Status) */
+  ticket_reopen_status?: string;
+  /** Default Ticket Status: Link (HD Ticket Status) */
+  default_ticket_status?: string;
+}
+
+// Last updated: 2026-02-02 11:15:47.402850
+export interface HDAgent extends DocType {
+  /** User: Link (User) */
+  user: string;
+  /** Agent Name: Data */
+  agent_name: string;
+  /** Is Active: Check */
+  is_active: 0 | 1;
+  /** Image: Attach Image */
+  user_image?: string;
+}
+
+// Last updated: 2022-12-22 18:52:50.658355
+export interface HDTeamMember extends ChildDocType {
+  /** User: Link (User) */
+  user?: string;
+}
+
+// Last updated: 2026-05-11 13:28:58.204342
+export interface HDTeam extends DocType {
+  /** Name: Data */
+  team_name: string;
+  /** Assignment Rule: Link (Assignment Rule) */
+  assignment_rule?: string;
+  /** Users: Table MultiSelect (HD Team Member) */
+  users: HDTeamMember[];
+  /** Ignore Restrictions: Check */
+  ignore_restrictions: 0 | 1;
+  /** Disabled: Check */
+  disabled: 0 | 1;
 }

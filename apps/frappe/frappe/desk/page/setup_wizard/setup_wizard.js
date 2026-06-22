@@ -32,7 +32,7 @@ frappe.setup = {
 
 frappe.pages["setup-wizard"].on_page_load = function (wrapper) {
 	if (frappe.boot.setup_complete) {
-		window.location.href = frappe.boot.apps_data.default_path || "/app";
+		window.location.href = frappe.boot.apps_data.default_path || "/desk";
 	}
 	let requires = frappe.boot.setup_wizard_requires || [];
 	frappe.require(requires, function () {
@@ -41,18 +41,30 @@ frappe.pages["setup-wizard"].on_page_load = function (wrapper) {
 			freeze: true,
 			callback: function (r) {
 				frappe.setup.data.lang = r.message;
+				frappe.call({
+					method: "frappe.desk.page.setup_wizard.setup_wizard.load_user_details",
+					freeze: true,
+					callback: function (r) {
+						frappe.setup.data.full_name = r.message.full_name;
+						frappe.setup.data.email = r.message.email;
 
-				frappe.setup.run_event("before_load");
-				var wizard_settings = {
-					parent: wrapper,
-					slides: frappe.setup.slides,
-					slide_class: frappe.setup.SetupWizardSlide,
-					unidirectional: 1,
-					done_state: 1,
-				};
-				frappe.wizard = new frappe.setup.SetupWizard(wizard_settings);
-				frappe.setup.run_event("after_load");
-				frappe.wizard.show_slide(cint(frappe.get_route()[1]));
+						if (r.message.full_name) {
+							frappe.setup.data.first_name = r.message.full_name.split(" ")[0];
+						}
+
+						frappe.setup.run_event("before_load");
+						var wizard_settings = {
+							parent: wrapper,
+							slides: frappe.setup.slides,
+							slide_class: frappe.setup.SetupWizardSlide,
+							unidirectional: 1,
+							done_state: 1,
+						};
+						frappe.wizard = new frappe.setup.SetupWizard(wizard_settings);
+						frappe.setup.run_event("after_load");
+						frappe.wizard.show_slide(cint(frappe.get_route()[1]));
+					},
+				});
 			},
 		});
 	});
@@ -226,7 +238,7 @@ frappe.setup.SetupWizard = class SetupWizard extends frappe.ui.Slides {
 			localStorage.current_route = "";
 			localStorage.current_app = "";
 
-			window.location.href = current_route || frappe.boot.apps_data.default_path || "/app";
+			window.location.href = current_route || frappe.boot.apps_data.default_path || "/desk";
 		}, 2000);
 	}
 
@@ -238,7 +250,7 @@ frappe.setup.SetupWizard = class SetupWizard extends frappe.ui.Slides {
 			? frappe.last_response.setup_wizard_failure_message
 			: __("Failed to complete setup");
 
-		this.update_setup_message(__("Could not start up: ") + fail_msg);
+		this.update_setup_message(__("Could not start up:") + " " + fail_msg);
 
 		this.$working_state.find(".title").html(__("Setup failed"));
 
@@ -388,7 +400,7 @@ frappe.setup.slides_settings = [
 	{
 		// Welcome (language) slide
 		name: "welcome",
-		title: __("Welcome"),
+		title: () => __("Welcome") + " " + (frappe.setup.data.first_name || ""),
 
 		fields: [
 			{
@@ -407,16 +419,12 @@ frappe.setup.slides_settings = [
 				reqd: 1,
 			},
 			{
-				fieldtype: "Section Break",
-			},
-			{
 				fieldname: "timezone",
 				label: __("Time Zone"),
 				placeholder: __("Select Time Zone"),
 				fieldtype: "Select",
 				reqd: 1,
 			},
-			{ fieldtype: "Column Break" },
 			{
 				fieldname: "currency",
 				label: __("Currency"),
@@ -425,20 +433,10 @@ frappe.setup.slides_settings = [
 				reqd: 1,
 			},
 			{
-				fieldtype: "Section Break",
-			},
-			{
 				fieldname: "enable_telemetry",
 				label: __("Allow sending usage data for improving applications"),
 				fieldtype: "Check",
 				default: cint(frappe.telemetry.can_enable()),
-				depends_on: "eval:frappe.telemetry.can_enable()",
-			},
-			{
-				fieldname: "allow_recording_first_session",
-				label: __("Allow recording my first session to improve user experience"),
-				fieldtype: "Check",
-				default: 0,
 				depends_on: "eval:frappe.telemetry.can_enable()",
 			},
 		],
@@ -514,6 +512,8 @@ frappe.setup.slides_settings = [
 		],
 
 		onload: function (slide) {
+			slide.form.fields_dict.password?.$input?.attr("autocomplete", "new-password");
+
 			if (frappe.session.user !== "Administrator") {
 				const { first_name, last_name, email } = frappe.boot.user;
 				if (first_name || last_name) {
@@ -525,22 +525,19 @@ frappe.setup.slides_settings = [
 				slide.form.fields_dict.email.df.read_only = 1;
 				slide.form.fields_dict.email.refresh();
 			} else {
-				slide.form.fields_dict.email.df.reqd = 1;
-				slide.form.fields_dict.email.refresh();
 				if (!frappe.boot.is_fc_site) slide.form.fields_dict.password.df.reqd = 1;
 				slide.form.fields_dict.password.refresh();
-
-				frappe.setup.utils.load_user_details(slide, this.setup_fields);
-			}
-		},
-
-		setup_fields: function (slide) {
-			if (frappe.setup.data.full_name) {
-				slide.form.fields_dict.full_name.set_input(frappe.setup.data.full_name);
-			}
-			if (frappe.setup.data.email) {
-				let email = frappe.setup.data.email;
-				slide.form.fields_dict.email.set_input(email);
+				if (frappe.setup.data.full_name) {
+					slide.form.fields_dict.full_name.set_input(frappe.setup.data.full_name);
+					slide.form.fields_dict.full_name.df.read_only = 1;
+					slide.form.fields_dict.full_name.refresh();
+				}
+				if (frappe.setup.data.email) {
+					slide.form.fields_dict.email.set_input(frappe.setup.data.email);
+					slide.form.fields_dict.email.df.read_only = 1;
+				}
+				slide.form.fields_dict.email.df.reqd = 1;
+				slide.form.fields_dict.email.refresh();
 			}
 		},
 	},

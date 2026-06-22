@@ -11,7 +11,7 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import Max, Min, Sum
 from frappe.utils import add_days, add_months, cint, cstr, flt, formatdate, get_first_day, getdate
-from pypika.terms import ExistsCriterion
+from pypika.terms import Bracket, ExistsCriterion, LiteralValue
 
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
@@ -295,6 +295,8 @@ def prepare_data(accounts, balance_must_be, period_list, company_currency, accum
 				"account_name": (
 					f"{_(d.account_number)} - {_(d.account_name)}" if d.account_number else _(d.account_name)
 				),
+				"acc_name": d.account_name,
+				"acc_number": d.account_number,
 			}
 		)
 		for period in period_list:
@@ -441,14 +443,13 @@ def set_gl_entries_by_account(
 	ignore_closing_entries=False,
 	ignore_opening_entries=False,
 	group_by_account=False,
+	ignore_reporting_currency=True,
 ):
 	"""Returns a dict like { "account": [gl entries], ... }"""
 	gl_entries = []
 
 	# For balance sheet
-	ignore_closing_balances = frappe.db.get_single_value(
-		"Accounts Settings", "ignore_account_closing_balance"
-	)
+	ignore_closing_balances = frappe.get_single_value("Accounts Settings", "ignore_account_closing_balance")
 	if not from_date and not ignore_closing_balances:
 		last_period_closing_voucher = frappe.db.get_all(
 			"Period Closing Voucher",
@@ -473,6 +474,7 @@ def set_gl_entries_by_account(
 				ignore_closing_entries,
 				last_period_closing_voucher[0].name,
 				group_by_account=group_by_account,
+				ignore_reporting_currency=ignore_reporting_currency,
 			)
 			from_date = add_days(last_period_closing_voucher[0].period_end_date, 1)
 			ignore_opening_entries = True
@@ -488,9 +490,10 @@ def set_gl_entries_by_account(
 		ignore_closing_entries,
 		ignore_opening_entries=ignore_opening_entries,
 		group_by_account=group_by_account,
+		ignore_reporting_currency=ignore_reporting_currency,
 	)
 
-	if filters and filters.get("presentation_currency"):
+	if filters and filters.get("presentation_currency") and ignore_reporting_currency:
 		convert_to_presentation_currency(gl_entries, get_currency(filters))
 
 	for entry in gl_entries:
@@ -511,6 +514,7 @@ def get_accounting_entries(
 	period_closing_voucher=None,
 	ignore_opening_entries=False,
 	group_by_account=False,
+	ignore_reporting_currency=True,
 ):
 	gl_entry = frappe.qb.DocType(doctype)
 	query = (
@@ -530,9 +534,17 @@ def get_accounting_entries(
 		.where(gl_entry.company == filters.company)
 	)
 
-	ignore_is_opening = frappe.db.get_single_value(
-		"Accounts Settings", "ignore_is_opening_check_for_reporting"
-	)
+	if not ignore_reporting_currency:
+		query = query.select(
+			gl_entry.debit_in_reporting_currency
+			if not group_by_account
+			else Sum(gl_entry.debit_in_reporting_currency).as_("debit_in_reporting_currency"),
+			gl_entry.credit_in_reporting_currency
+			if not group_by_account
+			else Sum(gl_entry.credit_in_reporting_currency).as_("credit_in_reporting_currency"),
+		)
+
+	ignore_is_opening = frappe.get_single_value("Accounts Settings", "ignore_is_opening_check_for_reporting")
 
 	if doctype == "GL Entry":
 		query = query.select(gl_entry.posting_date, gl_entry.is_opening, gl_entry.fiscal_year)
@@ -552,18 +564,15 @@ def get_accounting_entries(
 		account_filter_query = get_account_filter_query(root_lft, root_rgt, root_type, gl_entry)
 		query = query.where(ExistsCriterion(account_filter_query))
 
+	if group_by_account:
+		query = query.groupby("account")
+
 	from frappe.desk.reportview import build_match_conditions
 
-	query, params = query.walk()
-	match_conditions = build_match_conditions(doctype)
+	if match_conditions := build_match_conditions(doctype):
+		query = query.where(Bracket(LiteralValue(match_conditions)))
 
-	if match_conditions:
-		query += "and" + match_conditions
-
-	if group_by_account:
-		query += " GROUP BY `account`"
-
-	return frappe.db.sql(query, params, as_dict=True)
+	return query.run(as_dict=True)
 
 
 def get_account_filter_query(root_lft, root_rgt, root_type, gl_entry):
@@ -661,6 +670,25 @@ def get_columns(periodicity, period_list, accumulated_values=1, company=None, ca
 			"width": 300,
 		}
 	]
+	if not cash_flow:
+		columns.extend(
+			[
+				{
+					"fieldname": "acc_name",
+					"label": _("Account Name"),
+					"fieldtype": "Data",
+					"width": 250,
+					"hidden": 1,
+				},
+				{
+					"fieldname": "acc_number",
+					"label": _("Account Number"),
+					"fieldtype": "Data",
+					"width": 120,
+					"hidden": 1,
+				},
+			]
+		)
 	if company:
 		columns.append(
 			{
@@ -709,6 +737,9 @@ def compute_growth_view_data(data, columns):
 	data_copy = copy.deepcopy(data)
 
 	for row_idx in range(len(data_copy)):
+		if not data_copy[row_idx]:
+			continue
+
 		for column_idx in range(1, len(columns)):
 			previous_period_key = columns[column_idx - 1].get("key")
 			current_period_key = columns[column_idx].get("key")
@@ -757,11 +788,19 @@ def compute_margin_view_data(data, columns, accumulated_values):
 
 		for column in columns:
 			curr_period = column.get("key")
-			base_value = base_row[curr_period]
-			curr_value = row[curr_period]
 
-			if curr_value is None or base_value <= 0:
+			base_value = base_row.get(curr_period)
+			curr_value = row.get(curr_period)
+
+			if base_value is None or curr_value is None:
 				data[row_idx][curr_period] = None
+				continue
+
+			if base_value == 0:
+				if curr_value == 0:
+					data[row_idx][curr_period] = 0
+				else:
+					data[row_idx][curr_period] = None
 				continue
 
 			margin_percent = round((curr_value / base_value) * 100, 2)

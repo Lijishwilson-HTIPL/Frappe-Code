@@ -10,6 +10,7 @@ frappe.treeview_settings["Account"] = {
 			fieldtype: "Select",
 			options: erpnext.utils.get_tree_options("company"),
 			label: __("Company"),
+			render_on_toolbar: true,
 			default: erpnext.utils.get_tree_default("company"),
 			on_change: function () {
 				var me = frappe.treeview_settings["Account"].treeview;
@@ -51,59 +52,55 @@ frappe.treeview_settings["Account"] = {
 	],
 	root_label: "Accounts",
 	get_tree_nodes: "erpnext.accounts.utils.get_children",
-	on_get_node: function (nodes, deep = false) {
-		if (frappe.boot.user.can_read.indexOf("GL Entry") == -1) return;
+	on_node_render: function (node, deep) {
+		const render_balances = () => {
+			for (let account of cur_tree.account_balance_data) {
+				const node = cur_tree.nodes && cur_tree.nodes[account.value];
+				if (!node || node.is_root) continue;
 
-		let accounts = [];
-		if (deep) {
-			// in case of `get_all_nodes`
-			accounts = nodes.reduce((acc, node) => [...acc, ...node.data], []);
-		} else {
-			accounts = nodes;
-		}
+				// show Dr if positive since balance is calculated as debit - credit else show Cr
+				const balance = account.balance_in_account_currency || account.balance;
+				const dr_or_cr = balance > 0 ? __("Dr") : __("Cr");
+				const format = (value, currency) => format_currency(Math.abs(value), currency);
 
-		frappe.db.get_single_value("Accounts Settings", "show_balance_in_coa").then((value) => {
-			if (value) {
-				const get_balances = frappe.call({
-					method: "erpnext.accounts.utils.get_account_balances",
-					args: {
-						accounts: accounts,
-						company: cur_tree.args.company,
-					},
-				});
-
-				get_balances.then((r) => {
-					if (!r.message || r.message.length == 0) return;
-
-					for (let account of r.message) {
-						const node = cur_tree.nodes && cur_tree.nodes[account.value];
-						if (!node || node.is_root) continue;
-
-						// show Dr if positive since balance is calculated as debit - credit else show Cr
-						const balance = account.balance_in_account_currency || account.balance;
-						const dr_or_cr = balance > 0 ? "Dr" : "Cr";
-						const format = (value, currency) => format_currency(Math.abs(value), currency);
-
-						if (account.balance !== undefined) {
-							node.parent && node.parent.find(".balance-area").remove();
-							$(
-								'<span class="balance-area pull-right">' +
-									(account.balance_in_account_currency
-										? format(
-												account.balance_in_account_currency,
-												account.account_currency
-										  ) + " / "
-										: "") +
-									format(account.balance, account.company_currency) +
-									" " +
-									dr_or_cr +
-									"</span>"
-							).insertBefore(node.$ul);
-						}
-					}
-				});
+				if (account.balance !== undefined) {
+					node.parent && node.parent.find(".balance-area").remove();
+					$(
+						'<span class="balance-area pull-right">' +
+							(account.account_currency != account.company_currency
+								? format(account.balance_in_account_currency, account.account_currency) +
+								  " / "
+								: "") +
+							format(account.balance, account.company_currency) +
+							" " +
+							dr_or_cr +
+							"</span>"
+					).insertBefore(node.$ul);
+				}
 			}
-		});
+		};
+
+		if (frappe.boot.user.can_read.indexOf("GL Entry") == -1) return;
+		if (!cur_tree.account_balance_data) {
+			frappe.db.get_single_value("Accounts Settings", "show_balance_in_coa").then((value) => {
+				if (value) {
+					frappe.call({
+						method: "erpnext.accounts.utils.get_account_balances_coa",
+						args: {
+							company: cur_tree.args.company,
+							include_default_fb_balances: true,
+						},
+						callback: function (r) {
+							if (!r.message || r.message.length === 0) return;
+							cur_tree.account_balance_data = r.message || [];
+							render_balances();
+						},
+					});
+				}
+			});
+		} else {
+			render_balances();
+		}
 	},
 	add_tree_node: "erpnext.accounts.utils.add_ac",
 	menu_items: [
@@ -160,6 +157,14 @@ frappe.treeview_settings["Account"] = {
 			description: __("Optional. This setting will be used to filter in various transactions."),
 		},
 		{
+			fieldtype: "Link",
+			fieldname: "account_category",
+			label: __("Account Category"),
+			options: frappe.get_meta("Account").fields.filter((d) => d.fieldname == "account_category")[0]
+				.options,
+			description: __("Optional. Used with Financial Report Template"),
+		},
+		{
 			fieldtype: "Float",
 			fieldname: "tax_rate",
 			label: __("Tax Rate"),
@@ -187,7 +192,9 @@ frappe.treeview_settings["Account"] = {
 			function () {
 				frappe.set_route("Tree", "Cost Center", { company: get_company() });
 			},
-			__("View")
+			__("View"),
+			"default",
+			true
 		);
 
 		treeview.page.add_inner_button(
@@ -195,31 +202,12 @@ frappe.treeview_settings["Account"] = {
 			function () {
 				frappe.set_route("Form", "Opening Invoice Creation Tool", { company: get_company() });
 			},
-			__("View")
+			__("View"),
+			"default",
+			true
 		);
 
-		treeview.page.add_inner_button(
-			__("Period Closing Voucher"),
-			function () {
-				frappe.set_route("List", "Period Closing Voucher", { company: get_company() });
-			},
-			__("View")
-		);
-
-		treeview.page.add_inner_button(
-			__("Journal Entry"),
-			function () {
-				frappe.new_doc("Journal Entry", { company: get_company() });
-			},
-			__("Create")
-		);
-		treeview.page.add_inner_button(
-			__("Company"),
-			function () {
-				frappe.new_doc("Company");
-			},
-			__("Create")
-		);
+		treeview.page.add_divider_to_button_group(__("View"));
 
 		// financial statements
 		for (let report of [
@@ -236,7 +224,7 @@ frappe.treeview_settings["Account"] = {
 				function () {
 					frappe.set_route("query-report", report, { company: get_company() });
 				},
-				__("Financial Statements")
+				__("View")
 			);
 		}
 	},

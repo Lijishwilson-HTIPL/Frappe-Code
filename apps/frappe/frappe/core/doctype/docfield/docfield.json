@@ -19,6 +19,8 @@
   "reqd",
   "is_virtual",
   "search_index",
+  "not_nullable",
+  "mask",
   "column_break_18",
   "options",
   "sort_options",
@@ -30,6 +32,7 @@
   "fetch_from",
   "fetch_if_empty",
   "visibility_section",
+  "button_color",
   "hidden",
   "show_on_timeline",
   "bold",
@@ -47,6 +50,7 @@
   "in_list_view",
   "in_standard_filter",
   "in_preview",
+  "sticky",
   "column_break_35",
   "in_filter",
   "in_global_search",
@@ -68,6 +72,7 @@
   "mandatory_depends_on",
   "read_only_depends_on",
   "display",
+  "alignment",
   "print_width",
   "width",
   "max_height",
@@ -77,7 +82,8 @@
   "documentation_url",
   "placeholder",
   "oldfieldname",
-  "oldfieldtype"
+  "oldfieldtype",
+  "show_description_on_click"
  ],
  "fields": [
   {
@@ -90,6 +96,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Label",
+   "length": 255,
    "oldfieldname": "label",
    "oldfieldtype": "Data",
    "print_width": "163",
@@ -107,8 +114,7 @@
    "oldfieldtype": "Select",
    "options": "Autocomplete\nAttach\nAttach Image\nBarcode\nButton\nCheck\nCode\nColor\nColumn Break\nCurrency\nData\nDate\nDatetime\nDuration\nDynamic Link\nFloat\nFold\nGeolocation\nHeading\nHTML\nHTML Editor\nIcon\nImage\nInt\nJSON\nLink\nLong Text\nMarkdown Editor\nPassword\nPercent\nPhone\nRead Only\nRating\nSection Break\nSelect\nSignature\nSmall Text\nTab Break\nTable\nTable MultiSelect\nText\nText Editor\nTime",
    "reqd": 1,
-   "search_index": 1,
-   "sort_options": 1
+   "search_index": 1
   },
   {
    "bold": 1,
@@ -188,6 +194,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:!in_list(['Tab Break', 'Table'], doc.fieldtype)",
    "fieldname": "allow_in_quick_entry",
    "fieldtype": "Check",
    "label": "Allow in Quick Entry"
@@ -226,9 +233,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "For Links, enter the DocType as range.\nFor Select, enter list of Options, each on a new line.",
    "fieldname": "options",
    "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
    "in_list_view": 1,
    "label": "Options",
    "oldfieldname": "options",
@@ -237,6 +244,7 @@
   {
    "fieldname": "default",
    "fieldtype": "Small Text",
+   "ignore_xss_filter": 1,
    "label": "Default",
    "max_height": "3rem",
    "oldfieldname": "default",
@@ -323,6 +331,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:[\"Link\", \"Dynamic Link\", \"Table MultiSelect\"].includes(doc.fieldtype)",
    "fieldname": "ignore_user_permissions",
    "fieldtype": "Check",
    "label": "Ignore User Permissions"
@@ -469,6 +478,13 @@
    "options": "JS"
   },
   {
+   "depends_on": "eval:in_list([\"Data\", \"Int\", \"Float\", \"Currency\", \"Percent\"], doc.fieldtype)",
+   "fieldname": "alignment",
+   "fieldtype": "Select",
+   "label": "Alignment",
+   "options": "\nLeft\nCenter\nRight"
+  },
+  {
    "fieldname": "column_break_38",
    "fieldtype": "Column Break"
   },
@@ -495,7 +511,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:in_list([\"Int\", \"Float\", \"Currency\"], doc.fieldtype)",
+   "depends_on": "eval:in_list([\"Int\", \"Float\", \"Currency\", \"Percent\"], doc.fieldtype)",
    "fieldname": "non_negative",
    "fieldtype": "Check",
    "label": "Non Negative"
@@ -548,6 +564,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.fieldtype !== 'Link'",
    "fieldname": "is_virtual",
    "fieldtype": "Check",
    "label": "Virtual"
@@ -573,6 +590,13 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:!in_list([\"Check\", \"Currency\", \"Float\", \"Int\", \"Percent\", \"Rating\", \"Select\", \"Table\", \"Table MultiSelect\"], doc.fieldtype)",
+   "fieldname": "not_nullable",
+   "fieldtype": "Check",
+   "label": "Not Nullable"
+  },
+  {
+   "default": "0",
    "depends_on": "eval: doc.hidden",
    "fieldname": "show_on_timeline",
    "fieldtype": "Check",
@@ -589,8 +613,36 @@
    "fieldname": "make_attachment_public",
    "fieldtype": "Check",
    "label": "Make Attachment Public (by default)"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!in_list(['Table', 'Table MultiSelect'], doc.fieldtype);",
+   "fieldname": "sticky",
+   "fieldtype": "Check",
+   "label": "Sticky"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:[\"Select\", \"Read Only\", \"Phone\", \"Percent\", \"Password\", \"Link\", \"Int\", \"Float\", \"Dynamic Link\", \"Duration\", \"Datetime\", \"Currency\", \"Data\", \"Date\"].includes(doc.fieldtype)",
+   "fieldname": "mask",
+   "fieldtype": "Check",
+   "label": "Mask"
+  },
+  {
+   "depends_on": "eval:doc.fieldtype===\"Button\"",
+   "fieldname": "button_color",
+   "fieldtype": "Select",
+   "label": "Button Color",
+   "options": "\nDefault\nPrimary\nInfo\nSuccess\nWarning\nDanger"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_description_on_click",
+   "fieldtype": "Check",
+   "label": "Show Description on Click"
   }
  ],
+ "grid_page_length": 50,
  "idx": 1,
  "index_web_pages_for_search": 1,
  "istable": 1,
@@ -602,7 +654,8 @@
  "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "ASC",
  "states": []
 }

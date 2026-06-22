@@ -44,7 +44,7 @@ class ExchangeRateRevaluation(Document):
 		self.set_total_gain_loss()
 
 	def validate_rounding_loss_allowance(self):
-		if not (self.rounding_loss_allowance >= 0 and self.rounding_loss_allowance < 1):
+		if self.rounding_loss_allowance < 0 or self.rounding_loss_allowance >= 1:
 			frappe.throw(_("Rounding Loss Allowance should be between 0 and 1"))
 
 	def set_total_gain_loss(self):
@@ -485,9 +485,6 @@ class ExchangeRateRevaluation(Document):
 		journal_entry.company = self.company
 		journal_entry.posting_date = self.posting_date
 		journal_entry.multi_currency = 1
-
-		# Prevent JE from overriding user-entered exchange rates (e.g., rate of 1)
-		journal_entry.flags.ignore_exchange_rate = True
 
 		journal_entry_accounts = []
 		for d in accounts:

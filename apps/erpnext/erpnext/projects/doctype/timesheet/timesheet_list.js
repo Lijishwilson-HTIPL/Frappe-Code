@@ -4,6 +4,7 @@ frappe.listview_settings["Timesheet"] = {
 		if (doc.status == "Partially Billed") {
 			return [__("Partially Billed"), "orange", "status,=," + "Partially Billed"];
 		}
+
 		if (doc.status == "Billed") {
 			return [__("Billed"), "green", "status,=," + "Billed"];
 		}

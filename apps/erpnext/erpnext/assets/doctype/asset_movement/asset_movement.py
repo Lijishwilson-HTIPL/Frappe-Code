@@ -78,6 +78,7 @@ class AssetMovement(Document):
 					)
 			else:
 				d.source_location = current_location
+
 			if not d.target_location:
 				frappe.throw(_("Target Location is required for transferring Asset {0}").format(d.asset))
 			if d.source_location == d.target_location:

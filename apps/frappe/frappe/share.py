@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
+from frappe.core.doctype.permission_type.permission_type import get_doctype_ptype_map
 from frappe.desk.doctype.notification_log.notification_log import (
 	enqueue_create_notification,
 	get_title,
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist()
-def add(doctype, name, user=None, read=1, write=0, submit=0, share=0, everyone=0, notify=0):
+def add(doctype, name, user=None, read=1, write=0, submit=0, share=0, everyone=0, notify=0, **kwargs):
 	"""Expose function without flags to the client-side"""
 	return add_docshare(
 		doctype,
@@ -30,11 +31,12 @@ def add(doctype, name, user=None, read=1, write=0, submit=0, share=0, everyone=0
 		share=share,
 		everyone=everyone,
 		notify=notify,
+		**kwargs,
 	)
 
 
 def add_docshare(
-	doctype, name, user=None, read=1, write=0, submit=0, share=0, everyone=0, flags=None, notify=0
+	doctype, name, user=None, read=1, write=0, submit=0, share=0, everyone=0, flags=None, notify=0, **kwargs
 ):
 	"""Share the given document with a user."""
 	if not user:
@@ -47,9 +49,14 @@ def add_docshare(
 		"submit": cint(submit),
 		"share": cint(share),
 	}
+	custom_perms = get_doctype_ptype_map().get(doctype, [])
+	if kwargs and custom_perms:
+		for ptype in custom_perms:
+			if ptype in kwargs:
+				share_perms[ptype] = cint(kwargs.get(ptype))
 
 	if not (flags or {}).get("ignore_share_permission"):
-		check_share_permission(doctype, name, share_perms)
+		check_share_permission(doctype, name, share_perms, custom_perms)
 
 	if share_name := get_share_name(doctype, name, user, everyone):
 		doc = frappe.get_doc("DocShare", share_name)
@@ -64,7 +71,9 @@ def add_docshare(
 	doc.save(ignore_permissions=True)
 	notify_assignment(user, doctype, name, everyone, notify=notify)
 
-	if frappe.get_cached_value("User", user, "follow_shared_documents"):
+	if (user != name or doctype != "User") and frappe.get_cached_value(
+		"User", user, "follow_shared_documents"
+	):
 		follow_document(doctype, name, user)
 
 	return doc
@@ -123,29 +132,19 @@ def set_docshare_permission(doctype, name, user, permission_to, value=1, everyon
 @frappe.whitelist()
 def get_users(doctype: str, name: str) -> list:
 	"""Get list of users with which this document is shared"""
-	doc = frappe.get_doc(doctype, name)
+	doc = frappe.get_lazy_doc(doctype, name)
 	return _get_users(doc)
 
 
 def _get_users(doc: "Document") -> list:
 	from frappe.permissions import has_permission
 
-	if not has_permission(doc.doctype, "read", doc, raise_exception=False):
+	if not has_permission(doc.doctype, "read", doc, print_logs=False):
 		return []
 
 	return frappe.get_all(
 		"DocShare",
-		fields=[
-			"name",
-			"user",
-			"read",
-			"write",
-			"submit",
-			"share",
-			"everyone",
-			"owner",
-			"creation",
-		],
+		fields=["*"],
 		filters=dict(share_doctype=doc.doctype, share_name=str(doc.name)),
 	)
 
@@ -211,12 +210,13 @@ def get_share_name(doctype, name, user, everyone):
 	return share_name
 
 
-def check_share_permission(doctype, name, permissions=None):
+def check_share_permission(doctype, name, permissions=None, custom_perms=None):
 	"""Check if the user can share with other users and has the permissions they are trying to grant.
 
 	:param doctype: DocType being shared
 	:param name: Document name being shared
 	:param permissions: Permissions that the user wants to share
+	:param custom_perms: List of custom permission types for the doctype
 	"""
 	if not frappe.has_permission(doctype, ptype="share", doc=name):
 		frappe.throw(
@@ -229,6 +229,11 @@ def check_share_permission(doctype, name, permissions=None):
 
 	# Validate user has the permissions they're trying to grant
 	restricted_permissions = ["read", "write", "submit"]
+
+	# Append custom permissions
+	if custom_perms is None:
+		custom_perms = get_doctype_ptype_map().get(doctype, [])
+	restricted_permissions.extend(custom_perms)
 
 	doc = frappe.get_doc(doctype, name)
 

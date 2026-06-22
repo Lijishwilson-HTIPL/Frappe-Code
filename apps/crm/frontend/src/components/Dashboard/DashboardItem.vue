@@ -32,17 +32,10 @@
     >
       <DonutChart v-if="item.data" :config="item.data" />
     </div>
-    <div
-      v-else-if="item.type == 'leads_journey'"
-      class="h-full w-full rounded-md bg-surface-white shadow overflow-hidden"
-    >
-      <LeadsJourney />
-    </div>
   </div>
 </template>
 <script setup>
 import { AxisChart, DonutChart, NumberChart, Tooltip } from 'frappe-ui'
-import LeadsJourney from './LeadsJourney.vue'
 
 defineProps({
   index: { type: Number, required: true },

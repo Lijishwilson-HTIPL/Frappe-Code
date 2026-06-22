@@ -17,7 +17,7 @@ from frappe.monitor import add_data_to_monitor
 from frappe.permissions import check_doctype_permission
 from frappe.utils import cint
 from frappe.utils.csvutils import build_csv_response
-from frappe.utils.deprecations import deprecation_warning
+from frappe.utils.deprecations import deprecated
 from frappe.utils.image import optimize_image
 from frappe.utils.response import build_response
 
@@ -100,23 +100,23 @@ def is_valid_http_method(method):
 	if frappe.flags.in_safe_exec:
 		return
 
+	# Skip HTTP method validation when running in a background job
+	if hasattr(frappe.local, "job"):
+		return
+
 	http_method = frappe.local.request.method
 
 	if http_method not in frappe.allowed_http_methods_for_whitelisted_func[method]:
-		throw_permission_error()
+		frappe.throw_permission_error()
 
 
-def throw_permission_error():
-	frappe.throw(_("Not permitted"), frappe.PermissionError)
-
-
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 def logout():
 	frappe.local.login_manager.logout()
 	frappe.db.commit()
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 def web_logout():
 	frappe.local.login_manager.logout()
 	frappe.db.commit()
@@ -125,58 +125,26 @@ def web_logout():
 	)
 
 
-@frappe.whitelist()
-def uploadfile():
-	deprecation_warning(
-		"uploadfile is deprecated and will be removed in v16. Use upload_file instead.",
-	)
-	ret = None
-	check_write_permission(frappe.form_dict.doctype, frappe.form_dict.docname)
-
-	try:
-		if frappe.form_dict.get("from_form"):
-			try:
-				ret = frappe.get_doc(
-					{
-						"doctype": "File",
-						"attached_to_name": frappe.form_dict.docname,
-						"attached_to_doctype": frappe.form_dict.doctype,
-						"attached_to_field": frappe.form_dict.docfield,
-						"file_url": frappe.form_dict.file_url,
-						"file_name": frappe.form_dict.filename,
-						"is_private": frappe.utils.cint(frappe.form_dict.is_private),
-						"content": frappe.form_dict.filedata,
-						"decode": True,
-					}
-				)
-				ret.save()
-			except frappe.DuplicateEntryError:
-				# ignore pass
-				ret = None
-				frappe.db.rollback()
-		else:
-			if frappe.form_dict.get("method"):
-				method = frappe.get_attr(frappe.form_dict.method)
-				is_whitelisted(method)
-				ret = method()
-	except Exception:
-		frappe.errprint(frappe.utils.get_traceback())
-		frappe.response["http_status_code"] = 500
-		ret = None
-
-	return ret
-
-
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 def upload_file():
 	user = None
 	if frappe.session.user == "Guest":
 		if frappe.get_system_settings("allow_guests_to_upload_files"):
 			ignore_permissions = True
+			guest_allowed_docs = frappe.get_system_settings("allowed_doctypes_for_guest_uploads")
+			if guest_allowed_docs:
+				target_doctype = frappe.form_dict.doctype
+				allowed_docs = guest_allowed_docs.splitlines()
+				allowed_docs = [doc.strip() for doc in allowed_docs if doc.strip()]
+				if allowed_docs and target_doctype not in allowed_docs:
+					frappe.throw(
+						_("Guests are not allowed to upload files for {0} Doctype").format(target_doctype),
+						frappe.PermissionError,
+					)
 		else:
 			raise frappe.PermissionError
 	else:
-		user: User = frappe.get_doc("User", frappe.session.user)
+		user: User = frappe.get_lazy_doc("User", frappe.session.user)
 		ignore_permissions = False
 
 	files = frappe.request.files
@@ -258,14 +226,12 @@ def check_write_permission(doctype: str | None = None, name: str | None = None):
 		return
 
 	try:
-		doc = frappe.get_doc(doctype, name)
+		frappe.get_lazy_doc(doctype, name, check_permission="write")
 	except frappe.DoesNotExistError:
 		# doc has not been inserted yet, name is set to "new-some-doctype"
 		# If doc inserts fine then only this attachment will be linked see file/utils.py:relink_mismatched_files
 		frappe.new_doc(doctype).check_permission("write")
 		return
-
-	doc.check_permission("write")
 
 
 @frappe.whitelist(allow_guest=True)
@@ -292,8 +258,12 @@ def get_attr(cmd):
 	if "." in cmd:
 		method = frappe.get_attr(cmd)
 	else:
+		from frappe.deprecation_dumpster import deprecation_warning
+
 		deprecation_warning(
-			f"Calling shorthand for {cmd} is deprecated, please specify full path in RPC call."
+			"unknown",
+			"v17",
+			f"Calling shorthand for {cmd} is deprecated, please specify full path in RPC call.",
 		)
 		method = globals()[cmd]
 	return method
@@ -313,16 +283,16 @@ def run_doc_method(method, docs=None, dt=None, dn=None, arg=None, args=None):
 		if not isinstance(dn, str | int):
 			frappe.throw("'dn' must be a string or an integer")
 
-		doc = frappe.get_doc(dt, dn)
+		doc = frappe.get_doc(dt, dn, check_permission=True)
 
 	else:
 		docs = frappe.parse_json(docs)
-		doc = frappe.get_doc(docs)
+		doc = frappe.get_doc(docs, check_permission=True)
 		doc._original_modified = doc.modified
 		doc.check_if_latest()
 
-	if not doc or not doc.has_permission("read"):
-		throw_permission_error()
+	if not doc:
+		frappe.throw_permission_error()
 
 	try:
 		args = frappe.parse_json(args)
@@ -359,5 +329,4 @@ def run_doc_method(method, docs=None, dt=None, dn=None, arg=None, args=None):
 	add_data_to_monitor(methodname=method)
 
 
-# for backwards compatibility
-runserverobj = run_doc_method
+runserverobj = deprecated(run_doc_method)

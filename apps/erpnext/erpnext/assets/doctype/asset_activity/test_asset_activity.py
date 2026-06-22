@@ -2,8 +2,10 @@
 # See license.txt
 
 # import frappe
-from frappe.tests.utils import FrappeTestCase
 
 
-class TestAssetActivity(FrappeTestCase):
+from erpnext.tests.utils import ERPNextTestSuite
+
+
+class TestAssetActivity(ERPNextTestSuite):
 	pass

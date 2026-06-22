@@ -15,14 +15,18 @@
         placement="right"
         :options="[
           {
-            label: 'Merge Ticket',
+            label: __('Merge Ticket'),
             onClick: () => (showMergeModal = true),
             icon: LucideMerge,
             condition: () => !ticket.is_merged,
           },
         ]"
       >
-        <Button icon="more-horizontal" class="text-gray-600" variant="ghost" />
+        <Button
+          icon="lucide-more-horizontal"
+          class="text-ink-gray-5"
+          variant="ghost"
+        />
       </Dropdown>
     </div>
     <TicketAgentContact
@@ -33,7 +37,7 @@
     <!-- feedback component -->
     <TicketFeedback
       v-if="ticket.feedback_rating"
-      class="py-3 !px-6 !gap-3 text-base text-gray-600"
+      class="py-3 !px-6 !gap-3 text-base text-ink-gray-5"
       :ticket="ticket"
     />
     <!-- ticket details -->
@@ -54,6 +58,7 @@ import { Ticket } from "@/types";
 import { copyToClipboard } from "@/utils";
 import { computed, ref } from "vue";
 import LucideMerge from "~icons/lucide/merge";
+import { __ } from "@/translation";
 import TicketAgentContact from "./TicketAgentContact.vue";
 import TicketAgentDetails from "./TicketAgentDetails.vue";
 import TicketAgentFields from "./TicketAgentFields.vue";

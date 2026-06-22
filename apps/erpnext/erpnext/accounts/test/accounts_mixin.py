@@ -12,7 +12,6 @@ class AccountsTestMixin:
 			customer = frappe.new_doc("Customer")
 			customer.customer_name = customer_name
 			customer.type = "Individual"
-			customer.customer_group = "Individual"
 
 			if currency:
 				customer.default_currency = currency
@@ -37,7 +36,6 @@ class AccountsTestMixin:
 						"account": default_account,
 					},
 				)
-				customer.customer_group = "Individual"
 				customer.save()
 			self.customer = customer_name
 
@@ -55,8 +53,14 @@ class AccountsTestMixin:
 		else:
 			self.supplier = supplier_name
 
-	def create_item(self, item_name="_Test Item", is_stock=0, warehouse=None, company=None):
-		item = create_item(item_name, is_stock_item=is_stock, warehouse=warehouse, company=company)
+	def create_item(self, item_name="_Test Item", is_stock=0, warehouse=None, company=None, valuation_rate=0):
+		item = create_item(
+			item_name,
+			is_stock_item=is_stock,
+			warehouse=warehouse,
+			company=company,
+			valuation_rate=valuation_rate,
+		)
 		self.item = item.name
 
 	def create_company(self, company_name="_Test Company", abbr="_TC"):

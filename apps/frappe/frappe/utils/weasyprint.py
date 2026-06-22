@@ -92,19 +92,14 @@ class PrintFormatGenerator:
 
 	def get_header_footer_html(self):
 		header_html = footer_html = None
-		if self.letterhead:
+		if self.letterhead or self.layout.get("header"):
 			header_html = frappe.render_template("templates/print_format/print_header.html", self.context)
-		if self.letterhead:
+		if self.letterhead or self.layout.get("footer"):
 			footer_html = frappe.render_template("templates/print_format/print_footer.html", self.context)
 		return header_html, footer_html
 
 	def render_pdf(self):
-		"""
-		Returns
-		-------
-		pdf: a bytes sequence
-		        The rendered PDF.
-		"""
+		"""Return a bytes sequence of the rendered PDF."""
 		HTML, _CSS = import_weasyprint()
 
 		self._make_header_footer()
@@ -245,7 +240,7 @@ def import_weasyprint():
 	except OSError:
 		message = "\n".join(
 			[
-				"WeasyPrint depdends on additional system dependencies.",
+				"WeasyPrint depends on additional system dependencies.",
 				"Follow instructions specific to your operating system:",
 				"https://doc.courtbouillon.org/weasyprint/stable/first_steps.html",
 			]

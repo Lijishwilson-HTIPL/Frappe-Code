@@ -8,7 +8,7 @@ from uuid import uuid4
 import frappe
 from frappe.core.page.permission_manager.permission_manager import reset
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.query_builder.functions import Timestamp
 from frappe.utils import add_days, add_to_date, flt, today
 
 from erpnext.accounts.doctype.gl_entry.gl_entry import rename_gle_sle_docs
@@ -28,24 +28,13 @@ from erpnext.stock.doctype.stock_reconciliation.test_stock_reconciliation import
 )
 from erpnext.stock.stock_ledger import get_previous_sle
 from erpnext.stock.tests.test_utils import StockTestMixin
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
+class TestStockLedgerEntry(ERPNextTestSuite, StockTestMixin):
 	def setUp(self):
-		items = create_items()
+		create_items()
 		reset("Stock Entry")
-
-		# delete SLE and BINs for all items
-		frappe.db.sql(
-			"delete from `tabStock Ledger Entry` where item_code in (%s)" % (", ".join(["%s"] * len(items))),
-			items,
-		)
-		frappe.db.sql(
-			"delete from `tabBin` where item_code in (%s)" % (", ".join(["%s"] * len(items))), items
-		)
-
-	def tearDown(self):
-		frappe.db.rollback()
 
 	def test_item_cost_reposting(self):
 		company = "_Test Company"
@@ -423,37 +412,35 @@ class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
 			user.add_roles("Stock User")
 			user.remove_roles("Stock Manager")
 
-			frappe.set_user(user.name)
+			with self.set_user(user.name):
+				stock_entry_on_today = make_stock_entry(
+					target="_Test Warehouse - _TC", qty=10, basic_rate=100
+				)
+				back_dated_se_1 = make_stock_entry(
+					target="_Test Warehouse - _TC",
+					qty=10,
+					basic_rate=100,
+					posting_date=add_days(today(), -1),
+					do_not_submit=True,
+				)
 
-			stock_entry_on_today = make_stock_entry(target="_Test Warehouse - _TC", qty=10, basic_rate=100)
-			back_dated_se_1 = make_stock_entry(
-				target="_Test Warehouse - _TC",
-				qty=10,
-				basic_rate=100,
-				posting_date=add_days(today(), -1),
-				do_not_submit=True,
-			)
+				# Block back-dated entry
+				self.assertRaises(BackDatedStockTransaction, back_dated_se_1.submit)
 
-			# Block back-dated entry
-			self.assertRaises(BackDatedStockTransaction, back_dated_se_1.submit)
-
-			frappe.set_user("Administrator")
 			user.add_roles("Stock Manager")
-			frappe.set_user(user.name)
+			with self.set_user(user.name):
+				# Back dated entry allowed to Stock Manager
+				back_dated_se_2 = make_stock_entry(
+					target="_Test Warehouse - _TC", qty=10, basic_rate=100, posting_date=add_days(today(), -1)
+				)
 
-			# Back dated entry allowed to Stock Manager
-			back_dated_se_2 = make_stock_entry(
-				target="_Test Warehouse - _TC", qty=10, basic_rate=100, posting_date=add_days(today(), -1)
-			)
-
-			back_dated_se_2.cancel()
-			stock_entry_on_today.cancel()
+				back_dated_se_2.cancel()
+				stock_entry_on_today.cancel()
 
 		finally:
 			frappe.db.set_single_value(
 				"Stock Settings", "role_allowed_to_create_edit_back_dated_transactions", None
 			)
-			frappe.set_user("Administrator")
 			user.remove_roles("Stock Manager")
 
 	def test_batchwise_item_valuation_fifo(self):
@@ -1039,7 +1026,7 @@ class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
 					"is_cancelled": 0,
 					"account": "Stock In Hand - TCP1",
 				},
-				"sum(credit)",
+				[{"SUM": "credit"}],
 			)
 
 		def _day(days):
@@ -1257,7 +1244,7 @@ class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
 		self.assertEqual(sle[0].qty_after_transaction, 105)
 		self.assertEqual(sle[0].actual_qty, 100)
 
-	@change_settings("System Settings", {"float_precision": 3, "currency_precision": 2})
+	@ERPNextTestSuite.change_settings("System Settings", {"float_precision": 3, "currency_precision": 2})
 	def test_transfer_invariants(self):
 		"""Extact stock value should be transferred."""
 
@@ -1283,16 +1270,20 @@ class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
 			item=item, from_warehouse=source_warehouse, to_warehouse=target_warehouse, qty=1_728.0
 		)
 
-		filters = {"voucher_no": transfer.name, "voucher_type": transfer.doctype, "is_cancelled": 0}
-		sles = frappe.get_all(
-			"Stock Ledger Entry",
-			fields=["*"],
-			filters=filters,
-			order_by="timestamp(posting_date, posting_time), creation",
+		sle = frappe.qb.DocType("Stock Ledger Entry")
+		sles = (
+			frappe.qb.from_(sle)
+			.select("*")
+			.where(sle.voucher_no == transfer.name)
+			.where(sle.voucher_type == transfer.doctype)
+			.where(sle.is_cancelled == 0)
+			.orderby(Timestamp(sle.posting_date, sle.posting_time))
+			.orderby(sle.creation)
+			.run(as_dict=True)
 		)
 		self.assertEqual(abs(sles[0].stock_value_difference), sles[1].stock_value_difference)
 
-	@change_settings("System Settings", {"float_precision": 4})
+	@ERPNextTestSuite.change_settings("System Settings", {"float_precision": 4})
 	def test_negative_qty_with_precision(self):
 		"Test if system precision is respected while validating negative qty."
 		from erpnext.stock.doctype.item.test_item import create_item
@@ -1332,7 +1323,7 @@ class TestStockLedgerEntry(FrappeTestCase, StockTestMixin):
 
 		self.assertEqual(flt(get_stock_balance(item_code, warehouse), 3), 0.000)
 
-	@change_settings("System Settings", {"float_precision": 4})
+	@ERPNextTestSuite.change_settings("System Settings", {"float_precision": 4})
 	def test_future_negative_qty_with_precision(self):
 		"""
 		Ledger:
@@ -1588,81 +1579,3 @@ def get_unique_suffix():
 	# Used to isolate valuation sensitive
 	# tests to prevent future tests from failing.
 	return str(uuid4())[:8].upper()
-
-
-class TestDeferredNaming(FrappeTestCase):
-	@classmethod
-	def setUpClass(cls) -> None:
-		super().setUpClass()
-		cls.gle_autoname = frappe.get_meta("GL Entry").autoname
-		cls.sle_autoname = frappe.get_meta("Stock Ledger Entry").autoname
-
-	def setUp(self) -> None:
-		self.item = make_item().name
-		self.warehouse = "Stores - TCP1"
-		self.company = "_Test Company with perpetual inventory"
-
-	def tearDown(self) -> None:
-		make_property_setter(
-			doctype="GL Entry",
-			for_doctype=True,
-			property="autoname",
-			value=self.gle_autoname,
-			property_type="Data",
-			fieldname=None,
-		)
-		make_property_setter(
-			doctype="Stock Ledger Entry",
-			for_doctype=True,
-			property="autoname",
-			value=self.sle_autoname,
-			property_type="Data",
-			fieldname=None,
-		)
-
-		# since deferred naming autocommits, commit all changes to avoid flake
-		frappe.db.commit()  # nosemgrep
-
-	@staticmethod
-	def get_gle_sles(se):
-		filters = {"voucher_type": se.doctype, "voucher_no": se.name}
-		gle = set(frappe.get_list("GL Entry", filters, pluck="name"))
-		sle = set(frappe.get_list("Stock Ledger Entry", filters, pluck="name"))
-		return gle, sle
-
-	def test_deferred_naming(self):
-		se = make_stock_entry(
-			item_code=self.item, to_warehouse=self.warehouse, qty=10, rate=100, company=self.company
-		)
-
-		gle, sle = self.get_gle_sles(se)
-		rename_gle_sle_docs()
-		renamed_gle, renamed_sle = self.get_gle_sles(se)
-
-		self.assertFalse(gle & renamed_gle, msg="GLEs not renamed")
-		self.assertFalse(sle & renamed_sle, msg="SLEs not renamed")
-		se.cancel()
-
-	def test_hash_naming(self):
-		# disable naming series
-		for doctype in ("GL Entry", "Stock Ledger Entry"):
-			make_property_setter(
-				doctype=doctype,
-				for_doctype=True,
-				property="autoname",
-				value="hash",
-				property_type="Data",
-				fieldname=None,
-			)
-
-		se = make_stock_entry(
-			item_code=self.item, to_warehouse=self.warehouse, qty=10, rate=100, company=self.company
-		)
-
-		gle, sle = self.get_gle_sles(se)
-		rename_gle_sle_docs()
-		renamed_gle, renamed_sle = self.get_gle_sles(se)
-
-		self.assertEqual(gle, renamed_gle, msg="GLEs are renamed while using hash naming")
-		self.assertEqual(sle, renamed_sle, msg="SLEs are renamed while using hash naming")
-		se.cancel()

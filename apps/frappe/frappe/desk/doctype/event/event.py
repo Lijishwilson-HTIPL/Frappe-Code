@@ -4,8 +4,10 @@
 
 import json
 from datetime import date, datetime
+from typing import Any
 
 import frappe
+import frappe.share
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_default_contact
 from frappe.desk.doctype.notification_settings.notification_settings import (
@@ -18,6 +20,7 @@ from frappe.utils import (
 	add_days,
 	add_months,
 	add_years,
+	date_diff,
 	format_datetime,
 	get_fullname,
 	getdate,
@@ -25,6 +28,7 @@ from frappe.utils import (
 	now_datetime,
 	nowdate,
 )
+from frappe.utils.caching import http_cache
 from frappe.utils.user import get_enabled_system_users
 
 weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -76,7 +80,7 @@ class Event(Document):
 		pulled_from_google_calendar: DF.Check
 		reference_docname: DF.DynamicLink | None
 		reference_doctype: DF.Link | None
-		repeat_on: DF.Literal["", "Daily", "Weekly", "Monthly", "Yearly"]
+		repeat_on: DF.Literal["", "Daily", "Weekly", "Monthly", "Quarterly", "Half Yearly", "Yearly"]
 		repeat_this_event: DF.Check
 		repeat_till: DF.Date | None
 		saturday: DF.Check
@@ -90,8 +94,8 @@ class Event(Document):
 		thursday: DF.Check
 		tuesday: DF.Check
 		wednesday: DF.Check
-
 	# end: auto-generated types
+
 	def validate(self):
 		if not self.starts_on:
 			self.starts_on = now_datetime()
@@ -234,8 +238,15 @@ class Event(Document):
 @frappe.whitelist()
 def update_attending_status(event_name, attendee, status):
 	event_doc = frappe.get_doc("Event", event_name)
+	caller = frappe.session.user
 
-	if event_doc.owner == attendee == frappe.session.user:
+	if attendee != caller:
+		if event_doc.owner != caller and not frappe.has_permission("Event", "write", event_name):
+			frappe.throw(
+				_("You are not allowed to update attendance for another user."), frappe.PermissionError
+			)
+
+	if event_doc.owner == caller:
 		frappe.db.set_value("Event", event_name, "attending", status)
 		return
 
@@ -244,8 +255,7 @@ def update_attending_status(event_name, attendee, status):
 			frappe.db.set_value("Event Participants", participant.name, "attending", status)
 			return
 
-	if not has_permission(event_doc, user=attendee):
-		frappe.throw(_("You are not allowed to update the status of this event."))
+	frappe.throw(_("Attendee not found in this event."))
 
 
 @frappe.whitelist()
@@ -273,8 +283,9 @@ def delete_communication(event, reference_doctype, reference_docname):
 def get_permission_query_conditions(user):
 	if not user:
 		user = frappe.session.user
-
 	query = f"""(`tabEvent`.`event_type`='Public' or `tabEvent`.`owner`={frappe.db.escape(user)})"""
+	if shared_events := frappe.share.get_shared("Event", user=user):
+		query += f" or `tabEvent`.`name` in ({', '.join([frappe.db.escape(e) for e in shared_events])})"
 
 	query += f" or exists (select 'x' from `tabEvent Participants` ep where ep.parent=`tabEvent`.name and ep.email={frappe.db.escape(user)})"
 
@@ -326,11 +337,23 @@ def send_event_digest():
 
 
 @frappe.whitelist()
+@http_cache(max_age=5 * 60, stale_while_revalidate=60 * 60)
 def get_events(
-	start: date, end: date, user: str | None = None, for_reminder: bool = False, filters=None
+	start: str | date,
+	end: str | date,
+	user: str | None = None,
+	for_reminder: bool = False,
+	filters: str | list | dict[str, Any] | None = None,
 ) -> list[frappe._dict]:
-	user = user or frappe.session.user
-	EventLikeDict: TypeAlias = Event | frappe._dict
+	start, end = getdate(start), getdate(end)
+
+	caller = frappe.session.user
+	target_user = user or caller
+
+	if user and user != caller:
+		if not frappe.has_permission("Event", ptype="read"):
+			frappe.throw(_("You are not allowed to view events for another user."), frappe.PermissionError)
+	type EventLikeDict = Event | frappe._dict
 	resolved_events: list[EventLikeDict] = []
 
 	if isinstance(filters, str):
@@ -401,7 +424,7 @@ def get_events(
 		{
 			"start": start,
 			"end": end,
-			"user": user,
+			"user": target_user,
 		},
 		as_dict=True,
 	)
@@ -465,6 +488,15 @@ def get_events(
 				resolve_event(e, target_date=target_date, repeat_till=repeat_till)
 				target_date = add_months(target_date, 1)
 
+		elif e.repeat_on == "Quarterly":
+			first_occurence_in_range = e.starts_on.date()
+			jump_ahead = month_diff(start, first_occurence_in_range) // 3
+			target_date = add_months(first_occurence_in_range, 3 * jump_ahead)
+
+			while target_date <= end:
+				resolve_event(e, target_date=target_date, repeat_till=repeat_till)
+				target_date = add_months(target_date, 3)
+
 		elif e.repeat_on == "Yearly":
 			first_occurence_in_range = e.starts_on.date()
 			jump_ahead = month_diff(start, first_occurence_in_range) // 12
@@ -473,6 +505,15 @@ def get_events(
 			while target_date <= end:
 				resolve_event(e, target_date=target_date, repeat_till=repeat_till)
 				target_date = add_years(target_date, 1)
+
+		elif e.repeat_on == "Half Yearly":
+			first_occurence_in_range = e.starts_on.date()
+			jump_ahead = month_diff(start, first_occurence_in_range) // 6
+			target_date = add_months(first_occurence_in_range, 6 * jump_ahead)
+
+			while target_date <= end:
+				resolve_event(e, target_date=target_date, repeat_till=repeat_till)
+				target_date = add_months(target_date, 6)
 
 	# Remove events that are not in the range and boolean weekdays fields
 	for event in resolved_events:

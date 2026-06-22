@@ -1,15 +1,40 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-import unittest
-
 import frappe
 from frappe.utils import add_days, getdate, nowdate
 
 from erpnext.projects.doctype.task.task import CircularReferenceError, ParentIsGroupError
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestTask(unittest.TestCase):
+class TestTask(ERPNextTestSuite):
+	def test_task_total_costing_and_billing_amount(self):
+		from erpnext.projects.doctype.project.test_project import make_project
+		from erpnext.projects.doctype.timesheet.test_timesheet import make_timesheet
+		from erpnext.setup.doctype.employee.test_employee import make_employee
+
+		project_name = "Test Project Costing"
+		employee = make_employee("employee@frappe.io", company="_Test Company")
+		project = make_project({"project_name": project_name})
+		task = create_task("_Test Task 1")
+		task.project = project.name
+		task.save()
+		timesheet = make_timesheet(
+			employee=employee,
+			is_billable=1,
+			currency="USD",
+			project=project.name,
+			simulate=True,
+			exchange_rate=80,
+			task=task.name,
+		)
+		timesheet.reload()
+		project.reload()
+		task.reload()
+		self.assertEqual(task.total_costing_amount, 3200)
+		self.assertEqual(task.total_billing_amount, 8000)
+
 	def test_circular_reference(self):
 		task1 = create_task("_Test Task 1", add_days(nowdate(), -15), add_days(nowdate(), -10))
 		task2 = create_task("_Test Task 2", add_days(nowdate(), 11), add_days(nowdate(), 15), task1.name)
@@ -44,17 +69,21 @@ class TestTask(unittest.TestCase):
 		task1.save()
 
 		self.assertEqual(
-			frappe.db.get_value("Task", task2.name, "exp_start_date"), getdate(add_days(nowdate(), 21))
-		)
-		self.assertEqual(
-			frappe.db.get_value("Task", task2.name, "exp_end_date"), getdate(add_days(nowdate(), 25))
+			getdate(frappe.db.get_value("Task", task2.name, "exp_start_date")),
+			getdate(add_days(nowdate(), 21)),
 		)
 
 		self.assertEqual(
-			frappe.db.get_value("Task", task3.name, "exp_start_date"), getdate(add_days(nowdate(), 26))
+			getdate(frappe.db.get_value("Task", task2.name, "exp_end_date")), getdate(add_days(nowdate(), 25))
 		)
+
 		self.assertEqual(
-			frappe.db.get_value("Task", task3.name, "exp_end_date"), getdate(add_days(nowdate(), 30))
+			getdate(frappe.db.get_value("Task", task3.name, "exp_start_date")),
+			getdate(add_days(nowdate(), 26)),
+		)
+
+		self.assertEqual(
+			getdate(frappe.db.get_value("Task", task3.name, "exp_end_date")), getdate(add_days(nowdate(), 30))
 		)
 
 	def test_close_assignment(self):
@@ -123,66 +152,11 @@ class TestTask(unittest.TestCase):
 
 		self.assertRaises(ParentIsGroupError, child_task.save)
 
-	def test_validate_blocked_requires_blocked_by_task(self):
-		"""is_blocked=1 without blocked_by_task must throw a ValidationError."""
-		task = frappe.get_doc({
-			"doctype": "Task",
-			"subject": "Test Blocked Validation EC-5",
-			"status": "Open",
-			"is_blocked": 1,
-			# blocked_by_task intentionally omitted
-		})
-		self.assertRaises(frappe.ValidationError, task.insert)
-		frappe.db.rollback()
-
-	def test_sync_assignees_from_assign(self):
-		"""sync_assignees_from_assign must rebuild task_assignees to match _assign."""
-		import json
-		task = frappe.get_doc({
-			"doctype": "Task",
-			"subject": "Test Assignee Sync",
-			"status": "Open",
-		}).insert(ignore_permissions=True)
-
-		# Simulate Frappe's assign mechanism writing directly to _assign column
-		frappe.db.set_value("Task", task.name, "_assign", json.dumps([frappe.session.user]))
-
-		task.reload()
-		task.sync_assignees_from_assign()
-
-		rows = frappe.get_all(
-			"Task Assignee",
-			filters={"parent": task.name},
-			fields=["user", "full_name"],
-		)
-		self.assertEqual(len(rows), 1)
-		self.assertEqual(rows[0].user, frappe.session.user)
-
-		frappe.db.rollback()
-
-	def test_sync_assignees_clears_when_assign_empty(self):
-		"""sync_assignees_from_assign must clear task_assignees when _assign is empty."""
-		import json
-		task = frappe.get_doc({
-			"doctype": "Task",
-			"subject": "Test Assignee Sync Clear",
-			"status": "Open",
-		}).insert(ignore_permissions=True)
-
-		# First add an assignment
-		frappe.db.set_value("Task", task.name, "_assign", json.dumps([frappe.session.user]))
-		task.reload()
-		task.sync_assignees_from_assign()
-
-		# Now clear it
-		frappe.db.set_value("Task", task.name, "_assign", "[]")
-		task.reload()
-		task.sync_assignees_from_assign()
-
-		rows = frappe.get_all("Task Assignee", filters={"parent": task.name})
-		self.assertEqual(len(rows), 0)
-
-		frappe.db.rollback()
+	def test_expected_end_date(self):
+		task = create_task("Testing End Date", add_days(nowdate(), 1), add_days(nowdate(), 5))
+		task.expected_time = 72
+		task.save()
+		self.assertEqual(getdate(task.exp_end_date), getdate(add_days(nowdate(), 5)))
 
 
 def create_task(

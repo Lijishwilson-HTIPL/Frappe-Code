@@ -2,8 +2,10 @@ import unittest
 
 import frappe
 
+from erpnext.tests.utils import ERPNextTestSuite
 
-class TestUtils(unittest.TestCase):
+
+class TestUtils(ERPNextTestSuite):
 	def test_reset_default_field_value(self):
 		doc = frappe.get_doc(
 			{

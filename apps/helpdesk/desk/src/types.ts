@@ -1,21 +1,131 @@
 import { Dayjs } from "dayjs";
-import { Component, ComputedRef, InjectionKey } from "vue";
-import type { HDTicket } from "./types/doctypes";
+import { Component, ComputedRef, InjectionKey, Ref } from "vue";
+import type { AssignmentRule, HDTicket } from "./types/doctypes";
 
-export interface Resource<T = unknown> {
-  auto: boolean;
+interface ResourceOptions<T = any> {
+  method?: string;
+  url: string;
+  initialData?: T;
+  auto?: boolean;
+  cache?: string | string[];
+  debounce?: number;
+  params?: any;
+  makeParams?: (params: any) => any;
+  onFetch?: (params: any) => void;
+  beforeSubmit?: (params: any) => void;
+  validate?: (params: any) => string | void;
+  onError?: (error: Error) => void;
+  onSuccess?: (data: T) => void;
+  onData?: (data: T) => void;
+  transform?: (data: any) => T;
+  resourceFetcher?: (options: any) => Promise<any>;
+}
+
+export interface Resource<T = any> {
+  method: string | undefined;
+  url: string;
+  data: T | null;
+  previousData: T | null;
   loading: boolean;
-  data: T;
-  pageLength: number;
-  totalCount: number;
-  hasNextPage: boolean;
-  promise: Promise<void> | null;
-  list: {
-    loading: boolean;
+  fetched: boolean;
+  error: Error | null;
+  promise: Promise<T> | null;
+  auto: boolean;
+  params: any;
+  fetch: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  reload: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  submit: (
+    params?: any,
+    tempOptions?: Partial<ResourceOptions<T>>
+  ) => Promise<T>;
+  reset: () => void;
+  update: (options: {
+    method?: string;
+    url?: string;
+    params?: any;
+    auto?: boolean;
+  }) => void;
+  setData: (data: T | ((currentData: T) => T)) => void;
+}
+
+export interface ListResourceOptions {
+  doctype: string;
+  fields?: string[];
+  filters?: Record<string, any>;
+  orFilters?: Record<string, any>;
+  orderBy?: string;
+  start?: number;
+  pageLength?: number;
+  groupBy?: string;
+  parent?: string;
+  debug?: number;
+  auto?: boolean;
+  url?: string;
+  cache?: any;
+  realtime?: boolean;
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+  onData?: (data: any) => void;
+  transform?: (data: any) => any;
+  fetchOne?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
   };
+  insert?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  setValue?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  delete?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+  runDocMethod?: {
+    onSuccess?: (data: any) => void;
+    onError?: (error: any) => void;
+  };
+}
+
+export interface ListResource<T = any> {
+  doctype: string;
+  fields?: string[];
+  filters?: Record<string, any>;
+  orFilters?: Record<string, any>;
+  orderBy?: string;
+  start: number;
+  pageLength: number;
+  groupBy?: string;
+  parent?: string;
+  debug: number;
+  originalData: T[] | null;
+  dataMap: Record<string, T>;
+  data: T[] | null;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  auto?: boolean;
+  list: Resource<T[]>;
+  fetchOne: Resource<T>;
+  insert: Resource<T>;
+  setValue: Resource<T>;
+  delete: Resource<T>;
+  runDocMethod: Resource<T>;
+  update: (updatedOptions: Partial<ListResourceOptions>) => void;
+  fetch: () => void;
+  reload: () => Promise<T[]>;
+  setData: (data: T[] | ((data: T[]) => T[])) => void;
+  transform: (data: T[]) => T[];
+  getRow: (name: string) => T;
+  previous: () => void;
   next: () => void;
-  reload: () => void;
-  update: (r: unknown) => void;
 }
 
 export interface Error {
@@ -43,6 +153,10 @@ export interface Communication {
   sender: string;
   bcc?: string;
   cc?: string;
+  sent_or_received?: "Sent" | "Received";
+  email_account?: string;
+  sender_full_name?: string;
+  sender_mail_id?: string;
 }
 
 export interface Activity {
@@ -198,8 +312,18 @@ export interface RenderField {
   description?: string;
 }
 
+export type EmailServiceName =
+  | "GMail"
+  | "Outlook"
+  | "Sendgrid"
+  | "SparkPost"
+  | "Yahoo"
+  | "Yandex"
+  | "Frappe Mail"
+  | "Custom";
+
 export interface EmailService {
-  name: string;
+  name: EmailServiceName;
   icon: string;
   info: string;
   link: string;
@@ -209,6 +333,16 @@ export interface EmailService {
 export type EmailStep = "email-list" | "email-add" | "email-edit";
 
 export interface EmailAccount {
+  smtp_server: string;
+  incoming_port: string;
+  smtp_port: string;
+  use_ssl: boolean;
+  use_starttls: boolean;
+  use_tls: boolean;
+  use_ssl_for_outgoing: boolean;
+  validate_ssl_certificate: boolean;
+  email_server: string;
+  domain: string;
   email_account_name: string;
   email_id: string;
   service: string;
@@ -220,9 +354,34 @@ export interface EmailAccount {
   enable_incoming?: boolean;
   default_outgoing?: boolean;
   default_incoming?: boolean;
+  validate_ssl_certificate_for_outgoing: boolean;
 }
 
-export type TicketTab = "activity" | "email" | "comment" | "details" | "call" | "ticket_data";
+export type EmailAccountFormState = {
+  email_account_name?: string;
+  email_id?: string;
+  service?: string;
+  password?: string;
+  api_key?: string;
+  api_secret?: string;
+  frappe_mail_site?: string;
+  domain?: string;
+  email_server?: string;
+  incoming_port?: string | number;
+  smtp_server?: string;
+  smtp_port?: string | number;
+  use_ssl?: boolean | number;
+  use_starttls?: boolean | number;
+  use_tls?: boolean | number;
+  use_ssl_for_outgoing?: boolean | number;
+  validate_ssl_certificate?: boolean | number;
+  validate_ssl_certificate_for_outgoing?: boolean | number;
+  attachment_limit?: string | number;
+  append_emails_to_sent_folder?: boolean | number;
+  sent_folder_name?: string;
+};
+
+export type TicketTab = "activity" | "email" | "comment" | "details" | "call";
 
 export interface TabObject {
   name: TicketTab;
@@ -287,6 +446,7 @@ export interface View {
   group_by_field?: string;
   name?: string;
   is_customer_portal?: boolean;
+  is_standard?: boolean;
 }
 
 export interface ViewType {
@@ -475,12 +635,12 @@ export interface TicketContact {
 }
 
 export type RecentTicket = Record<
-  "subject" | "status" | "priority" | "name",
-  string | number
+  "subject" | "status" | "priority" | "name" | "creation",
+  string
 >;
 export type SimilarTicket = Record<
-  "subject" | "status" | "priority" | "name",
-  string | number
+  "subject" | "status" | "priority" | "name" | "creation",
+  string
 >;
 export interface RecentSimilarTicket {
   recent_tickets: RecentTicket[];
@@ -494,12 +654,68 @@ export interface TicketActivities {
   views: ViewLog[];
 }
 
+
+export interface HDSettings {
+  brandName: string;
+  brandLogo: string;
+  favicon: string;
+  autoCloseAfterDays: string;
+  autoCloseStatus: string;
+  autoCloseTickets: string;
+  assignWithinTeam: boolean;
+  doNotRestrictTicketsWithoutAnAgentGroup: boolean;
+  restrictTicketsByAgentGroup: boolean;
+  updateStatusTo: string;
+  autoUpdateStatus: boolean;
+  isFeedbackMandatory: boolean;
+  allowAnyoneToCreateTickets: boolean;
+  defaultTicketType: string;
+  preferKnowledgeBase: boolean;
+  skipEmailWorkflow: boolean;
+  disableSavedRepliesGlobalScope: boolean;
+  enableOutsideHoursBanner: boolean;
+  outsideWorkingHoursBannerMessage: string;
+}
+
+export interface HolidayList {
+  name: string;
+  description: string;
+}
+
+export interface SlaPolicy {
+  name: string;
+  description: string;
+  default_sla: boolean;
+  enabled: boolean;
+}
+
+export interface Team {
+  name: string;
+  team: string;
+  disabled: boolean;
+}
+
+export interface SavedReply {
+  name: string;
+  title: string;
+  message: string;
+  scope: string;
+  teams: Team[];
+  owner: string;
+}
+
 export type APIOptions = DropdownOption[] | string[] | [];
 
 export type DropdownOption = {
   label: string;
   value: string | number;
 };
+
+export interface AgentOption {
+  value: string;
+  label: string;
+  image?: string;
+}
 
 // symbols
 export const TicketSymbol: InjectionKey<
@@ -525,11 +741,36 @@ export const ActivitiesSymbol: InjectionKey<
   ComputedRef<Resource<TicketActivities>>
 > = Symbol("activities");
 
+export const AssignmentRuleListResourceSymbol: InjectionKey<
+  Resource<AssignmentRule[]>
+> = Symbol("assignmentRuleListResource");
+
+export const HDSettingsSymbol: InjectionKey<Ref<HDSettings>> =
+  Symbol("hdSettings");
+
+export const HolidayListResourceSymbol: InjectionKey<
+  ListResource<HolidayList>
+> = Symbol("holidayListResource");
+
+export const SlaPolicyListResourceSymbol: InjectionKey<
+  ListResource<SlaPolicy>
+> = Symbol("slaPolicyListResource");
+
+export const TeamListResourceSymbol: InjectionKey<ListResource<Team>> =
+  Symbol("teamListResource");
+
+export const SavedReplyListResourceSymbol: InjectionKey<
+  ListResource<SavedReply>
+> = Symbol("savedReplyListResource");
+
 declare global {
   interface Window {
     is_fc_site: boolean;
     date_format: string;
     time_format: string;
     session_user: string;
+    timezone: Record<"user" | "system", string>;
+    agent: string | null;
+    apps: string[];
   }
 }

@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from crm.fcrm.doctype.crm_call_log.crm_call_log import (
 	create_lead_from_call_log,
@@ -11,7 +11,7 @@ from crm.fcrm.doctype.crm_call_log.crm_call_log import (
 )
 
 
-class TestCRMCallLog(IntegrationTestCase):
+class TestCRMCallLog(FrappeTestCase):
 	def tearDown(self):
 		frappe.db.rollback()
 

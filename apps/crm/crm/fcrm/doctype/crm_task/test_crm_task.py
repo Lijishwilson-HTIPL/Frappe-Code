@@ -2,10 +2,10 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 
-class TestCRMTask(IntegrationTestCase):
+class TestCRMTask(FrappeTestCase):
 	def tearDown(self) -> None:
 		frappe.db.rollback()
 

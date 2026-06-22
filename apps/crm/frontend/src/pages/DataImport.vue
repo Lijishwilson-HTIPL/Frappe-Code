@@ -20,7 +20,7 @@ const doctypeMap = {
     pageRoute: `/crm/leads/docname`,
   },
   'CRM Deal': {
-    title: 'Opportunities',
+    title: 'Deals',
     listRoute: '/crm/deals',
     pageRoute: `/crm/deals/docname`,
   },
@@ -34,7 +34,7 @@ const doctypeMap = {
     listRoute: '/crm/tasks',
   },
   'CRM Organization': {
-    title: 'Accounts',
+    title: 'Organizations',
     listRoute: '/crm/organizations',
     pageRoute: `/crm/organizations/docname`,
   },

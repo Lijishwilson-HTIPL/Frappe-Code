@@ -16,6 +16,14 @@ erpnext.buying.SupplierQuotationController = class SupplierQuotationController e
 			return !doc.qty && me.frm.doc.has_unit_price_items ? "yellow" : "";
 		});
 
+		this.frm.set_query("warehouse", "items", (doc, cdt, cdn) => {
+			return {
+				filters: {
+					company: doc.company,
+					is_group: 0,
+				},
+			};
+		});
 		super.setup();
 	}
 
@@ -27,10 +35,11 @@ erpnext.buying.SupplierQuotationController = class SupplierQuotationController e
 			this.frm.set_value("valid_till", frappe.datetime.add_months(this.frm.doc.transaction_date, 1));
 		}
 		if (this.frm.doc.docstatus === 1) {
-			cur_frm.add_custom_button(__("Purchase Order"), this.make_purchase_order, __("Create"));
-			cur_frm.page.set_inner_btn_group_as_primary(__("Create"));
-			cur_frm.add_custom_button(__("Quotation"), this.make_quotation, __("Create"));
-
+			this.frm.add_custom_button(
+				__("Purchase Order"),
+				this.make_purchase_order.bind(this),
+				__("Create")
+			);
 			this.frm.add_custom_button(__("Update Items"), () => {
 				erpnext.utils.update_child_items({
 					frm: this.frm,
@@ -38,6 +47,8 @@ erpnext.buying.SupplierQuotationController = class SupplierQuotationController e
 					cannot_add_row: false,
 				});
 			});
+			this.frm.page.set_inner_btn_group_as_primary(__("Create"));
+			this.frm.add_custom_button(__("Quotation"), this.make_quotation.bind(this), __("Create"));
 		} else if (this.frm.doc.docstatus === 0) {
 			erpnext.set_unit_price_items_note(this.frm);
 
@@ -102,22 +113,16 @@ erpnext.buying.SupplierQuotationController = class SupplierQuotationController e
 	make_purchase_order() {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.buying.doctype.supplier_quotation.supplier_quotation.make_purchase_order",
-			frm: cur_frm,
+			frm: this.frm,
 		});
 	}
 	make_quotation() {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.buying.doctype.supplier_quotation.supplier_quotation.make_quotation",
-			frm: cur_frm,
+			frm: this.frm,
 		});
 	}
 };
 
 // for backward compatibility: combine new and previous states
 extend_cscript(cur_frm.cscript, new erpnext.buying.SupplierQuotationController({ frm: cur_frm }));
-
-cur_frm.fields_dict["items"].grid.get_field("project").get_query = function (doc, cdt, cdn) {
-	return {
-		filters: [["Project", "status", "not in", "Completed, Cancelled"]],
-	};
-};

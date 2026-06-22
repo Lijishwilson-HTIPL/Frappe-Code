@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -12,9 +11,10 @@ from hrms.hr.doctype.shift_request.test_shift_request import make_shift_request
 from hrms.hr.doctype.shift_schedule.shift_schedule import get_or_insert_shift_schedule
 from hrms.hr.doctype.shift_type.test_shift_type import make_shift_assignment, setup_shift_type
 from hrms.tests.test_utils import create_company
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestShiftAssignmentTool(FrappeTestCase):
+class TestShiftAssignmentTool(HRMSTestSuite):
 	def setUp(self):
 		create_company()
 		create_company("_Test Company2")
@@ -31,10 +31,7 @@ class TestShiftAssignmentTool(FrappeTestCase):
 		self.emp4 = make_employee("employee4@test.com", company="_Test Company2")
 		self.emp5 = make_employee("employee5@test.io", company="_Test Company")
 
-	def tearDown(self):
-		frappe.db.rollback()
-
-	@change_settings("HR Settings", {"allow_multiple_shift_assignments": 0})
+	@HRMSTestSuite.change_settings("HR Settings", {"allow_multiple_shift_assignments": 0})
 	def test_get_employees_for_assigning_shifts(self):
 		today = getdate()
 
@@ -112,6 +109,7 @@ class TestShiftAssignmentTool(FrappeTestCase):
 
 	def test_get_shift_requests(self):
 		today = getdate()
+		setup_shift_type(shift_type="Day Shift")
 
 		for emp in [self.emp1, self.emp2, self.emp3, self.emp4, self.emp5]:
 			employee = frappe.get_doc("Employee", emp)
@@ -251,6 +249,7 @@ class TestShiftAssignmentTool(FrappeTestCase):
 			employee.shift_request_approver = "employee1@test.com"
 			employee.save()
 
+		setup_shift_type(shift_type="Day Shift")
 		request1 = make_shift_request(
 			employee=self.emp1,
 			employee_name="employee1@test.com",

@@ -4,7 +4,7 @@ app_publisher = "Frappe Technologies Pvt. Ltd."
 app_description = "Kick-ass Open Source CRM"
 app_email = "shariq@frappe.io"
 app_license = "AGPLv3"
-app_icon_url = "/assets/crm/images/logo.png"
+app_icon_url = "/assets/crm/images/logo.svg"
 app_icon_title = "CRM"
 app_icon_route = "/crm"
 
@@ -15,7 +15,7 @@ app_icon_route = "/crm"
 add_to_apps_screen = [
 	{
 		"name": "crm",
-		"logo": "/assets/crm/images/logo.png",
+		"logo": "/assets/crm/images/logo.svg",
 		"title": "CRM",
 		"route": "/crm",
 		"has_permission": "crm.api.check_app_permission",
@@ -26,13 +26,6 @@ get_site_info = "crm.activation.get_site_info"
 
 export_python_type_annotations = True
 require_type_annotated_api_methods = True
-
-# Fixtures
-# --------
-fixtures = [
-    {"dt": "Color", "filters": [["name", "in", ["#6D28D9", "#F8F7FF", "#2E1065", "#E0D7FA", "#1E1B2E"]]]},
-    {"dt": "Website Theme", "filters": [["name", "in", ["Royal Purple"]]]},
-]
 
 # Includes in <head>
 # ------------------
@@ -135,13 +128,15 @@ before_uninstall = "crm.uninstall.before_uninstall"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# "Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# "Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"CRM Lead": "crm.permissions.org_hierarchy.get_lead_permission_query_conditions",
+	"CRM Deal": "crm.permissions.org_hierarchy.get_deal_permission_query_conditions",
+}
+
+has_permission = {
+	"CRM Lead": "crm.permissions.org_hierarchy.has_lead_permission",
+	"CRM Deal": "crm.permissions.org_hierarchy.has_deal_permission",
+}
 
 # DocType Class
 # ---------------
@@ -193,7 +188,10 @@ doc_events = {
 scheduler_events = {
 	"all": ["crm.api.event.trigger_offset_event_notifications"],
 	"hourly": ["crm.api.event.trigger_hourly_event_notifications"],
-	"daily": ["crm.api.event.trigger_daily_event_notifications"],
+	"daily": [
+		"crm.api.event.trigger_daily_event_notifications",
+		"crm.fcrm.doctype.crm_view_settings.crm_view_settings.clear_old_versions",
+	],
 	"weekly": ["crm.api.event.trigger_weekly_event_notifications"],
 	"daily_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_daily"],
 	"hourly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_hourly"],

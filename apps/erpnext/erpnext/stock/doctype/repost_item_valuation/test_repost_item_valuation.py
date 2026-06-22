@@ -5,7 +5,6 @@
 from unittest.mock import MagicMock, call
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, add_to_date, now, nowdate, today
 
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
@@ -19,12 +18,10 @@ from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import (
 from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
 from erpnext.stock.tests.test_utils import StockTestMixin
 from erpnext.stock.utils import PendingRepostingError
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
-	def tearDown(self):
-		frappe.flags.dont_execute_stock_reposts = False
-
+class TestRepostItemValuation(ERPNextTestSuite, StockTestMixin):
 	def test_repost_time_slot(self):
 		repost_settings = frappe.get_doc("Stock Reposting Settings")
 
@@ -99,7 +96,7 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 			).insert(ignore_permissions=True)
 
 			repost_doc.load_from_db()
-			repost_doc.modified = add_days(now(), days=-i * 10)
+			repost_doc.creation = add_days(now(), days=-i * 10)
 			repost_doc.db_update_all()
 
 		logs = frappe.get_all("Repost Item Valuation", filters={"status": "Skipped"})
@@ -140,6 +137,7 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 			posting_date="2021-01-02",
 			posting_time="00:01:00",
 		)
+
 		# new repost without any duplicates
 		riv1 = frappe.get_doc(riv_args)
 		riv1.flags.dont_run_in_test = True
@@ -194,9 +192,10 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 
 		riv.set_status("Skipped")
 
-	@change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
+	@ERPNextTestSuite.change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
 	def test_prevention_of_cancelled_transaction_riv(self):
 		frappe.flags.dont_execute_stock_reposts = True
+		self.addCleanup(frappe.flags.pop, "dont_execute_stock_reposts")
 
 		item = make_item()
 		warehouse = "_Test Warehouse - _TC"
@@ -355,6 +354,7 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 		riv = frappe.get_doc(
 			doctype="Repost Item Valuation",
 			item_code="_Test Item",
+			company="_Test Company",
 			warehouse="_Test Warehouse - _TC",
 			based_on="Item and Warehouse",
 			posting_date=today,
@@ -362,17 +362,17 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 		)
 		riv.flags.dont_run_in_test = True  # keep it queued
 
-		accounts_settings = frappe.get_doc("Accounts Settings")
-		accounts_settings.acc_frozen_upto = today
-		accounts_settings.frozen_accounts_modifier = ""
-		accounts_settings.save()
+		company = frappe.get_doc("Company", "_Test Company")
+		company.accounts_frozen_till_date = today
+		company.role_allowed_for_frozen_entries = ""
+		company.save()
 
 		self.assertRaises(frappe.ValidationError, riv.save)
 
-		accounts_settings.acc_frozen_upto = ""
-		accounts_settings.save()
+		company.accounts_frozen_till_date = ""
+		company.save()
 
-	@change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
+	@ERPNextTestSuite.change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
 	def test_create_repost_entry_for_cancelled_document(self):
 		pr = make_purchase_receipt(
 			company="_Test Company with perpetual inventory",
@@ -390,17 +390,18 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 		self.assertTrue(frappe.db.exists("Repost Item Valuation", {"voucher_no": pr.name}))
 
 	def test_repost_item_valuation_for_closing_stock_balance(self):
-		from erpnext.stock.doctype.closing_stock_balance.closing_stock_balance import (
+		from erpnext.stock.doctype.stock_closing_entry.stock_closing_entry import (
 			prepare_closing_stock_balance,
 		)
 
-		doc = frappe.new_doc("Closing Stock Balance")
+		doc = frappe.new_doc("Stock Closing Entry")
 		doc.company = "_Test Company"
 		doc.from_date = today()
 		doc.to_date = today()
 		doc.submit()
 
 		prepare_closing_stock_balance(doc.name)
+
 		doc.load_from_db()
 		self.assertEqual(doc.docstatus, 1)
 		self.assertEqual(doc.status, "Completed")
@@ -419,17 +420,73 @@ class TestRepostItemValuation(FrappeTestCase, StockTestMixin):
 		self.assertRaises(frappe.ValidationError, riv.save)
 		doc.cancel()
 
+	def test_recalculate_valuation_rate_for_purchase_receipt(self):
+		item = self.make_item().name
+
+		# receive item at rate 100
+		pr = make_purchase_receipt(item_code=item, qty=1, rate=100)
+		self.assertSLEs(pr, [{"incoming_rate": 100}])
+
+		# change the rate from 100 to 150
+		pr.load_from_db()
+		pr.items[0].db_set(
+			{
+				"base_net_amount": 150,
+				"net_rate": 150,
+			}
+		)
+
+		# repost with recalculate valuation rate
+		riv = frappe.get_doc(
+			doctype="Repost Item Valuation",
+			based_on="Transaction",
+			voucher_type=pr.doctype,
+			voucher_no=pr.name,
+			recalculate_valuation_rate=1,
+			posting_date=pr.posting_date,
+			posting_time=pr.posting_time,
+		)
+		riv.submit()
+
+		# incoming rate after reposting should be 150
+		self.assertSLEs(pr, [{"incoming_rate": 150}])
+
+	def test_recalculate_valuation_rate_for_stock_entry(self):
+		item = self.make_item().name
+
+		# receive item at rate 100
+		se = make_stock_entry(item_code=item, target="_Test Warehouse - _TC", qty=1, rate=100)
+		self.assertSLEs(se, [{"incoming_rate": 100}])
+
+		# change the rate from 100 to 150
+		se.items[0].db_set("basic_rate", 150)
+
+		# repost with recalculate valuation rate
+		riv = frappe.get_doc(
+			doctype="Repost Item Valuation",
+			based_on="Transaction",
+			voucher_type=se.doctype,
+			voucher_no=se.name,
+			recalculate_valuation_rate=1,
+			posting_date=se.posting_date,
+			posting_time=se.posting_time,
+		)
+		riv.submit()
+
+		# incoming rate after reposting should be 150
+		self.assertSLEs(se, [{"incoming_rate": 150}])
+
 	def test_remove_attached_file(self):
 		item_code = make_item("_Test Remove Attached File Item", properties={"is_stock_item": 1})
 
 		make_purchase_receipt(
-			item_code=item_code,
+			item_code=item_code.name,
 			qty=1,
 			rate=100,
 		)
 
 		pr1 = make_purchase_receipt(
-			item_code=item_code,
+			item_code=item_code.name,
 			qty=1,
 			rate=100,
 			posting_date=add_days(today(), days=-1),

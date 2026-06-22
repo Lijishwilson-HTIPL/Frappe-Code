@@ -5,10 +5,10 @@ import json
 
 import frappe
 from frappe import _
-from frappe.config import get_modules_from_all_apps_for_user
 from frappe.model.document import Document
 from frappe.modules.export_file import export_to_files
 from frappe.query_builder import DocType
+from frappe.utils.modules import get_modules_from_all_apps_for_user
 
 
 class Dashboard(Document):
@@ -29,8 +29,8 @@ class Dashboard(Document):
 		is_default: DF.Check
 		is_standard: DF.Check
 		module: DF.Link | None
-
 	# end: auto-generated types
+
 	def on_update(self):
 		if self.is_default:
 			# make all other dashboards non-default
@@ -89,21 +89,33 @@ def get_permitted_charts(dashboard_name):
 	permitted_charts = []
 	dashboard = frappe.get_doc("Dashboard", dashboard_name)
 	for chart in dashboard.charts:
-		if frappe.has_permission("Dashboard Chart", doc=chart.chart):
-			chart_dict = frappe._dict()
-			chart_dict.update(chart.as_dict())
+		try:
+			if frappe.has_permission("Dashboard Chart", doc=chart.chart):
+				chart_dict = frappe._dict()
+				chart_dict.update(chart.as_dict())
 
-			if dashboard.get("chart_options"):
-				chart_dict.custom_options = dashboard.get("chart_options")
-			permitted_charts.append(chart_dict)
+				if dashboard.get("chart_options"):
+					chart_dict.custom_options = dashboard.get("chart_options")
+				permitted_charts.append(chart_dict)
+		except frappe.DoesNotExistError:
+			frappe.clear_last_message()
+			frappe.log_error(f"Dashboard Chart '{chart.chart}' not found or its source DocType is missing")
 
 	return permitted_charts
 
 
 @frappe.whitelist()
-def get_permitted_cards(dashboard_name):
+def get_permitted_cards(dashboard_name: str):
+	permitted_cards = []
 	dashboard = frappe.get_doc("Dashboard", dashboard_name)
-	return [card for card in dashboard.cards if frappe.has_permission("Number Card", doc=card.card)]
+	for card in dashboard.cards:
+		try:
+			if frappe.has_permission("Number Card", doc=card.card):
+				permitted_cards.append(card)
+		except frappe.DoesNotExistError:
+			frappe.log_error(f"Number Card '{card.card}' not found or its source DocType is missing")
+
+	return permitted_cards
 
 
 def get_non_standard_charts_in_dashboard(dashboard):
@@ -122,7 +134,7 @@ def get_non_standard_warning_message(non_standard_docs_map):
 	def get_html(docs, doctype):
 		html = f"<p>{frappe.bold(doctype)}</p>"
 		for doc in docs:
-			html += f'<div><a href="/app/Form/{doctype}/{doc}">{doc}</a></div>'
+			html += f'<div><a href="/desk/Form/{doctype}/{doc}">{doc}</a></div>'
 		html += "<br>"
 		return html
 

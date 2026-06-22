@@ -11,6 +11,7 @@ from frappe.utils.background_jobs import enqueue, is_job_enqueued
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
 )
+from erpnext.stock.utils import get_default_stock_uom
 
 
 class OpeningInvoiceCreationTool(Document):
@@ -31,6 +32,7 @@ class OpeningInvoiceCreationTool(Document):
 		create_missing_party: DF.Check
 		invoice_type: DF.Literal["Sales", "Purchase"]
 		invoices: DF.Table[OpeningInvoiceCreationToolItem]
+		project: DF.Link | None
 	# end: auto-generated types
 
 	def onload(self):
@@ -70,8 +72,8 @@ class OpeningInvoiceCreationTool(Document):
 		max_count = {}
 		fields = [
 			"company",
-			"count(name) as total_invoices",
-			"sum(outstanding_amount) as outstanding_amount",
+			{"COUNT": "*", "as": "total_invoices"},
+			{"SUM": "outstanding_amount", "as": "outstanding_amount"},
 		]
 		companies = frappe.get_all("Company", fields=["name as company", "default_currency as currency"])
 		if not companies:
@@ -106,10 +108,20 @@ class OpeningInvoiceCreationTool(Document):
 		row.due_date = row.due_date or nowdate()
 
 	def validate_mandatory_invoice_fields(self, row):
-		if not frappe.db.exists(row.party_type, row.party):
-			if self.create_missing_party:
-				self.add_party(row.party_type, row.party)
-			else:
+		if self.create_missing_party:
+			if not row.party and not row.party_name:
+				frappe.throw(_("Row #{}: Either Party ID or Party Name is required").format(row.idx))
+
+			if not row.party and row.party_name:
+				row.party = self.add_party(row.party_type, row.party_name)
+
+			if row.party and not frappe.db.exists(row.party_type, row.party):
+				row.party = self.add_party(row.party_type, row.party)
+
+		else:
+			if not row.party:
+				frappe.throw(_("Row #{}: Party ID is required").format(row.idx))
+			if not frappe.db.exists(row.party_type, row.party):
 				frappe.throw(
 					_("Row #{}: {} {} does not exist.").format(
 						row.idx, frappe.bold(row.party_type), frappe.bold(row.party)
@@ -117,7 +129,7 @@ class OpeningInvoiceCreationTool(Document):
 				)
 
 		mandatory_error_msg = _("Row #{0}: {1} is required to create the Opening {2} Invoices")
-		for d in ("Party", "Outstanding Amount", "Temporary Opening Account"):
+		for d in ("Outstanding Amount", "Temporary Opening Account"):
 			if not row.get(scrub(d)):
 				frappe.throw(mandatory_error_msg.format(row.idx, d, self.invoice_type))
 
@@ -163,6 +175,7 @@ class OpeningInvoiceCreationTool(Document):
 
 		party_doc.flags.ignore_mandatory = True
 		party_doc.save(ignore_permissions=True)
+		return party_doc.name
 
 	def get_invoice_dict(self, row=None):
 		def get_item_dict():
@@ -177,7 +190,7 @@ class OpeningInvoiceCreationTool(Document):
 			income_expense_account_field = (
 				"income_account" if row.party_type == "Customer" else "expense_account"
 			)
-			default_uom = frappe.db.get_single_value("Stock Settings", "stock_uom") or _("Nos")
+			default_uom = get_default_stock_uom()
 			rate = flt(row.outstanding_amount) / flt(row.qty)
 
 			item_dict = frappe._dict(
@@ -218,6 +231,9 @@ class OpeningInvoiceCreationTool(Document):
 			}
 		)
 
+		if self.invoice_type == "Purchase" and row.supplier_invoice_date:
+			invoice.update({"bill_date": row.supplier_invoice_date})
+
 		accounting_dimension = get_accounting_dimensions()
 		for dimension in accounting_dimension:
 			invoice.update({dimension: self.get(dimension) or item.get(dimension)})
@@ -233,7 +249,7 @@ class OpeningInvoiceCreationTool(Document):
 		else:
 			from frappe.utils.scheduler import is_scheduler_inactive
 
-			if is_scheduler_inactive() and not frappe.flags.in_test:
+			if is_scheduler_inactive() and not frappe.in_test:
 				frappe.throw(_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive"))
 
 			job_id = f"opening_invoice::{self.name}"
@@ -246,7 +262,7 @@ class OpeningInvoiceCreationTool(Document):
 					event="opening_invoice_creation",
 					job_id=job_id,
 					invoices=invoices,
-					now=frappe.conf.developer_mode or frappe.flags.in_test,
+					now=frappe.conf.developer_mode or frappe.in_test,
 				)
 
 
@@ -263,7 +279,8 @@ def start_import(invoices):
 			doc.flags.ignore_mandatory = True
 			doc.insert(set_name=invoice_number)
 			doc.submit()
-			frappe.db.commit()
+			if not frappe.in_test:
+				frappe.db.commit()
 			names.append(doc.name)
 		except Exception:
 			errors += 1
@@ -275,7 +292,7 @@ def start_import(invoices):
 				errors, "<a href='/app/List/Error Log' class='variant-click'>Error Log</a>"
 			),
 			indicator="red",
-			title=_("Error Occured"),
+			title=_("Error Occurred"),
 		)
 	return names
 

@@ -1,12 +1,13 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
 
+from erpnext.tests.utils import ERPNextTestSuite
 
-class TestModeofPayment(unittest.TestCase):
+
+class TestModeofPayment(ERPNextTestSuite):
 	pass
 
 

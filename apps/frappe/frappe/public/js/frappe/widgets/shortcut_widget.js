@@ -29,6 +29,15 @@ export default class ShortcutWidget extends Widget {
 		this.widget.click((e) => {
 			if (this.in_customize_mode) return;
 
+			if (this.type == "DocType" && this.doc_view == "New") {
+				frappe.ui.form.make_quick_entry(
+					this.link_to,
+					// Callback to ensure no redirection after insert
+					() => {}
+				);
+				return;
+			}
+
 			let route = frappe.utils.generate_route({
 				route: this.route,
 				name: this.link_to,
@@ -50,12 +59,7 @@ export default class ShortcutWidget extends Widget {
 			}
 
 			if (this.type == "URL") {
-				if (frappe.open_in_new_tab) {
-					window.open(this.url, "_blank");
-					frappe.open_in_new_tab = false;
-				} else {
-					window.location.href = this.url;
-				}
+				window.open(this.url, "_blank");
 				return;
 			}
 

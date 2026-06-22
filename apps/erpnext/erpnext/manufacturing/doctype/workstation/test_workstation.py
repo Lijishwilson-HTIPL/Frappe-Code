@@ -1,8 +1,7 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and Contributors
 # See license.txt
 import frappe
-from frappe.test_runner import make_test_records
-from frappe.tests.utils import FrappeTestCase
+from frappe import _
 
 from erpnext.manufacturing.doctype.operation.test_operation import make_operation
 from erpnext.manufacturing.doctype.routing.test_routing import create_routing, setup_bom
@@ -10,14 +9,23 @@ from erpnext.manufacturing.doctype.workstation.workstation import (
 	NotInWorkingHoursError,
 	WorkstationHolidayError,
 	check_if_within_operating_hours,
+	update_job_card,
 )
-
-test_dependencies = ["Warehouse"]
-test_records = frappe.get_test_records("Workstation")
-make_test_records("Workstation")
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestWorkstation(FrappeTestCase):
+class TestWorkstation(ERPNextTestSuite):
+	def test_update_job_card_rejects_disallowed_method(self):
+		# The whitelisted update_job_card endpoint must only run an allowlisted set of Job Card
+		# methods. An arbitrary method name must be rejected (PermissionError) before the document
+		# is even loaded, so this needs no Job Card to exist.
+		self.assertRaises(
+			frappe.PermissionError,
+			update_job_card,
+			"NON-EXISTENT-JOB-CARD",
+			"delete",
+		)
+
 	def test_validate_timings(self):
 		check_if_within_operating_hours(
 			"_Test Workstation 1", "Operation 1", "2013-02-02 11:00:00", "2013-02-02 19:00:00"
@@ -78,14 +86,22 @@ class TestWorkstation(FrappeTestCase):
 		bom_doc = setup_bom(item_code="_Testing Item", routing=routing_doc.name, currency="INR")
 		w1 = frappe.get_doc("Workstation", "_Test Workstation A")
 		# resets values
-		w1.hour_rate_rent = 300
-		w1.hour_rate_labour = 0
+		for row in w1.workstation_costs:
+			if row.operating_component == _("Rent"):
+				row.operating_cost = 300
+				break
+
 		w1.save()
 		bom_doc.update_cost()
 		bom_doc.reload()
 		self.assertEqual(w1.hour_rate, 300)
 		self.assertEqual(bom_doc.operations[0].hour_rate, 300)
-		w1.hour_rate_rent = 250
+
+		for row in w1.workstation_costs:
+			if row.operating_component == _("Rent"):
+				row.operating_cost = 250
+				break
+
 		w1.save()
 		# updating after setting new rates in workstations
 		bom_doc.update_cost()
@@ -105,8 +121,24 @@ def make_workstation(*args, **kwargs):
 	workstation_name = args.workstation_name or args.workstation
 	if not frappe.db.exists("Workstation", workstation_name):
 		doc = frappe.get_doc({"doctype": "Workstation", "workstation_name": workstation_name})
-		doc.hour_rate_rent = args.get("hour_rate_rent")
-		doc.hour_rate_labour = args.get("hour_rate_labour")
+		if args.get("hour_rate_rent"):
+			doc.append(
+				"workstation_costs",
+				{
+					"operating_component": _("Rent"),
+					"operating_cost": args.get("hour_rate_rent"),
+				},
+			)
+
+		if args.get("hour_rate_labour"):
+			doc.append(
+				"workstation_costs",
+				{
+					"operating_component": _("Wages"),
+					"operating_cost": args.get("hour_rate_labour"),
+				},
+			)
+
 		doc.workstation_type = args.get("workstation_type")
 		doc.insert()
 

@@ -179,7 +179,8 @@
    "fieldtype": "Link",
    "label": "Material Request",
    "options": "Material Request",
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "material_request_item",
@@ -292,7 +293,7 @@
  "permissions": [],
  "quick_entry": 1,
  "row_format": "Dynamic",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

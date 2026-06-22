@@ -2,12 +2,12 @@ import re
 import types
 import typing
 
-from pypika import MySQLQuery, Order, PostgreSQLQuery, terms
-from pypika.dialects import MySQLQueryBuilder, PostgreSQLQueryBuilder
+from pypika import MySQLQuery, Order, PostgreSQLQuery, SQLLiteQuery, terms
+from pypika.dialects import MySQLQueryBuilder, PostgreSQLQueryBuilder, SQLLiteQueryBuilder
 from pypika.queries import QueryBuilder, Schema, Table
 from pypika.terms import Function
 
-from frappe.query_builder.terms import ParameterizedValueWrapper
+from frappe.query_builder.terms import ParameterizedValueWrapper, SQLiteParameterizedValueWrapper
 from frappe.utils import get_table_name
 
 # less restrictive version of frappe.core.doctype.doctype.doctype.START_WITH_LETTERS_PATTERN
@@ -15,8 +15,20 @@ from frappe.utils import get_table_name
 TABLE_NAME_PATTERN = re.compile(r"^[\w -]*$", flags=re.ASCII)
 
 
+def _flatten(module):
+	import inspect
+
+	from frappe.types import _dict
+
+	new_mod = _dict()
+	for name, obj in inspect.getmembers(module, lambda x: not inspect.ismodule(x)):
+		if not name.startswith("_"):
+			new_mod[name] = obj
+	return new_mod
+
+
 class Base:
-	terms = terms
+	terms = _flatten(terms)
 	desc = Order.desc
 	asc = Order.asc
 	Schema = Schema
@@ -109,4 +121,20 @@ class Postgres(Base, PostgreSQLQuery):
 		elif isinstance(table, str):
 			table = cls.DocType(table)
 
+		return super().from_(table, *args, **kwargs)
+
+
+class SQLite(Base, SQLLiteQuery):
+	Field = terms.Field
+
+	_BuilderClasss = SQLLiteQueryBuilder
+
+	@classmethod
+	def _builder(cls, *args, **kwargs) -> "SQLLiteQueryBuilder":
+		return super()._builder(*args, wrapper_cls=SQLiteParameterizedValueWrapper, **kwargs)
+
+	@classmethod
+	def from_(cls, table, *args, **kwargs):
+		if isinstance(table, str):
+			table = cls.DocType(table)
 		return super().from_(table, *args, **kwargs)

@@ -9,7 +9,6 @@
  "engine": "InnoDB",
  "field_order": [
   "supplier_section",
-  "title",
   "naming_series",
   "supplier",
   "supplier_name",
@@ -81,6 +80,7 @@
   "disable_rounded_total",
   "tax_breakup",
   "other_charges_calculation",
+  "item_wise_tax_details",
   "pricing_rule_details",
   "pricing_rules",
   "address_and_contact_tab",
@@ -110,12 +110,13 @@
   "column_break_85",
   "select_print_heading",
   "language",
-  "subscription_section",
+  "auto_repeat_section",
   "auto_repeat",
   "update_auto_repeat_reference",
   "more_info",
   "is_subcontracted",
   "column_break_57",
+  "title",
   "opportunity",
   "connections_tab"
  ],
@@ -126,10 +127,9 @@
    "options": "fa fa-user"
   },
   {
-   "default": "{supplier_name}",
+   "allow_on_submit": 1,
    "fieldname": "title",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Title",
    "no_copy": 1,
    "print_hide": 1,
@@ -229,7 +229,7 @@
   },
   {
    "fieldname": "address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Address",
    "read_only": 1
   },
@@ -736,11 +736,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "subscription_section",
-   "fieldtype": "Section Break",
-   "label": "Auto Repeat"
-  },
-  {
    "fieldname": "auto_repeat",
    "fieldtype": "Link",
    "label": "Auto Repeat",
@@ -861,12 +856,12 @@
    "print_hide": 1
   },
   {
-    "fieldname": "column_break_zjaq",
-    "fieldtype": "Column Break"
+   "fieldname": "column_break_zjaq",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "shipping_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Shipping Address Details",
    "print_hide": 1,
    "read_only": 1
@@ -898,7 +893,7 @@
   },
   {
    "fieldname": "billing_address_display",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "label": "Billing Address Details",
    "read_only": 1
   },
@@ -930,6 +925,20 @@
    "hidden": 1,
    "label": "Has Unit Price Items",
    "no_copy": 1
+  },
+  {
+   "fieldname": "item_wise_tax_details",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Item Wise Tax Details",
+   "no_copy": 1,
+   "options": "Item Wise Tax Detail",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "auto_repeat_section",
+   "fieldtype": "Section Break",
+   "label": "Auto Repeat"
   }
  ],
  "grid_page_length": 50,
@@ -938,7 +947,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-03 17:39:38.459977",
+ "modified": "2026-05-28 12:29:37.509487",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Supplier Quotation",
@@ -1002,9 +1011,9 @@
  "row_format": "Dynamic",
  "search_fields": "status, transaction_date, supplier,grand_total",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "timeline_field": "supplier",
- "title_field": "title"
+ "title_field": "supplier_name"
 }

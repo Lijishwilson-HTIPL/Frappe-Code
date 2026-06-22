@@ -152,8 +152,17 @@ frappe.palette = [
 	["--red-avatar-bg", "--red-avatar-color"],
 	["--yellow-avatar-bg", "--yellow-avatar-color"],
 	["--purple-avatar-bg", "--purple-avatar-color"],
-	["--gray-avatar-bg", "--gray-avatar-color0"],
+	["--gray-avatar-bg", "--gray-avatar-color"],
 ];
+
+function process_palette() {
+	frappe.palette.forEach((color, index) => {
+		let color_name = color[0].split("-")[2];
+		frappe.palette_map[color_name] = index;
+	});
+}
+frappe.palette_map = {};
+process_palette();
 
 frappe.get_palette = function (txt) {
 	if (!txt) return frappe.palette[8]; // breaks when undefined
@@ -176,17 +185,6 @@ frappe.get_abbr = function (txt, max_length) {
 	});
 
 	return abbr || "?";
-};
-
-frappe.gravatars = {};
-frappe.get_gravatar = function (email_id, size = 0) {
-	var param = size ? "s=" + size : "d=retro";
-	if (!frappe.gravatars[email_id]) {
-		// TODO: check if gravatar exists
-		frappe.gravatars[email_id] =
-			"https://secure.gravatar.com/avatar/" + md5(email_id) + "?" + param;
-	}
-	return frappe.gravatars[email_id];
 };
 
 // string commons
@@ -271,11 +269,11 @@ frappe.get_cookies = function getCookies() {
 };
 
 frappe.is_mobile = function () {
-	return $(document).width() < 768;
+	return window.innerWidth < 768;
 };
 
 frappe.is_large_screen = function () {
-	return $(document).height() > 1180;
+	return window.innerHeight > 1180;
 };
 
 frappe.utils.xss_sanitise = function (string, options) {

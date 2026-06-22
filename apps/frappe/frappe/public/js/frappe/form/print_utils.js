@@ -3,7 +3,8 @@ frappe.ui.get_print_settings = function (
 	callback,
 	letter_head,
 	pick_columns,
-	has_filters = false
+	has_filters = false,
+	title = null
 ) {
 	var print_settings = locals[":Print Settings"]["Print Settings"];
 
@@ -110,8 +111,12 @@ frappe.ui.get_print_settings = function (
 			}
 
 			callback(settings);
+			// clean up print format to avoid affecting next print
+			if (settings.print_format) {
+				settings.print_format = null;
+			}
 		},
-		__("Print Settings")
+		title ? __(title) : __("Print Settings")
 	);
 };
 
@@ -246,7 +251,7 @@ frappe.ui.form.qz_fail = function (e) {
 	// notify qz errors
 	frappe.show_alert(
 		{
-			message: __("QZ Tray Failed: ") + e.toString(),
+			message: __("QZ Tray Failed:") + " " + e.toString(),
 			indicator: "red",
 		},
 		20

@@ -4,10 +4,11 @@
 
 import frappe
 from frappe import _
+from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder.functions import Sum
-from frappe.utils import cstr, flt, get_link_to_form
+from frappe.utils import cstr, flt, get_link_to_form, today
 
 import erpnext
 from erpnext.accounts.doctype.repost_accounting_ledger.repost_accounting_ledger import (
@@ -15,6 +16,10 @@ from erpnext.accounts.doctype.repost_accounting_ledger.repost_accounting_ledger 
 )
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
 from erpnext.accounts.general_ledger import make_gl_entries
+from erpnext.accounts.utils import (
+	create_gain_loss_journal,
+	unlink_ref_doc_from_payment_entries,
+)
 from erpnext.controllers.accounts_controller import AccountsController
 
 import hrms
@@ -36,9 +41,6 @@ class MismatchError(frappe.ValidationError):
 
 class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def onload(self):
-		self.get("__onload").make_payment_via_journal_entry = frappe.db.get_single_value(
-			"Accounts Settings", "make_payment_via_journal_entry"
-		)
 		self.set_onload(
 			"self_expense_approval_not_allowed",
 			frappe.db.get_single_value("HR Settings", "prevent_self_expense_approval"),
@@ -60,6 +62,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.validate_company_and_department()
 		if self.task and not self.project:
 			self.project = frappe.db.get_value("Task", self.task, "project")
+
+		if flt(self.grand_total) > 0 and self.total_advance_amount:
+			self.is_paid = 0
 
 	def set_status(self, update=False):
 		status = {"0": "Draft", "1": "Submitted", "2": "Cancelled"}[cstr(self.docstatus or 0)]
@@ -123,6 +128,10 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 	def after_delete(self):
 		self.publish_update()
 
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
+		self.db_set("approval_status", "Cancelled")
+
 	def before_submit(self):
 		if not self.payable_account and not self.is_paid:
 			frappe.throw(_("Payable Account is mandatory to submit an Expense Claim"))
@@ -140,10 +149,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 		self.update_task_and_project()
 		self.make_gl_entries()
-
 		update_reimbursed_amount(self)
-
 		self.update_claimed_amount_in_employee_advance()
+		self.create_exchange_gain_loss_je()
 
 	def on_update_after_submit(self):
 		if self.check_if_fields_updated([], {"taxes": ("account_head",), "expenses": ()}):
@@ -152,7 +160,12 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def on_cancel(self):
 		self.update_task_and_project()
-		self.ignore_linked_doctypes = ("GL Entry", "Stock Ledger Entry", "Payment Ledger Entry")
+		self.ignore_linked_doctypes = (
+			"GL Entry",
+			"Stock Ledger Entry",
+			"Payment Ledger Entry",
+			"Advance Payment Ledger Entry",
+		)
 		if self.payable_account:
 			self.make_gl_entries(cancel=True)
 
@@ -160,6 +173,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 		self.update_claimed_amount_in_employee_advance()
 		self.publish_update()
+		unlink_ref_doc_from_payment_entries(self)
 
 	def update_claimed_amount_in_employee_advance(self):
 		for d in self.get("advances"):
@@ -199,8 +213,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				self.get_gl_dict(
 					{
 						"account": self.payable_account,
-						"credit": self.grand_total,
+						"credit": self.base_grand_total,
 						"credit_in_account_currency": self.grand_total,
+						"credit_in_transaction_currency": self.grand_total,
 						"against": ",".join([d.default_account for d in self.expenses]),
 						"party_type": "Employee",
 						"party": self.employee,
@@ -208,7 +223,9 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 						"against_voucher": self.name,
 						"cost_center": self.cost_center,
 						"project": self.project,
+						"transaction_exchange_rate": self.exchange_rate,
 					},
+					account_currency=self.currency,
 					item=self,
 				)
 			)
@@ -219,33 +236,43 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				self.get_gl_dict(
 					{
 						"account": data.default_account,
-						"debit": data.sanctioned_amount,
+						"debit": data.base_sanctioned_amount,
 						"debit_in_account_currency": data.sanctioned_amount,
+						"debit_in_transaction_currency": data.sanctioned_amount,
 						"against": self.employee,
 						"cost_center": data.cost_center or self.cost_center,
 						"project": data.project or self.project,
+						"transaction_exchange_rate": self.exchange_rate,
 					},
+					account_currency=self.currency,
 					item=data,
 				)
 			)
 
+		# gl entry against advance
 		for data in self.advances:
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": data.advance_account,
-						"credit": data.allocated_amount,
-						"credit_in_account_currency": data.allocated_amount,
-						"against": ",".join([d.default_account for d in self.expenses]),
-						"party_type": "Employee",
-						"party": self.employee,
-						"against_voucher_type": "Employee Advance",
-						"against_voucher": data.employee_advance,
-						"cost_center": self.cost_center,
-						"project": self.project,
-					}
+			if data.allocated_amount:
+				gl_entry.append(
+					self.get_gl_dict(
+						{
+							"account": data.advance_account,
+							"credit": data.base_allocated_amount,
+							"credit_in_account_currency": data.allocated_amount,
+							"credit_in_transaction_currency": data.allocated_amount,
+							"against": ",".join([d.default_account for d in self.expenses]),
+							"party_type": "Employee",
+							"party": self.employee,
+							"against_voucher_type": data.reference_type,
+							"against_voucher": data.reference_name,
+							"advance_voucher_type": data.reference_type,
+							"advance_voucher_no": data.reference_name,
+							"transaction_exchange_rate": self.exchange_rate,
+							"cost_center": self.cost_center,
+							"project": self.project,
+						},
+						account_currency=self.currency,
+					)
 				)
-			)
 
 		self.add_tax_gl_entries(gl_entry)
 
@@ -256,12 +283,15 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				self.get_gl_dict(
 					{
 						"account": payment_account,
-						"credit": self.grand_total,
+						"credit": self.base_grand_total,
 						"credit_in_account_currency": self.grand_total,
+						"credit_in_transaction_currency": self.grand_total,
 						"against": self.employee,
+						"transaction_exchange_rate": self.exchange_rate,
 						"cost_center": self.cost_center,
 						"project": self.project,
 					},
+					account_currency=self.currency,
 					item=self,
 				)
 			)
@@ -273,13 +303,16 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 						"party_type": "Employee",
 						"party": self.employee,
 						"against": payment_account,
-						"debit": self.grand_total,
+						"debit": self.base_grand_total,
 						"debit_in_account_currency": self.grand_total,
+						"debit_in_transaction_currency": self.grand_total,
 						"against_voucher": self.name,
 						"against_voucher_type": self.doctype,
+						"transaction_exchange_rate": self.exchange_rate,
 						"cost_center": self.cost_center,
 						"project": self.project,
 					},
+					account_currency=self.currency,
 					item=self,
 				)
 			)
@@ -293,14 +326,17 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				self.get_gl_dict(
 					{
 						"account": tax.account_head,
-						"debit": tax.tax_amount,
+						"debit": tax.base_tax_amount,
 						"debit_in_account_currency": tax.tax_amount,
+						"debit_in_transaction_currency": tax.tax_amount,
 						"against": self.employee,
 						"cost_center": tax.cost_center or self.cost_center,
 						"project": tax.project or self.project,
 						"against_voucher_type": self.doctype,
 						"against_voucher": self.name,
+						"transaction_exchange_rate": self.exchange_rate,
 					},
+					account_currency=self.currency,
 					item=tax,
 				)
 			)
@@ -324,6 +360,62 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				if row.meta.get_field(field):
 					if not row.get(field) and dim.mandatory_for_pl:
 						row.set(field, dim.default_dimension)
+
+	def create_exchange_gain_loss_je(self):
+		if not self.advances:
+			return
+
+		per_advance_gain_loss = 0
+		total_advance_exchange_gain_loss = 0
+		for advance in self.advances:
+			if advance.base_allocated_amount and self.base_total_advance_amount:
+				allocated_amount_in_adv_exchange_rate = flt(advance.allocated_amount) * flt(
+					advance.exchange_rate
+				)
+				per_advance_gain_loss += flt(
+					(advance.base_allocated_amount - allocated_amount_in_adv_exchange_rate),
+					self.precision("total_exchange_gain_loss"),
+				)
+
+				if per_advance_gain_loss:
+					advance.db_set("exchange_gain_loss", per_advance_gain_loss)
+					total_advance_exchange_gain_loss += per_advance_gain_loss
+		if total_advance_exchange_gain_loss:
+			gain_loss_account = frappe.get_cached_value("Company", self.company, "exchange_gain_loss_account")
+			self.db_set(
+				{
+					"total_exchange_gain_loss": total_advance_exchange_gain_loss,
+					"gain_loss_account": gain_loss_account,
+				}
+			)
+			dr_or_cr = "credit" if self.total_exchange_gain_loss > 0 else "debit"
+			reverse_dr_or_cr = "debit" if dr_or_cr == "credit" else "credit"
+
+			je = create_gain_loss_journal(
+				company=self.company,
+				posting_date=today(),
+				party_type="Employee",
+				party=self.employee,
+				party_account=self.payable_account,
+				gain_loss_account=self.gain_loss_account,
+				exc_gain_loss=self.total_exchange_gain_loss,
+				dr_or_cr=dr_or_cr,
+				reverse_dr_or_cr=reverse_dr_or_cr,
+				ref1_dt=self.doctype,
+				ref1_dn=self.name,
+				ref1_detail_no=1,
+				ref2_dt=self.doctype,
+				ref2_dn=self.name,
+				ref2_detail_no=1,
+				cost_center=self.cost_center,
+				dimensions={},
+			)
+			frappe.msgprint(
+				_("All Exchange Gain/Loss amount of {0} has been booked through {1}").format(
+					self.name,
+					get_link_to_form("Journal Entry", je),
+				)
+			)
 
 	def validate_account_details(self):
 		for data in self.expenses:
@@ -350,8 +442,19 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 			self.total_claimed_amount += flt(d.amount)
 			self.total_sanctioned_amount += flt(d.sanctioned_amount)
+			self.set_base_fields_amount(d, ["amount", "sanctioned_amount"])
 
-		self.round_floats_in(self, ["total_claimed_amount", "total_sanctioned_amount"])
+		self.set_base_fields_amount(self, ["total_sanctioned_amount", "total_claimed_amount"])
+
+	def set_base_fields_amount(self, doc, fields, exchange_rate=None):
+		"""set values in base currency"""
+		for f in fields:
+			val = flt(
+				flt(doc.get(f), doc.precision(f))
+				* flt(exchange_rate if exchange_rate else self.exchange_rate),
+				doc.precision("base_" + f),
+			)
+			doc.set("base_" + f, val)
 
 	@frappe.whitelist()
 	def calculate_taxes(self):
@@ -367,6 +470,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 			tax.total = flt(tax.tax_amount) + flt(self.total_sanctioned_amount)
 			self.total_taxes_and_charges += flt(tax.tax_amount)
+			self.set_base_fields_amount(tax, ["tax_amount", "total"])
 
 		self.round_floats_in(self, ["total_taxes_and_charges"])
 
@@ -376,36 +480,18 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			- flt(self.total_advance_amount)
 		)
 		self.round_floats_in(self, ["grand_total"])
+		self.set_base_fields_amount(self, ["grand_total"])
 
 	def validate_advances(self):
 		self.total_advance_amount = 0
 		precision = self.precision("total_advance_amount")
 
 		for d in self.get("advances"):
-			self.round_floats_in(d)
-
-			ref_doc = frappe.db.get_value(
-				"Employee Advance",
-				d.employee_advance,
-				[
-					"employee",
-					"posting_date",
-					"paid_amount",
-					"claimed_amount",
-					"return_amount",
-					"advance_account",
-				],
-				as_dict=1,
-			)
-
-			if self.employee != ref_doc.employee:
+			advance_employee = frappe.db.get_value("Employee Advance", d.employee_advance, "employee")
+			if self.employee != advance_employee:
 				frappe.throw(_("Selected employee advance is not of employee {}").format(self.employee))
 
-			d.posting_date = ref_doc.posting_date
-			d.advance_account = ref_doc.advance_account
-			d.advance_paid = ref_doc.paid_amount
-			d.unclaimed_amount = flt(ref_doc.paid_amount) - flt(ref_doc.claimed_amount)
-
+			self.round_floats_in(d)
 			if d.allocated_amount and flt(d.allocated_amount) > flt(
 				flt(d.unclaimed_amount) - flt(d.return_amount), precision
 			):
@@ -416,6 +502,8 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				)
 
 			self.total_advance_amount += flt(d.allocated_amount)
+			self.set_base_fields_amount(d, ["advance_paid", "unclaimed_amount"], d.exchange_rate)
+			self.set_base_fields_amount(d, ["allocated_amount"])
 
 		if self.total_advance_amount:
 			self.round_floats_in(self, ["total_advance_amount"])
@@ -423,6 +511,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 				(flt(self.total_sanctioned_amount, precision) + flt(self.total_taxes_and_charges, precision)),
 				precision,
 			)
+			self.set_base_fields_amount(self, ["total_advance_amount"])
 
 			if flt(self.total_advance_amount, precision) > amount_with_taxes:
 				frappe.throw(_("Total advance amount cannot be greater than total sanctioned amount"))
@@ -456,14 +545,23 @@ def get_total_reimbursed_amount(doc):
 		# No need to check for cancelled state here as it will anyways update status as cancelled
 		return doc.grand_total
 	else:
+		JournalEntryAccount = frappe.qb.DocType("Journal Entry Account")
 		amount_via_jv = frappe.db.get_value(
 			"Journal Entry Account",
 			{"reference_name": doc.name, "docstatus": 1},
-			"sum(debit_in_account_currency - credit_in_account_currency)",
+			Sum(
+				JournalEntryAccount.debit_in_account_currency - JournalEntryAccount.credit_in_account_currency
+			),
 		)
 
 		amount_via_payment_entry = frappe.db.get_value(
-			"Payment Entry Reference", {"reference_name": doc.name, "docstatus": 1}, "sum(allocated_amount)"
+			"Payment Entry Reference",
+			{
+				"reference_name": doc.name,
+				"advance_voucher_type": None,
+				"docstatus": 1,
+			},
+			[{"SUM": "allocated_amount"}],
 		)
 
 		return flt(amount_via_jv) + flt(amount_via_payment_entry)
@@ -496,51 +594,7 @@ def get_outstanding_amount_for_claim(claim):
 
 
 @frappe.whitelist()
-def make_bank_entry(dt, dn):
-	from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
-
-	expense_claim = frappe.get_doc(dt, dn)
-	default_bank_cash_account = get_default_bank_cash_account(expense_claim.company, "Bank")
-	if not default_bank_cash_account:
-		default_bank_cash_account = get_default_bank_cash_account(expense_claim.company, "Cash")
-
-	payable_amount = get_outstanding_amount_for_claim(expense_claim)
-
-	je = frappe.new_doc("Journal Entry")
-	je.voucher_type = "Bank Entry"
-	je.company = expense_claim.company
-	je.remark = "Payment against Expense Claim: " + dn
-
-	je.append(
-		"accounts",
-		{
-			"account": expense_claim.payable_account,
-			"debit_in_account_currency": payable_amount,
-			"reference_type": "Expense Claim",
-			"party_type": "Employee",
-			"party": expense_claim.employee,
-			"cost_center": erpnext.get_default_cost_center(expense_claim.company),
-			"reference_name": expense_claim.name,
-		},
-	)
-
-	je.append(
-		"accounts",
-		{
-			"account": default_bank_cash_account.account,
-			"credit_in_account_currency": payable_amount,
-			"balance": default_bank_cash_account.balance,
-			"account_currency": default_bank_cash_account.account_currency,
-			"cost_center": erpnext.get_default_cost_center(expense_claim.company),
-			"account_type": default_bank_cash_account.account_type,
-		},
-	)
-
-	return je.as_dict()
-
-
-@frappe.whitelist()
-def get_expense_claim_account_and_cost_center(expense_claim_type, company):
+def get_expense_claim_account_and_cost_center(expense_claim_type: str, company: str) -> dict:
 	data = get_expense_claim_account(expense_claim_type, company)
 	cost_center = erpnext.get_default_cost_center(company)
 
@@ -548,7 +602,7 @@ def get_expense_claim_account_and_cost_center(expense_claim_type, company):
 
 
 @frappe.whitelist()
-def get_expense_claim_account(expense_claim_type, company):
+def get_expense_claim_account(expense_claim_type: str, company: str) -> dict:
 	account = frappe.db.get_value(
 		"Expense Claim Account", {"parent": expense_claim_type, "company": company}, "default_account"
 	)
@@ -564,7 +618,14 @@ def get_expense_claim_account(expense_claim_type, company):
 
 
 @frappe.whitelist()
-def get_advances(employee: str, advance_id: str | None = None):
+def get_advances(expense_claim: str | dict | Document, advance_id: str | None = None):
+	import json
+
+	if isinstance(expense_claim, str):
+		expense_claim = frappe._dict(json.loads(expense_claim))
+	expense_claim_doc = frappe.get_doc(expense_claim)
+	expense_claim_doc.advances = []
+
 	advance = frappe.qb.DocType("Employee Advance")
 
 	query = frappe.qb.from_(advance).select(
@@ -580,20 +641,26 @@ def get_advances(employee: str, advance_id: str | None = None):
 	if not advance_id:
 		query = query.where(
 			(advance.docstatus == 1)
-			& (advance.employee == employee)
+			& (advance.employee == expense_claim_doc.employee)
 			& (advance.paid_amount > 0)
 			& (advance.status.notin(["Claimed", "Returned", "Partly Claimed and Returned"]))
 		)
 	else:
-		query = query.where((advance.name == advance_id) & (advance.employee == employee))
+		query = query.where((advance.name == advance_id) & (advance.employee == expense_claim_doc.employee))
 
-	return query.run(as_dict=True)
+	advances = query.run(as_dict=True)
+
+	for advance in advances:
+		get_expense_claim_advances(expense_claim_doc, advance)
+	return expense_claim_doc.advances
 
 
 @frappe.whitelist()
-def get_expense_claim(
-	employee_name, company, employee_advance_name, posting_date, paid_amount, claimed_amount, return_amount
-):
+def get_expense_claim(employee_advance: str | dict) -> Document:
+	if isinstance(employee_advance, str):
+		employee_advance = frappe.get_doc("Employee Advance", employee_advance)
+
+	company = employee_advance.company
 	default_payable_account = frappe.get_cached_value(
 		"Company", company, "default_expense_claim_payable_account"
 	)
@@ -601,25 +668,85 @@ def get_expense_claim(
 
 	expense_claim = frappe.new_doc("Expense Claim")
 	expense_claim.company = company
-	expense_claim.employee = employee_name
-	expense_claim.payable_account = default_payable_account
+	expense_claim.currency = employee_advance.currency
+	expense_claim.employee = employee_advance.employee
+	expense_claim.payable_account = (
+		default_payable_account
+		if employee_advance.currency == erpnext.get_company_currency(company)
+		else None
+	)
 	expense_claim.cost_center = default_cost_center
-	expense_claim.is_paid = 1 if flt(paid_amount) else 0
-	expense_claim.append(
-		"advances",
-		{
-			"employee_advance": employee_advance_name,
-			"posting_date": posting_date,
-			"advance_paid": flt(paid_amount),
-			"unclaimed_amount": flt(paid_amount) - flt(claimed_amount),
-			"allocated_amount": get_allocation_amount(
-				paid_amount=(paid_amount), claimed_amount=(claimed_amount), return_amount=(return_amount)
-			),
-			"return_amount": flt(return_amount),
+	expense_claim.is_paid = 1 if flt(employee_advance.paid_amount) else 0
+	get_expense_claim_advances(expense_claim, employee_advance)
+	return expense_claim
+
+
+def get_expense_claim_advances(expense_claim, employee_advance):
+	advance_payments = frappe.get_all(
+		"Advance Payment Ledger Entry",
+		filters={
+			"company": expense_claim.company,
+			"against_voucher_type": "Employee Advance",
+			"against_voucher_no": employee_advance.name,
+			"event": "Submit",
+			"delinked": False,
 		},
+		fields=["voucher_type", "voucher_no", "amount", "base_amount", "exchange_rate", "creation"],
 	)
 
-	return expense_claim
+	if not advance_payments:
+		return
+
+	advance_payments.sort(key=lambda x: x.get("creation"))
+	advance_payment_voucher_nos = [payment["voucher_no"] for payment in advance_payments]
+
+	claimed_payments = frappe.get_all(
+		"Advance Payment Ledger Entry",
+		filters={
+			"company": expense_claim.company,
+			"event": "Adjustment",
+			"against_voucher_no": ["in", advance_payment_voucher_nos],
+			"delinked": False,
+		},
+		fields=[
+			"against_voucher_type",
+			"against_voucher_no",
+			"amount",
+		],
+	)
+
+	adjustment_map = {}
+	for adjustment_entry in claimed_payments:
+		payment_reference = (adjustment_entry["against_voucher_type"], adjustment_entry["against_voucher_no"])
+		adjustment_map[payment_reference] = adjustment_map.get(payment_reference, 0) + abs(
+			adjustment_entry["amount"]
+		)
+
+	for advance in advance_payments:
+		paid_amount = flt(advance["amount"])
+		claimed_amount = adjustment_map.get((advance["voucher_type"], advance["voucher_no"]), 0)
+		unclaimed_amount = paid_amount - claimed_amount
+		return_amount = flt(employee_advance.return_amount)
+		allocated_amount = get_allocation_amount(
+			paid_amount=(paid_amount), claimed_amount=(claimed_amount), return_amount=(return_amount)
+		)
+
+		expense_claim.append(
+			"advances",
+			{
+				"advance_account": employee_advance.advance_account,
+				"employee_advance": employee_advance.name,
+				"posting_date": employee_advance.posting_date,
+				"advance_paid": paid_amount,
+				"base_advance_paid": flt(advance["base_amount"]),
+				"unclaimed_amount": unclaimed_amount,
+				"allocated_amount": allocated_amount,
+				"return_amount": return_amount,
+				"exchange_rate": advance["exchange_rate"],
+				"reference_type": advance["voucher_type"],
+				"reference_name": advance["voucher_no"],
+			},
+		)
 
 
 def update_payment_for_expense_claim(doc, method=None):
@@ -656,10 +783,13 @@ def update_outstanding_amount_in_payment_entry(expense_claim: dict, pe_reference
 
 def validate_expense_claim_in_jv(doc, method=None):
 	"""Validates Expense Claim amount in Journal Entry"""
+	if doc.voucher_type == "Exchange Gain Or Loss":
+		return
+
 	for d in doc.accounts:
 		if d.reference_type == "Expense Claim":
 			outstanding_amt = get_outstanding_amount_for_claim(d.reference_name)
-			if d.debit > outstanding_amt:
+			if d.debit and (d.debit > outstanding_amt):
 				frappe.throw(
 					_(
 						"Row No {0}: Amount cannot be greater than the Outstanding Amount against Expense Claim {1}. Outstanding Amount is {2}"
@@ -668,7 +798,9 @@ def validate_expense_claim_in_jv(doc, method=None):
 
 
 @frappe.whitelist()
-def make_expense_claim_for_delivery_trip(source_name, target_doc=None):
+def make_expense_claim_for_delivery_trip(
+	source_name: str, target_doc: str | Document | None = None
+) -> Document:
 	doc = get_mapped_doc(
 		"Delivery Trip",
 		source_name,
@@ -680,7 +812,12 @@ def make_expense_claim_for_delivery_trip(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def get_allocation_amount(paid_amount=None, claimed_amount=None, return_amount=None, unclaimed_amount=None):
+def get_allocation_amount(
+	paid_amount: str | float | None = None,
+	claimed_amount: str | float | None = None,
+	return_amount: str | float | None = None,
+	unclaimed_amount: str | float | None = None,
+) -> float | None:
 	if unclaimed_amount is not None and return_amount is not None:
 		return flt(unclaimed_amount) - flt(return_amount)
 	elif paid_amount is not None and claimed_amount is not None and return_amount is not None:

@@ -3,12 +3,11 @@
 
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, get_year_ending, get_year_start, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_application.test_leave_application import make_allocation_record
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import process_expired_allocation
 from hrms.hr.report.employee_leave_balance_summary.employee_leave_balance_summary import execute
@@ -17,11 +16,12 @@ from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 	make_leave_application,
 )
 from hrms.tests.test_utils import get_first_sunday
+from hrms.tests.utils import HRMSTestSuite
 
 test_records = frappe.get_test_records("Leave Type")
 
 
-class TestEmployeeLeaveBalance(FrappeTestCase):
+class TestEmployeeLeaveBalance(HRMSTestSuite):
 	def setUp(self):
 		for dt in [
 			"Leave Application",
@@ -44,10 +44,7 @@ class TestEmployeeLeaveBalance(FrappeTestCase):
 			"_Test Emp Balance Holiday List", self.year_start, self.year_end
 		)
 
-	def tearDown(self):
-		frappe.db.rollback()
-
-	@set_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
+	@assign_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
 	def test_employee_leave_balance_summary(self):
 		frappe.get_doc(test_records[0]).insert()
 
@@ -111,7 +108,7 @@ class TestEmployeeLeaveBalance(FrappeTestCase):
 
 		self.assertEqual(report[1], expected_data)
 
-	@set_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
+	@assign_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
 	def test_get_leave_balance_near_alloc_expiry(self):
 		frappe.get_doc(test_records[0]).insert()
 
@@ -144,7 +141,7 @@ class TestEmployeeLeaveBalance(FrappeTestCase):
 
 		self.assertEqual(report[1], expected_data)
 
-	@set_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
+	@assign_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
 	def test_employee_status_filter(self):
 		frappe.get_doc(test_records[0]).insert()
 

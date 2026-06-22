@@ -1,13 +1,20 @@
 <template>
   <!-- View Controls -->
   <div
-    class="flex items-center justify-between gap-2 px-5 pb-4 pt-3 pl-6"
+    :class="[
+      'flex items-center justify-between gap-2 px-5 pb-4 pt-3 ',
+      list?.data?.data?.length > 0 ? 'relative' : 'absolute w-[stretch]',
+    ]"
     v-if="showViewControls"
   >
-    <QuickFilters v-if="!isMobileView" class="flex-1" />
-    <div class="flex items-start gap-2 justify-end h-full" v-if="!isMobileView">
+    <QuickFilters v-if="!isMobileView" />
+    <div v-if="!isMobileView" class="-ml-2 h-5 border-l"></div>
+    <div
+      class="flex items-start gap-2 justify-end h-full py-1 pl-0.5"
+      v-if="!isMobileView"
+    >
       <Button
-        label="Save Changes"
+        :label="__('Save Changes')"
         v-if="isViewUpdated && canSaveView"
         @click="handleViewUpdate"
       />
@@ -28,9 +35,16 @@
     </div>
   </div>
 
+  <!-- Loading State -->
+  <div
+    v-if="list.loading && !list.data?.data?.length"
+    class="flex items-center justify-center h-full w-full absolute top-0 z-100"
+  >
+    <LoadingIndicator :scale="8" />
+  </div>
   <!-- List View -->
   <ListView
-    v-if="list.data?.data.length > 0"
+    v-else-if="list.data?.data.length > 0"
     class="flex-1"
     :columns="columns"
     :rows="rows"
@@ -38,7 +52,7 @@
     :options="{
       selectable: options.selectable,
       showTooltip: false,
-      resizeColumn: false,
+      resizeColumn: true,
       getRowRoute: (row) => ({
         name: options.rowRoute?.name,
         params: { [options.rowRoute?.prop]: row.name },
@@ -52,7 +66,7 @@
         v-for="column in columns"
         :key="column.key"
         :item="column"
-        @columnWidthUpdated="(width) => console.log(width)"
+        @columnWidthUpdated="handleColumnResize"
       />
     </ListHeader>
     <ListRows
@@ -73,7 +87,7 @@
     <ListSelectBanner v-if="options.showSelectBanner">
       <template #actions="{ selections, unselectAll }">
         <Dropdown :options="selectBannerOptions(selections, unselectAll)">
-          <Button icon="more-horizontal" variant="ghost" />
+          <Button icon="lucide-more-horizontal" variant="ghost" />
         </Dropdown>
       </template>
     </ListSelectBanner>
@@ -99,19 +113,12 @@
       "
     />
   </div>
-  <!-- Loading State -->
-  <div
-    v-else-if="list.loading"
-    class="w-full h-full flex items-center justify-center -mt-48"
-  >
-    <LoadingIndicator :scale="10" />
-  </div>
   <!-- Empty State -->
   <EmptyState
-    v-else
+    v-else-if="!list.loading"
     :title="emptyState.title"
     :icon="emptyState.icon"
-    @emptyStateAction="emit('emptyStateAction')"
+    :description="emptyState.description"
   />
 </template>
 
@@ -136,13 +143,13 @@ import { capture } from "@/telemetry";
 import { View, ViewType } from "@/types";
 import { formatTimeShort, getIcon } from "@/utils";
 import { useStorage } from "@vueuse/core";
-
 import { useTicketStatusStore } from "@/stores/ticketStatus";
+import { __ } from "@/translation";
 import {
-  call,
   createResource,
   Dropdown,
   FeatherIcon,
+  frappeRequest,
   ListFooter,
   ListHeader,
   ListHeaderItem,
@@ -150,6 +157,7 @@ import {
   ListSelectBanner,
   ListView,
   LoadingIndicator,
+  dayjs,
   toast,
 } from "frappe-ui";
 import {
@@ -163,6 +171,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+
 import EmptyState from "./EmptyState.vue";
 import ListRows from "./ListRows.vue";
 
@@ -175,6 +184,7 @@ interface P {
       // type of a h componnt
       icon?: string | VNode;
       title: string;
+      description?: string;
     };
     hideViewControls?: boolean;
     hideColumnSetting?: boolean;
@@ -190,7 +200,6 @@ interface P {
 }
 
 interface E {
-  (event: "emptyStateAction"): void;
   (event: "rowClick", row: any): void;
 }
 const props = defineProps<P>();
@@ -198,7 +207,7 @@ const emit = defineEmits<E>();
 const route = useRoute();
 const router = useRouter();
 const { isManager } = useAuthStore();
-const { $dialog } = globalStore();
+const { $dialog, $socket } = globalStore();
 const { getStatus } = useTicketStatusStore();
 
 const listSelections = ref(new Set());
@@ -221,16 +230,20 @@ const defaultOptions = reactive({
   },
   selectBannerActions: [
     {
-      label: "Delete",
-      icon: "trash-2",
+      label: __("Delete"),
+      icon: "lucide-trash-2",
       onClick: (selections: Set<string>) => {
         $dialog({
-          title: "Delete",
-          message: `Are you sure you want to delete ${selections.size} item(s)?`,
+          title: __("Delete"),
+          message: __("Are you sure you want to delete {0} item(s)?", [
+            selections.size,
+          ]),
           actions: [
             {
-              label: "Confirm",
+              label: __("Delete"),
               variant: "solid",
+              theme: "red",
+              iconLeft: "trash-2",
               onClick({ close }) {
                 handleBulkDelete(close, selections);
               },
@@ -245,11 +258,69 @@ const defaultOptions = reactive({
 
 function handleBulkDelete(hide: Function, selections: Set<string>) {
   capture("bulk_delete" + props.options.doctype);
-  call("frappe.desk.reportview.delete_items", {
-    items: JSON.stringify(Array.from(selections)),
-    doctype: props.options.doctype,
-  }).then(() => {
-    toast.success("Item(s) deleted successfully");
+  const requested = Array.from(selections);
+  const requestedCount = requested.length;
+
+  const failureMessages: string[] = [];
+  let successMessage = "";
+  let failedCount = 0;
+
+  const onBulkResult = (data: { message: string; title: string }) => {
+    const isFailure =
+      data.title === __("Bulk Operation Failed") ||
+      data.title === "Bulk Operation Failed";
+    const isSuccess =
+      data.title === __("Bulk Operation Successful") ||
+      data.title === "Bulk Operation Successful";
+    if (!isFailure && !isSuccess) return;
+
+    if (isFailure) {
+      // Parse how many items failed from the message (Frappe includes the count)
+      const match = data.message.match(/Failed to delete (\d+) documents?/);
+      if (match) {
+        failedCount = parseInt(match[1], 10);
+      }
+      failureMessages.push(data.message);
+    } else {
+      successMessage = data.message;
+    }
+  };
+
+  $socket.on("msgprint", onBulkResult);
+
+  // Use frappeRequest (not `call`) so per-item delete errors surfaced in
+  // `_server_messages` get routed through the app's serverMessagesHandler.
+  // `call` silently drops them on 200 responses.
+  frappeRequest({
+    url: "frappe.desk.reportview.delete_items",
+    params: {
+      items: JSON.stringify(requested),
+      doctype: props.options.doctype,
+    },
+  }).finally(() => {
+    $socket.off("msgprint", onBulkResult);
+
+    const deletedCount = requestedCount - failedCount;
+
+    if (failureMessages.length > 0 && deletedCount > 0) {
+      // Partial success: some deleted, some failed — show both toasts
+      toast.success(__("{0} item(s) deleted successfully", [deletedCount]));
+      for (const msg of failureMessages) {
+        toast.error(msg);
+      }
+    } else if (failureMessages.length > 0) {
+      // All failed
+      for (const msg of failureMessages) {
+        toast.error(msg);
+      }
+    } else if (successMessage) {
+      // All succeeded
+      toast.success(successMessage);
+    } else {
+      // Fallback: no socket messages received (e.g. enqueued for >10 items)
+      toast.success(__("{0} item(s) queued for deletion", [requestedCount]));
+    }
+
     hide();
     reset();
   });
@@ -271,16 +342,21 @@ const { isMobileView } = useScreenSize();
 
 const defaultEmptyState = {
   icon: "",
-  title: "No Data Found",
+  title: __("No Data Found"),
 };
+
+const pageLengthCount = useStorage(
+  `list_page_length_count+${props.options.doctype}`,
+  options.value.default_page_length
+);
 
 const defaultParams = reactive({
   doctype: options.value.doctype,
   filters: {},
   default_filters: options.value.defaultFilters,
   order_by: "modified desc",
-  page_length: options.value.default_page_length,
-  page_length_count: options.value.default_page_length,
+  page_length: pageLengthCount.value,
+  page_length_count: pageLengthCount.value,
   view: options.value.view,
   columns: [],
   rows: [],
@@ -460,8 +536,8 @@ function listCell(column: any, row: any, item: any, idx: number) {
   if (column.type === "MultipleAvatar") {
     return h(MultipleAvatar, {
       avatars: item,
-      hideName: true,
-      class: "flex items-center truncate flex-1 flex-row-reverse justify-end",
+      hideName: false,
+      class: "flex items-center flex-1 min-w-0",
     });
   }
   if (column.type === "Rating") {
@@ -502,7 +578,10 @@ function handleFieldClick(e: MouseEvent, column, row, item) {
     } else {
       item = item[0].name;
     }
-    applyFilters({ ...defaultParams.filters, [column.key]: ["LIKE", item] });
+    applyFilters({
+      ...defaultParams.filters,
+      [column.key]: ["LIKE", `%${item}%`],
+    });
     return;
   }
   applyFilters({ ...defaultParams.filters, [column.key]: item });
@@ -548,6 +627,9 @@ function applySort(order_by: string) {
   isViewUpdated.value = true;
   defaultParams.order_by = order_by;
   list.submit({ ...defaultParams, order_by });
+  if (!defaultParams.is_default) return;
+  handleViewUpdate();
+  isViewUpdated.value = false;
 }
 
 function updateColumns(obj) {
@@ -567,7 +649,8 @@ function reload(reset: boolean = false) {
     defaultParams.filters = options.value.defaultFilters || {};
     defaultParams.order_by = "modified desc";
     defaultParams.page_length = options.value.default_page_length;
-    defaultParams.page_length_count = options.value.default_page_length;
+    pageLengthCount.value = options.value.default_page_length;
+    defaultParams.page_length_count = pageLengthCount.value;
     defaultParams.columns = [];
     defaultParams.rows = [];
     defaultParams.is_default = true;
@@ -576,7 +659,8 @@ function reload(reset: boolean = false) {
 }
 
 function handlePageLength(count: number, loadMore: boolean = false) {
-  defaultParams.page_length_count = count;
+  pageLengthCount.value = count;
+  defaultParams.page_length_count = pageLengthCount.value;
   if (loadMore) {
     defaultParams.page_length += count;
   } else {
@@ -603,15 +687,45 @@ function handleViewUpdate() {
     route_name: route.name,
     is_customer_portal: options.value.isCustomerPortal,
   };
-  updateView(view, () => {
-    isViewUpdated.value = false;
-  });
+  const currentView = findView(route.query.view as string).value;
+  if (currentView && currentView.public) {
+    $dialog({
+      title: __("Confirm Changes"),
+      message: __(
+        "This view is public. Changes made will be visible to everyone."
+      ),
+      actions: [
+        {
+          label: __("Save"),
+          variant: "solid",
+          onClick({ close }) {
+            updateView(view, () => {
+              isViewUpdated.value = false;
+            });
+            close();
+          },
+        },
+        {
+          label: __("Cancel"),
+          variant: "outline",
+          onClick({ close }) {
+            close();
+          },
+        },
+      ],
+    });
+  } else {
+    updateView(view, () => {
+      isViewUpdated.value = false;
+    });
+  }
 }
 
 const { findView, updateView, defaultView } = useView(options.value.doctype);
 
 const canSaveView = computed(() => {
   let currentView: View = findView(route.query.view as string).value;
+  if (currentView?.is_standard) return false;
   if (!currentView || !currentView.public) return true;
   if (currentView.public && isManager) {
     return true;
@@ -636,6 +750,20 @@ function handleViewChanges() {
   defaultParams.columns = currentView.columns;
   defaultParams.rows = currentView.rows;
 
+  if (route.query.filters) {
+    try {
+      const parsedFilters = JSON.parse(route.query.filters as string);
+      if (Object.keys(parsedFilters).length > 0) {
+        defaultParams.filters = {
+          ...defaultParams.filters,
+          ...parsedFilters,
+        };
+      }
+    } catch (e) {
+      console.error("Failed to parse filters from URL", e);
+    }
+  }
+
   list.submit({ ...defaultParams });
 }
 
@@ -657,8 +785,8 @@ watch(
     defaultParams.view.name = val;
     handleViewChanges();
     if (!val) {
-      headerView.value.label = "List";
-      headerView.value.icon = "lucide:align-justify";
+      headerView.value.label = __("List");
+      headerView.value.icon = LucideAlignJustify;
     }
   }
 );
@@ -678,6 +806,14 @@ function handleScrollPosition() {
   }, 200);
 }
 
+function handleColumnResize() {
+  isViewUpdated.value = true;
+  defaultParams.columns = columns.value;
+  if (!defaultParams.is_default) return;
+  handleViewUpdate();
+  isViewUpdated.value = false;
+}
+
 onMounted(async () => {
   handleScrollPosition();
 
@@ -691,7 +827,7 @@ onMounted(async () => {
     if (route.query.view) {
       const currentView = findCurrentView();
       if (!currentView) return;
-      headerView.value.label = currentView.label || "List";
+      headerView.value.label = currentView.label || __("List");
       headerView.value.icon = getIcon(currentView.icon);
     }
     return;

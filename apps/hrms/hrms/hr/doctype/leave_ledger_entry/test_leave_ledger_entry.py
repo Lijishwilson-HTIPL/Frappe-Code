@@ -2,15 +2,15 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils.data import add_to_date, today
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import expire_allocation
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestLeaveLedgerEntry(FrappeTestCase):
+class TestLeaveLedgerEntry(HRMSTestSuite):
 	def setUp(self):
 		emp_id = make_employee("test_leave_allocation@salary.com", company="_Test Company")
 		self.employee = frappe.get_doc("Employee", emp_id)
@@ -36,9 +36,3 @@ class TestLeaveLedgerEntry(FrappeTestCase):
 		allocation.reload()
 
 		self.assertEqual(allocation.expired, 1)
-
-	def tearDown(self):
-		frappe.db.rollback()
-
-
-test_dependencies = ["Employee", "Leave Type"]

@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from hrms.payroll.doctype.payroll_period.payroll_period import get_payroll_period
+from hrms.payroll.doctype.salary_structure.salary_structure import validate_max_benefit_for_flexible_benefit
 
 
 class DuplicateAssignment(frappe.ValidationError):
@@ -15,11 +16,46 @@ class DuplicateAssignment(frappe.ValidationError):
 
 
 class SalaryStructureAssignment(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		from hrms.payroll.doctype.employee_benefit_detail.employee_benefit_detail import EmployeeBenefitDetail
+		from hrms.payroll.doctype.employee_cost_center.employee_cost_center import EmployeeCostCenter
+
+		amended_from: DF.Link | None
+		base: DF.Currency
+		company: DF.Link
+		ctc: DF.Currency
+		currency: DF.Link
+		department: DF.Link | None
+		designation: DF.Link | None
+		employee: DF.Link
+		employee_benefits: DF.Table[EmployeeBenefitDetail]
+		employee_name: DF.Data | None
+		from_date: DF.Date
+		grade: DF.Link | None
+		income_tax_slab: DF.Link | None
+		leave_encashment_amount_per_day: DF.Currency
+		max_benefits: DF.Currency
+		payroll_cost_centers: DF.Table[EmployeeCostCenter]
+		payroll_payable_account: DF.Link | None
+		salary_structure: DF.Link
+		tax_deducted_till_date: DF.Currency
+		taxable_earnings_till_date: DF.Currency
+		variable: DF.Currency
+	# end: auto-generated types
+
 	def validate(self):
 		self.validate_dates()
 		self.validate_company()
 		self.validate_income_tax_slab()
 		self.set_payroll_payable_account()
+		validate_max_benefit_for_flexible_benefit(self.employee_benefits, self.max_benefits)
 
 		if not self.get("payroll_cost_centers"):
 			self.set_payroll_cost_centers()
@@ -112,7 +148,7 @@ class SalaryStructureAssignment(Document):
 			self.payroll_payable_account = payroll_payable_account
 
 	@frappe.whitelist()
-	def set_payroll_cost_centers(self):
+	def set_payroll_cost_centers(self) -> None:
 		self.payroll_cost_centers = []
 		default_payroll_cost_center = self.get_payroll_cost_center()
 		if default_payroll_cost_center:
@@ -153,9 +189,7 @@ class SalaryStructureAssignment(Document):
 			and not self.taxable_earnings_till_date
 			and not self.tax_deducted_till_date
 		):
-			msg = _("Could not find any salary slip(s) for the employee {0}").format(self.employee)
-			msg += "<br><br>"
-			msg += _(
+			msg = _(
 				"Please specify {0} and {1} (if any), for the correct tax calculation in future salary slips."
 			).format(
 				frappe.bold(_("Taxable Earnings Till Date")),
@@ -172,28 +206,35 @@ class SalaryStructureAssignment(Document):
 		if not get_tax_component(self.salary_structure):
 			return False
 
+		payroll_period = get_payroll_period(self.from_date, self.from_date, self.company)
+		if payroll_period and getdate(self.from_date) <= getdate(payroll_period.start_date):
+			return False
+
 		return True
 
 
 def get_assigned_salary_structure(employee, on_date):
 	if not employee or not on_date:
 		return None
-	salary_structure = frappe.db.sql(
-		"""
-		select salary_structure from `tabSalary Structure Assignment`
-		where employee=%(employee)s
-		and docstatus = 1
-		and %(on_date)s >= from_date order by from_date desc limit 1""",
-		{
-			"employee": employee,
-			"on_date": on_date,
-		},
+
+	salary_structure_assignment = frappe.qb.DocType("Salary Structure Assignment")
+
+	query = (
+		frappe.qb.from_(salary_structure_assignment)
+		.select(salary_structure_assignment.salary_structure)
+		.where(salary_structure_assignment.employee == employee)
+		.where(salary_structure_assignment.docstatus == 1)
+		.where(on_date >= salary_structure_assignment.from_date)
+		.orderby(salary_structure_assignment.from_date, order=frappe.qb.desc)
+		.limit(1)
 	)
-	return salary_structure[0][0] if salary_structure else None
+
+	result = query.run()
+	return result[0][0] if result else None
 
 
 @frappe.whitelist()
-def get_employee_currency(employee):
+def get_employee_currency(employee: str) -> str:
 	employee_currency = frappe.db.get_value("Salary Structure Assignment", {"employee": employee}, "currency")
 	if not employee_currency:
 		frappe.throw(

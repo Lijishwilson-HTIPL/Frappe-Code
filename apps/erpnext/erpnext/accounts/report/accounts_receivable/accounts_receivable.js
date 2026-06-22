@@ -37,6 +37,17 @@ frappe.query_reports["Accounts Receivable"] = {
 			options: "Cost Center",
 		},
 		{
+			fieldname: "project",
+			label: __("Project"),
+			fieldtype: "MultiSelectList",
+			options: "Project",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Project", txt, {
+					company: frappe.query_report.get_filter_value("company"),
+				});
+			},
+		},
+		{
 			fieldname: "party_type",
 			label: __("Party Type"),
 			fieldtype: "Autocomplete",
@@ -163,6 +174,11 @@ frappe.query_reports["Accounts Receivable"] = {
 			fieldtype: "Check",
 		},
 		{
+			fieldname: "in_party_currency",
+			label: __("In Party Currency"),
+			fieldtype: "Check",
+		},
+		{
 			fieldname: "for_revaluation_journals",
 			label: __("Revaluation Journals"),
 			fieldtype: "Check",
@@ -170,11 +186,6 @@ frappe.query_reports["Accounts Receivable"] = {
 		{
 			fieldname: "ignore_accounts",
 			label: __("Group by Voucher"),
-			fieldtype: "Check",
-		},
-		{
-			fieldname: "in_party_currency",
-			label: __("In Party Currency"),
 			fieldtype: "Check",
 		},
 	],

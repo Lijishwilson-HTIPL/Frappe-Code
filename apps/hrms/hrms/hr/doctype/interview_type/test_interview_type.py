@@ -2,8 +2,10 @@
 # See license.txt
 
 # import frappe
-from frappe.tests.utils import FrappeTestCase
+from hrms.tests.utils import HRMSTestSuite
+
+# import frappe
 
 
-class TestInterviewType(FrappeTestCase):
+class TestInterviewType(HRMSTestSuite):
 	pass

@@ -5,10 +5,11 @@ import json
 
 import frappe
 from frappe import _
+from frappe.custom.doctype.property_setter.property_setter import delete_property_setter
 from frappe.model import core_doctypes_list
 from frappe.model.docfield import supports_translation
 from frappe.model.document import Document
-from frappe.query_builder.functions import IfNull
+from frappe.query_builder import Field, functions
 from frappe.utils import cstr, random_string
 
 
@@ -23,7 +24,9 @@ class CustomField(Document):
 
 		allow_in_quick_entry: DF.Check
 		allow_on_submit: DF.Check
+		alignment: DF.Literal["", "Left", "Center", "Right"]
 		bold: DF.Check
+		button_color: DF.Literal["", "Default", "Primary", "Info", "Success", "Warning", "Danger"]
 		collapsible: DF.Check
 		collapsible_depends_on: DF.Code | None
 		columns: DF.Int
@@ -116,8 +119,8 @@ class CustomField(Document):
 		translatable: DF.Check
 		unique: DF.Check
 		width: DF.Data | None
-
 	# end: auto-generated types
+
 	def autoname(self):
 		self.set_fieldname()
 		self.name = self.dt + "-" + self.fieldname
@@ -222,7 +225,7 @@ class CustomField(Document):
 			)
 
 		# delete property setter entries
-		frappe.db.delete("Property Setter", {"doc_type": self.dt, "field_name": self.fieldname})
+		delete_property_setter(self.dt, field_name=self.fieldname)
 
 		# update doctype layouts
 		doctype_layouts = frappe.get_all("DocType Layout", filters={"document_type": self.dt}, pluck="name")
@@ -249,6 +252,21 @@ class CustomField(Document):
 		if self.fieldname == self.insert_after:
 			frappe.throw(_("Insert After cannot be set as {0}").format(meta.get_label(self.insert_after)))
 
+	def get_permission_log_options(self, event=None):
+		if event != "after_delete" and self.fieldtype not in (
+			"Section Break",
+			"Column Break",
+			"Tab Break",
+			"Fold",
+		):
+			return {
+				"fields": ("ignore_user_permissions", "permlevel"),
+				"for_doctype": "DocType",
+				"for_document": self.dt,
+			}
+
+		self._no_perm_log = True
+
 
 @frappe.whitelist()
 def get_fields_label(doctype=None):
@@ -269,7 +287,7 @@ def get_fields_label(doctype=None):
 def create_custom_field_if_values_exist(doctype, df):
 	df = frappe._dict(df)
 	if df.fieldname in frappe.db.get_table_columns(doctype) and frappe.db.count(
-		dt=doctype, filters=IfNull(df.fieldname, "") != ""
+		dt=doctype, filters=functions.IfNull(Field(df.fieldname), "") != ""
 	):
 		create_custom_field(doctype, df)
 
@@ -424,3 +442,53 @@ def _update_fieldname_references(field: CustomField, old_fieldname: str, new_fie
 		"insert_after",
 		new_fieldname,
 	)
+
+
+def delete_custom_fields(custom_fields: dict, bypass_hooks: bool = False):
+	"""
+	Delete custom fields from doctypes.
+
+	:param custom_fields: Dict mapping doctype to field names.
+	:param bypass_hooks: If `True`, fast raw delete (skips hooks (doc events like on_trash)).
+
+	Example:
+
+	```
+	delete_custom_fields({"Address": ["custom_a", "custom_b"]})
+
+	delete_custom_fields({"ToDo": [{"fieldname": "cf_1"}]}, bypass_hooks=True)
+	````
+	"""
+	for doctype, fields in custom_fields.items():
+		fieldnames = []
+
+		if isinstance(fields, (list, tuple, set)):
+			for field in fields:
+				if isinstance(field, str):
+					fieldnames.append(field)
+				elif isinstance(field, dict) and field.get("fieldname"):
+					fieldnames.append(field["fieldname"])
+
+		if not fieldnames:
+			continue
+
+		fieldnames = tuple(set(fieldnames))
+
+		if bypass_hooks:
+			frappe.db.delete(
+				"Custom Field",
+				{
+					"fieldname": ("in", fieldnames),
+					"dt": doctype,
+				},
+			)
+			frappe.clear_cache(doctype=doctype)
+		else:
+			custom_field_names = frappe.get_all(
+				"Custom Field",
+				filters={"fieldname": ("in", fieldnames), "dt": doctype},
+				pluck="name",
+			)
+
+			for custom_field_name in custom_field_names:
+				frappe.get_doc("Custom Field", custom_field_name).delete(ignore_permissions=True, force=True)

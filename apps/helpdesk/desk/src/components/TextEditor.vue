@@ -2,7 +2,7 @@
   <div class="rounded p-3 shadow w-full">
     <FTextEditor
       ref="e"
-      :extensions="[PreserveVideoControls]"
+      :extensions="[ComponentUtils, HandleExcelPaste, CleanStyles]"
       v-bind="$attrs"
       :editor-class="[
         'prose-f max-h-64 max-w-none  overflow-auto my-4 min-h-[5rem]',
@@ -32,15 +32,16 @@
           <div
             class="flex flex-col space-y-1.5 overflow-auto sm:flex-row sm:justify-between"
           >
-            <div class="flex items-center gap-1">
-              <TextEditorFixedMenu :buttons="fixedMenu" />
+            <div class="flex items-center">
               <slot name="bottom-left" />
+              <TextEditorFixedMenu :buttons="fixedMenu" />
             </div>
             <div class="flex items-center gap-2">
               <Button
                 label="Discard"
                 theme="gray"
                 variant="subtle"
+                v-if="!isContentEmpty(modelValue)"
                 @click="
                   () => {
                     editor.commands.clearContent(true);
@@ -59,8 +60,12 @@
 <script setup lang="ts">
 import { UserAvatar } from "@/components";
 import { useAuthStore } from "@/stores/auth";
-import { PreserveVideoControls } from "@/tiptap-extensions";
-import { getFontFamily } from "@/utils";
+import {
+  CleanStyles,
+  ComponentUtils,
+  HandleExcelPaste,
+} from "@/tiptap-extensions";
+import { ClearFormattingUtility, getFontFamily, isContentEmpty } from "@/utils";
 import { TextEditor as FTextEditor, TextEditorFixedMenu } from "frappe-ui";
 import { computed, nextTick, ref } from "vue";
 
@@ -86,13 +91,19 @@ const authStore = useAuthStore();
 const fixedMenu = [
   "Paragraph",
   ["Heading 2", "Heading 3", "Heading 4", "Heading 5"],
+  "Separator",
+  "Bold",
+  "Italic",
+  "Separator",
   "Bullet List",
   "Numbered List",
+  "Separator",
   "Image",
   "Video",
   "Link",
   "Blockquote",
   "Code",
+  ClearFormattingUtility,
 ];
 
 defineExpose({

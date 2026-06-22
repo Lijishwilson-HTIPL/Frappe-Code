@@ -2,13 +2,12 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, get_year_ending, get_year_start, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
 from hrms.hr.doctype.expense_claim.test_expense_claim import get_payable_account
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_allocation.leave_allocation import get_unused_leaves
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import process_expired_allocation
 from hrms.hr.doctype.leave_period.test_leave_period import create_leave_period
@@ -22,27 +21,12 @@ from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 )
 from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
 from hrms.tests.test_utils import get_first_sunday
+from hrms.tests.utils import HRMSTestSuite
 
-test_records = frappe.get_test_records("Leave Type")
 
-
-class TestLeaveEncashment(FrappeTestCase):
+class TestLeaveEncashment(HRMSTestSuite):
 	def setUp(self):
-		for dt in [
-			"Leave Period",
-			"Leave Policy Assignment",
-			"Leave Allocation",
-			"Leave Ledger Entry",
-			"Additional Salary",
-			"Leave Encashment",
-			"Leave Application",
-		]:
-			frappe.db.delete(dt)
-
 		self.leave_type = "_Test Leave Type Encashment"
-		if frappe.db.exists("Leave Type", self.leave_type):
-			frappe.delete_doc("Leave Type", self.leave_type, force=True)
-		frappe.get_doc(test_records[2]).insert()
 
 		date = getdate()
 		year_start = getdate(get_year_start(date))
@@ -50,14 +34,14 @@ class TestLeaveEncashment(FrappeTestCase):
 
 		self.holiday_list = make_holiday_list("_Test Leave Encashment", year_start, year_end)
 
-		# create the leave policy
-		leave_policy = create_leave_policy(leave_type=self.leave_type, annual_allocation=10)
-		leave_policy.submit()
-
 		# create employee, salary structure and assignment
 		self.employee = make_employee("test_employee_encashment@example.com", company="_Test Company")
 
 		self.leave_period = create_leave_period(year_start, year_end, "_Test Company")
+
+		# create the leave policy
+		leave_policy = create_leave_policy(leave_type=self.leave_type, annual_allocation=10)
+		leave_policy.submit()
 
 		data = {
 			"assignment_based_on": "Leave Period",
@@ -72,9 +56,10 @@ class TestLeaveEncashment(FrappeTestCase):
 			"Monthly",
 			self.employee,
 			other_details={"leave_encashment_amount_per_day": 50},
+			company="_Test Company",
 		)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_leave_balance_value_and_amount(self):
 		leave_encashment = self.create_test_leave_encashment()
 
@@ -91,7 +76,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		)
 		self.assertEqual(additional_salary_amount, leave_encashment.encashment_amount)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_non_encashable_leaves_setting(self):
 		frappe.db.set_value(
 			"Leave Type",
@@ -127,7 +112,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		)
 		self.assertEqual(additional_salary_amount, leave_encashment.encashment_amount)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_max_encashable_leaves_setting(self):
 		frappe.db.set_value(
 			"Leave Type",
@@ -162,7 +147,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		)
 		self.assertEqual(additional_salary_amount, leave_encashment.encashment_amount)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_max_encashable_leaves_and_non_encashable_leaves_setting(self):
 		frappe.db.set_value(
 			"Leave Type",
@@ -198,7 +183,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		)
 		self.assertEqual(additional_salary_amount, leave_encashment.encashment_amount)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_creation_of_leave_ledger_entry_on_submit(self):
 		leave_encashment = self.create_test_leave_encashment()
 		leave_encashment.submit()
@@ -217,7 +202,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		leave_encashment.cancel()
 		self.assertFalse(frappe.db.exists("Leave Ledger Entry", {"transaction_name": leave_encashment.name}))
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_unused_leaves_after_leave_encashment_for_carry_forwarding_leave_type(self):
 		employee = make_employee("test_employee2_encashment@example.com", company="_Test Company")
 		# allocated 10 leaves, encashed 5
@@ -245,7 +230,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		)
 		self.assertEqual(unused_leaves, 5)
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_leave_expiry_after_leave_encashment_for_non_carry_forwarding_leave_type(self):
 		employee = make_employee("test_employee3_encashment@example.com", company="_Test Company")
 		# allocated 10 leaves, encashed 3
@@ -306,6 +291,8 @@ class TestLeaveEncashment(FrappeTestCase):
 			employee,
 			from_date=start_date,
 			other_details={"leave_encashment_amount_per_day": 50},
+			company="_Test Company",
+			currency="INR",
 		)
 
 		leave_encashment = self.create_test_leave_encashment(
@@ -314,7 +301,7 @@ class TestLeaveEncashment(FrappeTestCase):
 		leave_encashment.submit()
 		return leave_encashment
 
-	@set_holiday_list("_Test Leave Encashment", "_Test Company")
+	@assign_holiday_list("_Test Leave Encashment", "_Test Company")
 	def test_status_of_leave_encashment_after_payment_via_salary_slip(self):
 		from hrms.payroll.doctype.salary_slip.test_salary_slip import make_employee_salary_slip
 		from hrms.payroll.doctype.salary_structure.test_salary_structure import (
@@ -326,6 +313,7 @@ class TestLeaveEncashment(FrappeTestCase):
 			"Monthly",
 			self.employee,
 			other_details={"leave_encashment_amount_per_day": 50},
+			company="_Test Company",
 		)
 
 		create_salary_structure_assignment(
@@ -419,6 +407,13 @@ class TestLeaveEncashment(FrappeTestCase):
 		args.update(kwargs)
 		return create_leave_encashment(**args)
 
+	def test_status_on_discard(self):
+		encashment = self.create_test_leave_encashment()
+		encashment.save()
+		encashment.discard()
+		encashment.reload()
+		self.assertEqual(encashment.status, "Cancelled")
+
 	def test_leave_encashment_based_on_salary_structure_assignment(self):
 		from hrms.payroll.doctype.salary_structure.test_salary_structure import (
 			create_salary_structure_assignment,
@@ -428,6 +423,7 @@ class TestLeaveEncashment(FrappeTestCase):
 			"Salary Structure for Encashment Amount",
 			"Monthly",
 			self.employee,
+			company="_Test Company",
 		)
 
 		create_salary_structure_assignment(

@@ -17,7 +17,7 @@
 
 <script setup>
 import { createResource, Autocomplete, debounce } from "frappe-ui";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 
 const props = defineProps({
 	doctype: {
@@ -51,9 +51,11 @@ const searchText = ref("");
 const value = computed({
 	get: () => props.modelValue,
 	set: (val) => {
-		const newVal = val && typeof val === "object" && val.value !== undefined ? val.value : val;
-		console.log(newVal);
-		emit("update:modelValue", newVal || "");
+		if (typeof val === "string") {
+			emit("update:modelValue", val);
+		} else {
+			emit("update:modelValue", val?.value || "");
+		}
 	},
 });
 
@@ -67,7 +69,12 @@ const options = createResource({
 	method: "POST",
 	transform: (data) => {
 		return data.map((doc) => {
-			const title = doc?.description?.split(",")?.[0];
+			let title = null;
+			if (doc.label && doc.label !== doc.value) {
+				title = doc.label;
+			} else if (doc.description) {
+				title = doc.description.split(",")[0];
+			}
 			return {
 				label: title ? `${title} : ${doc.value}` : doc.value,
 				value: doc.value,
@@ -88,13 +95,14 @@ const reloadOptions = (searchTextVal) => {
 
 const handleQueryUpdate = debounce((newQuery) => {
 	const val = newQuery || "";
-
-	if (val === "" && props.modelValue) return;
-
 	if (searchText.value === val) return;
 	searchText.value = val;
 	reloadOptions(val);
 }, 300);
+
+onMounted(() => {
+	reloadOptions(props.modelValue || "");
+});
 
 watch(
 	() => props.doctype,
@@ -102,6 +110,10 @@ watch(
 		if (!props.doctype || props.doctype === options.doctype) return;
 		reloadOptions("");
 	},
-	{ immediate: true },
+);
+
+watch(
+	() => props.filters,
+	() => reloadOptions(""),
 );
 </script>

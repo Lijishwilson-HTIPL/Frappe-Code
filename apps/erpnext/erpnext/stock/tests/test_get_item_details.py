@@ -1,18 +1,10 @@
 import frappe
-from frappe.test_runner import make_test_records
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.stock.get_item_details import get_item_details
-
-test_ignore = ["BOM"]
-test_dependencies = ["Customer", "Supplier", "Item", "Price List", "Item Price"]
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestGetItemDetail(FrappeTestCase):
-	def setUp(self):
-		make_test_records("Price List")
-		super().setUp()
-
+class TestGetItemDetail(ERPNextTestSuite):
 	def test_get_item_detail_purchase_order(self):
 		args = frappe._dict(
 			{
@@ -54,7 +46,7 @@ class TestGetItemDetail(FrappeTestCase):
 			{
 				"doctype": "Batch",
 				"batch_id": "BATCH01",
-				"item": item,
+				"item": item.name,
 			}
 		).insert()
 

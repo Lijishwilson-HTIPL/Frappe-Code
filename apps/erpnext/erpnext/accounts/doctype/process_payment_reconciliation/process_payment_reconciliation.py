@@ -23,7 +23,7 @@ class ProcessPaymentReconciliation(Document):
 		bank_cash_account: DF.Link | None
 		company: DF.Link
 		cost_center: DF.Link | None
-		default_advance_account: DF.Link
+		default_advance_account: DF.Link | None
 		error_log: DF.LongText | None
 		from_invoice_date: DF.Date | None
 		from_payment_date: DF.Date | None
@@ -35,7 +35,10 @@ class ProcessPaymentReconciliation(Document):
 		]
 		to_invoice_date: DF.Date | None
 		to_payment_date: DF.Date | None
+
 	# end: auto-generated types
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 	def validate(self):
 		self.validate_receivable_payable_account()
@@ -128,6 +131,7 @@ def is_job_running(job_name: str) -> bool:
 @frappe.whitelist()
 def pause_job_for_doc(docname: str | None = None):
 	if docname:
+		frappe.has_permission("Process Payment Reconciliation", "write", doc=docname, throw=True)
 		frappe.db.set_value("Process Payment Reconciliation", docname, "status", "Paused")
 		log = frappe.db.get_value("Process Payment Reconciliation Log", filters={"process_pr": docname})
 		if log:
@@ -142,7 +146,9 @@ def trigger_job_for_doc(docname: str | None = None):
 	if not docname:
 		return
 
-	if not frappe.db.get_single_value("Accounts Settings", "auto_reconcile_payments"):
+	frappe.has_permission("Process Payment Reconciliation", "write", doc=docname, throw=True)
+
+	if not frappe.get_single_value("Accounts Settings", "auto_reconcile_payments"):
 		frappe.throw(
 			_("Auto Reconciliation of Payments has been disabled. Enable it through {0}").format(
 				get_link_to_form("Accounts Settings", "Accounts Settings")
@@ -190,7 +196,7 @@ def trigger_reconciliation_for_queued_docs():
 	Will be called from Cron Job
 	Fetch queued docs and start reconciliation process for each one
 	"""
-	if not frappe.db.get_single_value("Accounts Settings", "auto_reconcile_payments"):
+	if not frappe.get_single_value("Accounts Settings", "auto_reconcile_payments"):
 		frappe.msgprint(
 			_("Auto Reconciliation of Payments has been disabled. Enable it through {0}").format(
 				get_link_to_form("Accounts Settings", "Accounts Settings")
@@ -210,15 +216,12 @@ def trigger_reconciliation_for_queued_docs():
 
 		docs_to_trigger = []
 		unique_filters = set()
-		queue_size = frappe.db.get_single_value("Accounts Settings", "reconciliation_queue_size") or 5
+		queue_size = frappe.get_single_value("Accounts Settings", "reconciliation_queue_size") or 5
 
 		fields = ["company", "party_type", "party", "receivable_payable_account", "default_advance_account"]
 
 		def get_filters_as_tuple(fields, doc):
-			filters = ()
-			for x in fields:
-				filters += tuple(doc.get(x))
-			return filters
+			return tuple(doc.get(x) or "" for x in fields)
 
 		for x in all_queued:
 			doc = frappe.get_doc("Process Payment Reconciliation", x)
@@ -477,9 +480,7 @@ def reconcile(doc: None | str = None) -> None:
 						frappe.db.set_value("Process Payment Reconciliation Log", log, "reconciled", True)
 						frappe.db.set_value("Process Payment Reconciliation", doc, "status", "Completed")
 					else:
-						if not (
-							frappe.db.get_value("Process Payment Reconciliation", doc, "status") == "Paused"
-						):
+						if frappe.db.get_value("Process Payment Reconciliation", doc, "status") != "Paused":
 							# trigger next batch in job
 							# generate reconcile job name
 							allocation = get_next_allocation(log)

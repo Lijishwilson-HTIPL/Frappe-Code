@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"1nr6UkvDiL\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>PORTAL</b></span>\", \"col\": 12}}, {\"id\": \"1hyi8SysUY\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"CRM Portal Page\", \"col\": 3}}, {\"id\": \"ktENiGaqXQ\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"VgeWLYOuAS\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>SHORTCUTS</b>\", \"col\": 12}}, {\"id\": \"A66FpG-K3T\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Leads\", \"col\": 3}}, {\"id\": \"n9b6N5ebOj\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deals\", \"col\": 3}}, {\"id\": \"sGHTXrludH\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Organizations\", \"col\": 3}}, {\"id\": \"uXZNCdqxy0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Contacts\", \"col\": 3}}, {\"id\": \"v1kkMwlntf\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"SLA\", \"col\": 3}}, {\"id\": \"WRzt4SMh_b\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Assignment Rule\", \"col\": 3}}, {\"id\": \"TZ7cULX3Tk\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"zpySv0nGVQ\", \"type\": \"paragraph\", \"data\": {\"text\": \"<b>META</b>\", \"col\": 12}}, {\"id\": \"fa-uKzobpp\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead Statuses\", \"col\": 3}}, {\"id\": \"hxoZghUHP2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deal Statuses\", \"col\": 3}}, {\"id\": \"HbgghUpc8N\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead Sources\", \"col\": 3}}, {\"id\": \"8cPs7Fohb4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Industries\", \"col\": 3}}, {\"id\": \"arT4xZ9HWR\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Territories\", \"col\": 3}}, {\"id\": \"ApHOcISpiJ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Communication Statuses\", \"col\": 3}}]",
+ "content": "[{\"id\":\"1nr6UkvDiL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\"><b>PORTAL</b></span>\",\"col\":12}},{\"id\":\"1hyi8SysUY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"CRM Portal Page\",\"col\":3}},{\"id\":\"ktENiGaqXQ\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"VgeWLYOuAS\",\"type\":\"paragraph\",\"data\":{\"text\":\"<b>SHORTCUTS</b>\",\"col\":12}},{\"id\":\"A66FpG-K3T\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leads\",\"col\":3}},{\"id\":\"n9b6N5ebOj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deals\",\"col\":3}},{\"id\":\"sGHTXrludH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Organizations\",\"col\":3}},{\"id\":\"uXZNCdqxy0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Contacts\",\"col\":3}},{\"id\":\"v1kkMwlntf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"SLA\",\"col\":3}},{\"id\":\"WRzt4SMh_b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Assignment Rule\",\"col\":3}},{\"id\":\"TZ7cULX3Tk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"zpySv0nGVQ\",\"type\":\"paragraph\",\"data\":{\"text\":\"<b>META</b>\",\"col\":12}},{\"id\":\"fa-uKzobpp\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead Statuses\",\"col\":3}},{\"id\":\"hxoZghUHP2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deal Statuses\",\"col\":3}},{\"id\":\"HbgghUpc8N\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lead Sources\",\"col\":3}},{\"id\":\"8cPs7Fohb4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Industries\",\"col\":3}},{\"id\":\"arT4xZ9HWR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Territories\",\"col\":3}},{\"id\":\"ApHOcISpiJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Communication Statuses\",\"col\":3}}]",
  "creation": "2023-11-27 13:55:17.090361",
  "custom_blocks": [],
  "docstatus": 0,
@@ -11,42 +11,22 @@
  "idx": 0,
  "indicator_color": "",
  "is_hidden": 0,
- "label": "SBIQ CRM",
- "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Career Inquiries",
-   "link_count": 0,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Career Inquiry",
-   "link_count": 0,
-   "link_to": "Career Inquiry",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  }
- ],
- "modified": "2026-05-04 11:57:29.553701",
+ "label": "Frappe CRM",
+ "links": [],
+ "modified": "2024-01-04 19:08:27.799960",
  "modified_by": "Administrator",
  "module": "FCRM",
- "name": "SBIQ CRM",
+ "name": "Frappe CRM",
  "number_cards": [],
  "owner": "shariq@frappe.io",
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 2.0,
+ "sequence_id": 1.0,
  "shortcuts": [
   {
-   "color": "Blue",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Communication Statuses",
    "link_to": "CRM Communication Status",
@@ -54,7 +34,7 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Leads",
    "link_to": "CRM Lead",
@@ -62,14 +42,14 @@
    "type": "DocType"
   },
   {
-   "color": "Blue",
+   "color": "Grey",
    "doc_view": "List",
    "label": "CRM Portal Page",
    "type": "URL",
    "url": "/crm"
   },
   {
-   "color": "Orange",
+   "color": "Grey",
    "doc_view": "List",
    "label": "SLA",
    "link_to": "CRM Service Level Agreement",
@@ -77,7 +57,7 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Lead Statuses",
    "link_to": "CRM Lead Status",
@@ -85,7 +65,7 @@
    "type": "DocType"
   },
   {
-   "color": "Purple",
+   "color": "Grey",
    "doc_view": "Tree",
    "label": "Territories",
    "link_to": "CRM Territory",
@@ -93,7 +73,7 @@
    "type": "DocType"
   },
   {
-   "color": "Orange",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Assignment Rule",
    "link_to": "Assignment Rule",
@@ -101,7 +81,7 @@
    "type": "DocType"
   },
   {
-   "color": "Blue",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Deals",
    "link_to": "CRM Deal",
@@ -109,7 +89,7 @@
    "type": "DocType"
   },
   {
-   "color": "Blue",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Deal Statuses",
    "link_to": "CRM Deal Status",
@@ -117,7 +97,7 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Lead Sources",
    "link_to": "CRM Lead Source",
@@ -125,7 +105,7 @@
    "type": "DocType"
   },
   {
-   "color": "Purple",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Organizations",
    "link_to": "CRM Organization",
@@ -133,7 +113,7 @@
    "type": "DocType"
   },
   {
-   "color": "Purple",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Contacts",
    "link_to": "Contact",
@@ -141,7 +121,7 @@
    "type": "DocType"
   },
   {
-   "color": "Orange",
+   "color": "Grey",
    "doc_view": "List",
    "label": "Industries",
    "link_to": "CRM Industry",
@@ -149,5 +129,5 @@
    "type": "DocType"
   }
  ],
- "title": "SBIQ CRM"
+ "title": "Frappe CRM"
 }

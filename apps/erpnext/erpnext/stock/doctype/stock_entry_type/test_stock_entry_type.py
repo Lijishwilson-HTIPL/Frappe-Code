@@ -1,12 +1,13 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
 
+from erpnext.tests.utils import ERPNextTestSuite
 
-class TestStockEntryType(unittest.TestCase):
+
+class TestStockEntryType(ERPNextTestSuite):
 	def test_stock_entry_type_non_standard(self):
 		stock_entry_type = "Test Manufacturing"
 

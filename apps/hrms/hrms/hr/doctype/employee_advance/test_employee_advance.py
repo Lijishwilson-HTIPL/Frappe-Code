@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import flt, nowdate
 
 import erpnext
@@ -12,35 +11,31 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from hrms.hr.doctype.employee_advance.employee_advance import (
 	EmployeeAdvanceOverPayment,
 	create_return_through_additional_salary,
-	make_bank_entry,
+	get_same_currency_bank_cash_account,
 	make_return_entry,
 )
-from hrms.hr.doctype.expense_claim.expense_claim import get_advances, get_allocation_amount
+from hrms.hr.doctype.expense_claim.expense_claim import get_advances, get_expense_claim
 from hrms.hr.doctype.expense_claim.test_expense_claim import (
 	get_payable_account,
 	make_expense_claim,
 )
 from hrms.payroll.doctype.salary_component.test_salary_component import create_salary_component
 from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestEmployeeAdvance(FrappeTestCase):
+class TestEmployeeAdvance(HRMSTestSuite):
 	def setUp(self):
 		frappe.db.delete("Employee Advance")
 		self.update_company_in_fiscal_year()
 		frappe.db.set_value("Account", "Employee Advances - _TC", "account_type", "Receivable")
 		frappe.db.set_value("Account", "_Test Employee Advance - _TC", "account_type", "Receivable")
 
-	def tearDown(self):
-		frappe.set_value(
-			"Company", "_Test Company", "default_employee_advance_account", "Employee Advances - _TC"
-		)
-
 	def test_paid_amount_and_status(self):
 		employee_name = make_employee("_T@employee.advance", "_Test Company")
 		advance = make_employee_advance(employee_name)
 
-		journal_entry = make_journal_entry_for_advance(advance)
+		journal_entry = manual_journal_entry_for_advance(advance)
 		journal_entry.submit()
 
 		advance.reload()
@@ -49,22 +44,19 @@ class TestEmployeeAdvance(FrappeTestCase):
 		self.assertEqual(advance.status, "Paid")
 
 		# try making over payment
-		journal_entry1 = make_journal_entry_for_advance(advance)
+		journal_entry1 = manual_journal_entry_for_advance(advance)
 		self.assertRaises(EmployeeAdvanceOverPayment, journal_entry1.submit)
 
 	def test_paid_amount_on_pe_cancellation(self):
 		employee_name = make_employee("_T@employee.advance", "_Test Company")
 		advance = make_employee_advance(employee_name)
-
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
-
+		payment_entry = make_payment_entry(advance)
 		advance.reload()
 
 		self.assertEqual(advance.paid_amount, 1000)
 		self.assertEqual(advance.status, "Paid")
 
-		journal_entry.cancel()
+		payment_entry.cancel()
 		advance.reload()
 
 		self.assertEqual(advance.paid_amount, 0)
@@ -82,8 +74,7 @@ class TestEmployeeAdvance(FrappeTestCase):
 		)
 
 		advance = make_employee_advance(claim.employee)
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 
 		claim = get_advances_for_claim(claim, advance.name)
 		claim.save()
@@ -94,11 +85,12 @@ class TestEmployeeAdvance(FrappeTestCase):
 		self.assertEqual(advance.status, "Claimed")
 
 		# advance should not be shown in claims
-		advances = get_advances(claim.employee)
-		advances = [entry.name for entry in advances]
+		advances = get_advances(claim)
+		advances = [entry.employee_advance for entry in advances]
 		self.assertTrue(advance.name not in advances)
 
 		# cancel claim; status should be Paid
+		claim.reload()
 		claim.cancel()
 		advance.reload()
 		self.assertEqual(advance.claimed_amount, 0)
@@ -111,8 +103,7 @@ class TestEmployeeAdvance(FrappeTestCase):
 		)
 
 		advance = make_employee_advance(claim.employee)
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 
 		# PARTLY CLAIMED AND RETURNED status check
 		# 500 Claimed, 500 Returned
@@ -121,8 +112,7 @@ class TestEmployeeAdvance(FrappeTestCase):
 		)
 
 		advance = make_employee_advance(claim.employee)
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 
 		claim = get_advances_for_claim(claim, advance.name, amount=500)
 		claim.save()
@@ -140,7 +130,6 @@ class TestEmployeeAdvance(FrappeTestCase):
 			advance_account=advance.advance_account,
 			mode_of_payment=advance.mode_of_payment,
 			currency=advance.currency,
-			exchange_rate=advance.exchange_rate,
 		)
 
 		entry = frappe.get_doc(entry)
@@ -152,8 +141,8 @@ class TestEmployeeAdvance(FrappeTestCase):
 		self.assertEqual(advance.status, "Partly Claimed and Returned")
 
 		# advance should not be shown in claims
-		advances = get_advances(claim.employee)
-		advances = [entry.name for entry in advances]
+		advances = get_advances(claim)
+		advances = [entry.employee_advance for entry in advances]
 		self.assertTrue(advance.name not in advances)
 
 		# Cancel return entry; status should change to PAID
@@ -163,15 +152,14 @@ class TestEmployeeAdvance(FrappeTestCase):
 		self.assertEqual(advance.status, "Paid")
 
 		# advance should be shown in claims
-		advances = get_advances(claim.employee)
-		advances = [entry.name for entry in advances]
+		advances = get_advances(claim)
+		advances = [entry.employee_advance for entry in advances]
 		self.assertTrue(advance.name in advances)
 
 	def test_repay_unclaimed_amount_from_salary(self):
 		employee_name = make_employee("_T@employee.advance", "_Test Company")
 		advance = make_employee_advance(employee_name, {"repay_unclaimed_amount_from_salary": 1})
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 
 		args = {"type": "Deduction"}
 		create_salary_component("Advance Salary - Deduction", **args)
@@ -218,7 +206,7 @@ class TestEmployeeAdvance(FrappeTestCase):
 
 		pe = make_payment_entry(advance, 700)
 		advance.reload()
-		self.assertEqual(advance.status, "Unpaid")
+		self.assertEqual(advance.status, "Partially Paid")
 		self.assertEqual(advance.paid_amount, 700)
 
 		pe = make_payment_entry(advance, 300)
@@ -228,14 +216,57 @@ class TestEmployeeAdvance(FrappeTestCase):
 
 		pe.cancel()
 		advance.reload()
-		self.assertEqual(advance.status, "Unpaid")
+		self.assertEqual(advance.status, "Partially Paid")
 		self.assertEqual(advance.paid_amount, 700)
+
+	def test_expense_claim_against_partially_paid_advance(self):
+		employee_name = make_employee("_T@employee.advance", "_Test Company")
+		advance = make_employee_advance(employee_name)
+		make_payment_entry(advance, 700)
+		advance.reload()
+
+		self.assertEqual(advance.status, "Partially Paid")
+
+		currency, cost_center = frappe.db.get_value(
+			"Company", "_Test Company", ["default_currency", "cost_center"]
+		)
+		claim = get_expense_claim(advance.name)  # create claim from employee advance form
+		claim.update(
+			{
+				"payable_account": get_payable_account("_Test Company"),
+				"currency": currency,
+				"exchange_rate": 1,
+				"approval_status": "Approved",
+			}
+		)
+		claim.append(
+			"expenses",
+			{
+				"expense_type": "Travel",
+				"default_account": "Travel Expenses - _TC",
+				"amount": 1000,
+				"sanctioned_amount": 1000,
+				"cost_center": cost_center,
+			},
+		)
+		claim.save()
+		claim.submit()
+
+		self.assertEqual(len(claim.advances), 1)
+		self.assertEqual(claim.advances[0].employee_advance, advance.name)
+		self.assertEqual(claim.advances[0].advance_paid, 700)
+		self.assertEqual(claim.advances[0].allocated_amount, 700)
+		self.assertEqual(claim.total_claimed_amount, 1000)
+		self.assertEqual(claim.grand_total, 300)
+
+		advance.reload()
+		self.assertEqual(advance.claimed_amount, 700)
+		self.assertEqual(advance.status, "Claimed")
 
 	def test_precision(self):
 		employee_name = make_employee("_T@employee.advance", "_Test Company")
 		advance = make_employee_advance(employee_name)
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 
 		# PARTLY CLAIMED AND RETURNED
 		payable_account = get_payable_account("_Test Company")
@@ -258,7 +289,6 @@ class TestEmployeeAdvance(FrappeTestCase):
 			advance_account=advance.advance_account,
 			mode_of_payment=advance.mode_of_payment,
 			currency=advance.currency,
-			exchange_rate=advance.exchange_rate,
 		)
 
 		entry = frappe.get_doc(entry)
@@ -275,6 +305,8 @@ class TestEmployeeAdvance(FrappeTestCase):
 
 		advance1 = make_employee_advance(employee_name)
 		make_payment_entry(advance1, 500)
+		advance1.reload()
+		self.assertEqual(advance1.status, "Partially Paid")
 
 		advance2 = make_employee_advance(employee_name)
 		# 1000 - 500
@@ -285,7 +317,9 @@ class TestEmployeeAdvance(FrappeTestCase):
 		# (1000 - 500) + (1000 - 700)
 		self.assertEqual(advance3.pending_amount, 800)
 
-	@change_settings("HR Settings", {"unlink_payment_on_cancellation_of_employee_advance": True})
+	@HRMSTestSuite.change_settings(
+		"HR Settings", {"unlink_payment_on_cancellation_of_employee_advance": True}
+	)
 	def test_unlink_payment_entries(self):
 		employee_name = make_employee("_T@employee.advance", "_Test Company")
 		self.assertTrue(frappe.db.exists("Employee", employee_name))
@@ -306,17 +340,11 @@ class TestEmployeeAdvance(FrappeTestCase):
 	def test_employee_advance_when_different_company_currency(self):
 		employee = make_employee("test_adv_in_company_currency@example.com", "_Test Company")
 
-		account = create_account(
-			account_name="Employee Advance (USD)",
-			parent_account="Accounts Receivable - _TC",
-			company="_Test Company",
-			account_currency="USD",
-			account_type="Receivable",
+		advance_account = create_advance_account("Employee Advance (USD)", "USD")
+
+		advance = make_employee_advance(
+			employee, {"currency": "USD", "exchange_rate": 80, "advance_account": advance_account}
 		)
-
-		frappe.db.set_value("Company", "_Test Company", "default_employee_advance_account", account)
-
-		advance = make_employee_advance(employee, {"currency": "USD", "exchange_rate": 80})
 		make_payment_entry(advance, 1000)
 		advance.reload()
 
@@ -325,15 +353,9 @@ class TestEmployeeAdvance(FrappeTestCase):
 
 	def test_employee_advance_when_different_account_currency(self):
 		employee = make_employee("test_adv_in_account_currency@example.com", "_Test Company")
-		account = create_account(
-			account_name="Employee Advance (USD)",
-			parent_account="Accounts Receivable - _TC",
-			company="_Test Company",
-			account_currency="USD",
-			account_type="Receivable",
-		)
+		advance_account = create_advance_account("Employee Advance (USD)", "USD")
 
-		frappe.db.set_value("Company", "_Test Company", "default_employee_advance_account", account)
+		frappe.db.set_value("Company", "_Test Company", "default_employee_advance_account", advance_account)
 		advance = make_employee_advance(employee, {"currency": "INR", "exchange_rate": 1})
 		make_payment_entry(advance, 1000)
 		advance.reload()
@@ -343,17 +365,10 @@ class TestEmployeeAdvance(FrappeTestCase):
 
 	def test_employee_advance_when_different_advance_currency(self):
 		employee = make_employee("test_adv_in_advance_currency@example.com", "_Test Company")
-
-		advance = make_employee_advance(employee, {"currency": "USD", "exchange_rate": 80})
-		frappe.db.set_value(
-			"Company", "_Test Company", "default_employee_advance_account", "_Test Employee Advance - _TC"
+		advance = make_employee_advance(
+			employee, {"currency": "USD", "exchange_rate": 80}, do_not_submit=True
 		)
-		make_payment_entry(advance)
-
-		advance.reload()
-
-		self.assertEqual(advance.status, "Paid")
-		self.assertEqual(advance.paid_amount, 1000)
+		self.assertRaises(frappe.ValidationError, advance.save)
 
 	def update_company_in_fiscal_year(self):
 		fy_entries = frappe.get_all("Fiscal Year")
@@ -364,73 +379,134 @@ class TestEmployeeAdvance(FrappeTestCase):
 				fiscal_year.append("companies", {"company": "_Test Company"})
 				fiscal_year.save()
 
+	def test_multicurrency_advance(self):
+		advance_account = create_advance_account("Employee Advance (USD)", "USD")
+		employee = make_employee(
+			"test_adv_in_multicurrency@example.com",
+			"_Test Company",
+			salary_currency="USD",
+			employee_advance_account=advance_account,
+		)
+		advance = make_employee_advance(employee)
+		self.assertEqual(advance.status, "Unpaid")
 
-def make_journal_entry_for_advance(advance):
-	journal_entry = frappe.get_doc(make_bank_entry("Employee Advance", advance.name))
-	journal_entry.cheque_no = "123123"
-	journal_entry.cheque_date = nowdate()
-	journal_entry.save()
+		payment_entry = make_payment_entry(advance, advance.advance_amount)
+		advance.reload()
+		self.assertEqual(advance.status, "Paid")
+		self.assertEqual(payment_entry.received_amount, advance.paid_amount)
 
-	return journal_entry
+		expected_base_paid = flt(
+			advance.paid_amount * payment_entry.transaction_exchange_rate,
+			advance.precision("base_paid_amount"),
+		)
+		self.assertEqual(advance.base_paid_amount, expected_base_paid)
+		self.assertEqual(payment_entry.paid_amount, expected_base_paid)
+
+	def test_status_on_discard(self):
+		employee_name = make_employee("Test_status@employee.advance", "_Test Company")
+		advance = make_employee_advance(employee_name, do_not_submit=True)
+		advance.insert()
+		advance.reload()
+		self.assertEqual(advance.status, "Draft")
+		advance.discard()
+		advance.reload()
+		self.assertEqual(advance.status, "Cancelled")
+
+
+def manual_journal_entry_for_advance(advance) -> dict:
+	doc = frappe.get_doc("Employee Advance", advance.name)
+	payment_account = get_same_currency_bank_cash_account(doc.company, doc.currency, doc.mode_of_payment)
+
+	je = frappe.new_doc("Journal Entry")
+	je.posting_date = nowdate()
+	je.voucher_type = "Bank Entry"
+	je.company = doc.company
+	je.remark = "Payment against Employee Advance: " + advance.name + "\n" + doc.purpose
+	je.multi_currency = 1 if doc.currency != erpnext.get_company_currency(doc.company) else 0
+
+	je.append(
+		"accounts",
+		{
+			"account": doc.advance_account,
+			"account_currency": doc.currency,
+			"debit_in_account_currency": flt(doc.advance_amount),
+			"reference_type": "Employee Advance",
+			"reference_name": doc.name,
+			"party_type": "Employee",
+			"cost_center": erpnext.get_default_cost_center(doc.company),
+			"party": doc.employee,
+			"is_advance": "Yes",
+		},
+	)
+
+	je.append(
+		"accounts",
+		{
+			"account": payment_account.account or payment_account.name,
+			"cost_center": erpnext.get_default_cost_center(doc.company),
+			"credit_in_account_currency": flt(doc.advance_amount),
+			"account_currency": doc.currency,
+			"account_type": payment_account.account_type,
+		},
+	)
+	je.cheque_no = "123123"
+	je.cheque_date = nowdate()
+	je.save()
+	return je
 
 
 def make_payment_entry(advance, amount=None):
 	from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
 
-	payment_entry = get_payment_entry_for_employee(advance.doctype, advance.name)
+	payment_entry = get_payment_entry_for_employee(advance.doctype, advance.name, party_amount=amount)
 
 	payment_entry.reference_no = "1"
 	payment_entry.reference_date = nowdate()
-	if amount:
-		payment_entry.references[0].allocated_amount = amount
 	payment_entry.submit()
 	return payment_entry
 
 
-def make_employee_advance(employee_name, args=None):
+def make_employee_advance(employee_name, args=None, do_not_submit=False):
+	emp_details = frappe.db.get_value(
+		"Employee", employee_name, ["salary_currency", "employee_advance_account"], as_dict=True
+	)
 	doc = frappe.new_doc("Employee Advance")
 	doc.employee = employee_name
 	doc.company = "_Test Company"
 	doc.purpose = "For site visit"
-	doc.currency = erpnext.get_company_currency("_Test company")
-	doc.exchange_rate = 1
+	doc.currency = emp_details.salary_currency or erpnext.get_company_currency("_Test company")
 	doc.advance_amount = 1000
 	doc.posting_date = nowdate()
-	doc.advance_account = "_Test Employee Advance - _TC"
+	doc.advance_account = emp_details.employee_advance_account or "_Test Employee Advance - _TC"
+	account_type = frappe.db.get_value("Account", "_Test Employee Advance - _TC", "account_type")
+	if not account_type:
+		frappe.db.set_value("Account", "_Test Employee Advance - _TC", "account_type", "Receivable")
 
 	if args:
 		doc.update(args)
 
+	if do_not_submit:
+		return doc
 	doc.insert()
 	doc.submit()
-
 	return doc
 
 
 def get_advances_for_claim(claim, advance_name, amount=None):
-	advances = get_advances(claim.employee, advance_name)
-
-	for entry in advances:
+	advances = get_advances(claim, advance_name)
+	claim.advances = []
+	for advance in advances:
 		if amount:
-			allocated_amount = amount
-		else:
-			allocated_amount = get_allocation_amount(
-				paid_amount=entry.paid_amount,
-				claimed_amount=entry.claimed_amount,
-				return_amount=entry.return_amount,
-			)
-
-		claim.append(
-			"advances",
-			{
-				"employee_advance": entry.name,
-				"posting_date": entry.posting_date,
-				"advance_account": entry.advance_account,
-				"advance_paid": entry.paid_amount,
-				"return_amount": entry.return_amount,
-				"unclaimed_amount": entry.paid_amount - entry.claimed_amount,
-				"allocated_amount": allocated_amount,
-			},
-		)
-
+			advance.allocated_amount = amount
+		claim.append("advances", advance)
 	return claim
+
+
+def create_advance_account(account_name, account_currency):
+	return create_account(
+		account_name=account_name,
+		parent_account="Accounts Receivable - _TC",
+		company="_Test Company",
+		account_currency=account_currency,
+		account_type="Receivable",
+	)

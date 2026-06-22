@@ -338,7 +338,7 @@ erpnext.utils.BarcodeScanner = class BarcodeScanner {
 			? this.dialog.get_value("serial_no").split("\n")
 			: [];
 
-		if (in_list(serial_nos, serial_no)) {
+		if (serial_nos.includes(serial_no)) {
 			frappe.throw(__("Serial No {0} already scanned", [serial_no]));
 		}
 	}
@@ -359,7 +359,7 @@ erpnext.utils.BarcodeScanner = class BarcodeScanner {
 			];
 
 			for (let key in prev_row) {
-				if (in_list(ignore_fields, key)) {
+				if (ignore_fields.includes(key)) {
 					continue;
 				}
 
@@ -404,8 +404,6 @@ erpnext.utils.BarcodeScanner = class BarcodeScanner {
 	async set_barcode(row, barcode) {
 		if (barcode && frappe.meta.has_field(row.doctype, this.barcode_field)) {
 			await frappe.model.set_value(row.doctype, row.name, this.barcode_field, barcode);
-		} else {
-			row.barcode = barcode;
 		}
 	}
 

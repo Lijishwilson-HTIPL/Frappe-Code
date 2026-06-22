@@ -1,8 +1,6 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, add_months, getdate, nowdate
 
-import erpnext
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.leave_allocation.leave_allocation import (
@@ -11,15 +9,11 @@ from hrms.hr.doctype.leave_allocation.leave_allocation import (
 )
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import process_expired_allocation
 from hrms.hr.doctype.leave_type.test_leave_type import create_leave_type
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestLeaveAllocation(FrappeTestCase):
+class TestLeaveAllocation(HRMSTestSuite):
 	def setUp(self):
-		frappe.db.delete("Leave Period")
-		frappe.db.delete("Leave Allocation")
-		frappe.db.delete("Leave Application")
-		frappe.db.delete("Leave Ledger Entry")
-
 		emp_id = make_employee("test_leave_allocation@salary.com", company="_Test Company")
 		self.employee = frappe.get_doc("Employee", emp_id)
 
@@ -281,7 +275,7 @@ class TestLeaveAllocation(FrappeTestCase):
 
 		self.assertEqual(leave_allocation_2.unused_leaves, 5)
 
-	@change_settings("System Settings", {"float_precision": 2})
+	@HRMSTestSuite.change_settings("System Settings", {"float_precision": 2})
 	def test_precision(self):
 		create_leave_type(
 			leave_type_name="_Test_CF_leave",
@@ -618,7 +612,7 @@ class TestLeaveAllocation(FrappeTestCase):
 def create_leave_allocation(**args):
 	args = frappe._dict(args)
 
-	emp_id = make_employee("test_emp_leave_allocation@salary.com")
+	emp_id = args.employee or make_employee("test_emp_leave_allocation@salary.com", company="_Test Company")
 	employee = frappe.get_doc("Employee", emp_id)
 
 	return frappe.get_doc(
@@ -634,6 +628,3 @@ def create_leave_allocation(**args):
 			"to_date": args.to_date or add_months(nowdate(), 12),
 		}
 	)
-
-
-test_dependencies = ["Employee", "Leave Type"]

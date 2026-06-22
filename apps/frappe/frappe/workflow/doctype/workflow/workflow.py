@@ -3,8 +3,9 @@
 
 import frappe
 from frappe import _
-from frappe.model import no_value_fields
 from frappe.model.document import Document
+from frappe.model.workflow import DEFAULT_WORKFLOW_TASKS
+from frappe.utils import cint
 
 
 class Workflow(Document):
@@ -29,8 +30,8 @@ class Workflow(Document):
 		workflow_data: DF.JSON | None
 		workflow_name: DF.Data
 		workflow_state_field: DF.Data
-
 	# end: auto-generated types
+
 	def validate(self):
 		self.set_active()
 		self.validate_docstatus()
@@ -67,17 +68,18 @@ class Workflow(Document):
 	def update_default_workflow_status(self):
 		docstatus_map = {}
 		states = self.get("states")
+
+		TargetDocType = frappe.qb.DocType(self.document_type)
+		state_field = getattr(TargetDocType, self.workflow_state_field)
+
 		for d in states:
 			if d.doc_status not in docstatus_map:
-				frappe.db.sql(
-					f"""
-					UPDATE `tab{self.document_type}`
-					SET `{self.workflow_state_field}` = %s
-					WHERE ifnull(`{self.workflow_state_field}`, '') = ''
-					AND `docstatus` = %s
-				""",
-					(d.state, d.doc_status),
-				)
+				(
+					frappe.qb.update(TargetDocType)
+					.set(state_field, d.state)
+					.where(state_field.isnull() | (state_field == ""))
+					.where(TargetDocType.docstatus == d.doc_status)
+				).run()
 
 				docstatus_map[d.doc_status] = d.state
 
@@ -109,13 +111,13 @@ class Workflow(Document):
 				frappe.throw(frappe._("Cannot cancel before submitting. See Transition {0}").format(t.idx))
 
 	def set_active(self):
-		if int(self.is_active or 0):
-			# clear all other
-			frappe.db.sql(
-				"""UPDATE `tabWorkflow` SET `is_active`=0
-				WHERE `document_type`=%s""",
-				self.document_type,
-			)
+		if cint(self.is_active):
+			Workflow = frappe.qb.DocType("Workflow")
+			(
+				frappe.qb.update(Workflow)
+				.set(Workflow.is_active, 0)
+				.where(Workflow.document_type == self.document_type)
+			).run()
 
 
 @frappe.whitelist()
@@ -126,8 +128,13 @@ def get_workflow_state_count(doctype, workflow_state_field, states):
 	if workflow_state_field in frappe.get_meta(doctype).get_valid_columns():
 		result = frappe.get_all(
 			doctype,
-			fields=[workflow_state_field, "count(*) as count"],
+			fields=[workflow_state_field, {"COUNT": "*", "as": "count"}],
 			filters={workflow_state_field: ["not in", states]},
 			group_by=workflow_state_field,
 		)
 		return [r for r in result if r[workflow_state_field]]
+
+
+@frappe.whitelist(methods=["GET"])
+def get_workflow_methods():
+	return [i["name"] for i in frappe.get_hooks("workflow_methods")] + DEFAULT_WORKFLOW_TASKS

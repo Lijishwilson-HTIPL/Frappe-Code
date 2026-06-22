@@ -197,7 +197,7 @@
             class="bg-surface-gray-6 text-ink-white hover:bg-surface-gray-5"
             size="md"
             :iconRight="ArrowUpRightIcon"
-            :label="contact.deal ? __('Opportunity') : __('Lead')"
+            :label="contact.deal ? __('Deal') : __('Lead')"
             @click="openDealOrLead"
           />
         </div>

@@ -17,9 +17,7 @@ class CustomerGroup(NestedSet):
 		from frappe.types import DF
 
 		from erpnext.accounts.doctype.party_account.party_account import PartyAccount
-		from erpnext.selling.doctype.customer_credit_limit.customer_credit_limit import (
-			CustomerCreditLimit,
-		)
+		from erpnext.selling.doctype.customer_credit_limit.customer_credit_limit import CustomerCreditLimit
 
 		accounts: DF.Table[PartyAccount]
 		credit_limits: DF.Table[CustomerCreditLimit]
@@ -77,13 +75,11 @@ class CustomerGroup(NestedSet):
 
 def get_parent_customer_groups(customer_group):
 	lft, rgt = frappe.db.get_value("Customer Group", customer_group, ["lft", "rgt"])
-
-	return frappe.db.sql(
-		"""select name from `tabCustomer Group`
-		where lft <= %s and rgt >= %s
-		order by lft asc""",
-		(lft, rgt),
-		as_dict=True,
+	return frappe.get_all(
+		"Customer Group",
+		filters=[["lft", "<=", lft], ["rgt", ">=", rgt]],
+		fields=["name"],
+		order_by="lft asc",
 	)
 
 

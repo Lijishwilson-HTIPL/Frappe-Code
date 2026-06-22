@@ -7,11 +7,11 @@
  "engine": "InnoDB",
  "field_order": [
   "interview_details_section",
-  "interview_round",
+  "interview_type",
   "job_applicant",
-  "applicant_name",
   "job_opening",
   "designation",
+  "resume_link",
   "column_break_4",
   "status",
   "scheduled_on",
@@ -49,22 +49,13 @@
    "read_only": 1
   },
   {
-   "fieldname": "interview_round",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Interview Round",
-   "options": "Interview Round",
-   "reqd": 1
-  },
-  {
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending\nUnder Review\nCleared\nRejected",
+   "options": "Pending\nUnder Review\nCleared\nRejected\nCancelled",
    "reqd": 1
   },
   {
@@ -90,11 +81,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "job_applicant.applicant_name",
-   "fieldname": "applicant_name",
+   "fetch_from": "job_applicant.resume_link",
+   "fetch_if_empty": 1,
+   "fieldname": "resume_link",
    "fieldtype": "Data",
-   "label": "Applicant Name",
-   "read_only": 1
+   "label": "Resume link"
   },
   {
    "fieldname": "interview_details_section",
@@ -102,7 +93,7 @@
    "label": "Details"
   },
   {
-   "fetch_from": "interview_round.expected_average_rating",
+   "fetch_from": "interview_type.expected_average_rating",
    "fieldname": "expected_average_rating",
    "fieldtype": "Rating",
    "label": "Expected Average Rating",
@@ -119,7 +110,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "interview_round.designation",
+   "fetch_from": "interview_type.designation",
    "fieldname": "designation",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -155,19 +146,17 @@
   },
   {
    "fieldname": "from_time",
-   "fieldtype": "Data",
+   "fieldtype": "Time",
    "in_list_view": 1,
-   "label": "From Time (HH:MM)",
-   "options": "Time",
+   "label": "From Time",
    "reqd": 1,
    "set_only_once": 1
   },
   {
    "fieldname": "to_time",
-   "fieldtype": "Data",
+   "fieldtype": "Time",
    "in_list_view": 1,
-   "label": "To Time (HH:MM)",
-   "options": "Time",
+   "label": "To Time",
    "reqd": 1,
    "set_only_once": 1
   },
@@ -186,11 +175,20 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "interview_details",
    "fieldtype": "Table",
    "label": "Interviewers",
-   "options": "Interview Detail",
-   "allow_on_submit": 1
+   "options": "Interview Detail"
+  },
+  {
+   "fieldname": "interview_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Interview Type",
+   "options": "Interview Type",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -201,11 +199,11 @@
    "link_fieldname": "interview"
   }
  ],
- "modified": "2023-12-30 12:13:59.157555",
+ "modified": "2026-02-19 15:40:38.547112",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Interview",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -265,7 +263,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "job_applicant",

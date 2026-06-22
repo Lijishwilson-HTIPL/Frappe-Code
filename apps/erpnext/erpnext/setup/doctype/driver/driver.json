@@ -1,4 +1,6 @@
 {
+ "actions": [],
+ "allow_bulk_edit": 1,
  "allow_import": 1,
  "allow_rename": 1,
  "autoname": "naming_series:",
@@ -16,6 +18,7 @@
   "employee",
   "cell_number",
   "address",
+  "user",
   "license_details",
   "license_number",
   "column_break_8",
@@ -115,14 +118,23 @@
    "fieldtype": "Link",
    "label": "Address",
    "options": "Address"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User",
+   "options": "User",
+   "read_only_depends_on": "employee"
   }
  ],
  "icon": "fa fa-user",
- "modified": "2022-06-28 10:29:14.151380",
+ "links": [],
+ "modified": "2026-06-16 16:04:12.762960",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "Driver",
- "name_case": "Title Case",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -133,30 +145,6 @@
    "report": 1,
    "role": "Fleet Manager",
    "share": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR User",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR Manager",
-   "share": 1,
-   "write": 1
   },
   {
    "print": 1,
@@ -173,13 +161,27 @@
    "role": "Delivery Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
  "search_fields": "full_name",
  "show_name_in_global_search": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "full_name",
  "track_changes": 1
 }

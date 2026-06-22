@@ -13,10 +13,10 @@ from frappe.desk.form.load import get_attachments
 from frappe.email.doctype.email_account.email_account import notify_unreplied
 from frappe.email.email_body import get_message_id
 from frappe.email.receive import Email, InboundMail, SentEmailInInboxError
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
-class TestEmailAccount(FrappeTestCase):
+class TestEmailAccount(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -132,7 +132,7 @@ class TestEmailAccount(FrappeTestCase):
 		TestEmailAccount.mocked_email_receive(email_account, messages)
 
 		comm = frappe.get_doc("Communication", {"sender": "test_sender@example.com"})
-		self.assertTrue("From: &quot;Microsoft Outlook&quot; &lt;test_sender@example.com&gt;" in comm.content)
+		self.assertTrue('From: "Microsoft Outlook" &lt;test_sender@example.com&gt;' in comm.content)
 		self.assertTrue(
 			"This is an e-mail message sent automatically by Microsoft Outlook while" in comm.content
 		)
@@ -153,22 +153,29 @@ class TestEmailAccount(FrappeTestCase):
 		TestEmailAccount.mocked_email_receive(email_account, messages)
 
 		comm = frappe.get_doc("Communication", {"sender": "test_sender@example.com"})
-		self.assertTrue("From: &quot;Microsoft Outlook&quot; &lt;test_sender@example.com&gt;" in comm.content)
+		self.assertTrue('From: "Microsoft Outlook" &lt;test_sender@example.com&gt;' in comm.content)
 		self.assertTrue(
 			"This is an e-mail message sent automatically by Microsoft Outlook while" in comm.content
 		)
 
 	def test_outgoing(self):
-		make(
+		comm_name = make(
 			subject="test-mail-000",
 			content="test mail 000",
 			recipients="test_receiver@example.com",
 			send_email=True,
 			sender="test_sender@example.com",
-		)
+		)["name"]
 
-		mail = email.message_from_string(frappe.get_last_doc("Email Queue").message)
-		self.assertTrue("test-mail-000" in mail.get("Subject"))
+		sent_mail = email.message_from_string(
+			frappe.get_doc(
+				"Email Queue",
+				{
+					"communication": comm_name,
+				},
+			).message
+		)
+		self.assertTrue("test-mail-000" in sent_mail.get("Subject"))
 
 	def test_sendmail(self):
 		frappe.sendmail(
@@ -176,14 +183,15 @@ class TestEmailAccount(FrappeTestCase):
 			recipients="test_recipient@example.com",
 			content="test mail 001",
 			subject="test-mail-001",
-			delayed=False,
+			now=True,
 		)
+		frappe.db.commit()  # now=True requires commit
 
 		sent_mail = email.message_from_string(frappe.safe_decode(frappe.flags.sent_mail))
 		self.assertTrue("test-mail-001" in sent_mail.get("Subject"))
 
 	def test_print_format(self):
-		make(
+		comm_name = make(
 			sender="test_sender@example.com",
 			recipients="test_recipient@example.com",
 			content="test mail 001",
@@ -192,9 +200,15 @@ class TestEmailAccount(FrappeTestCase):
 			name="_Test Email Account 1",
 			print_format="Standard",
 			send_email=True,
+		)["name"]
+		sent_mail = email.message_from_string(
+			frappe.get_doc(
+				"Email Queue",
+				{
+					"communication": comm_name,
+				},
+			).message
 		)
-
-		sent_mail = email.message_from_string(frappe.get_last_doc("Email Queue").message)
 		self.assertTrue("test-mail-002" in sent_mail.get("Subject"))
 
 	def test_threading(self):
@@ -268,7 +282,7 @@ class TestEmailAccount(FrappeTestCase):
 		frappe.db.delete("Email Queue")
 
 		# reference document for testing
-		event = frappe.get_doc(dict(doctype="Event", subject="test-message")).insert()
+		event = frappe.get_doc(doctype="Event", subject="test-message").insert()
 
 		# send a mail against this
 		frappe.sendmail(
@@ -454,7 +468,7 @@ class TestEmailAccount(FrappeTestCase):
 			email_account.receive()
 
 
-class TestInboundMail(FrappeTestCase):
+class TestInboundMail(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -624,6 +638,32 @@ class TestInboundMail(FrappeTestCase):
 		inbound_mail = InboundMail(mail_content, email_account, 12345, 1)
 		reference_doc = inbound_mail.reference_document()
 		self.assertEqual(todo.name, reference_doc.name)
+
+	def test_subject_match_when_append_to_doctype_has_no_subject_field(self):
+		"""Inbound mail must not raise when the `Append To` doctype has no subject_field configured."""
+		mail_content = self.get_test_mail(fname="incoming-subject-placeholder.raw").replace(
+			"{{ subject }}", "RE: An unmatched subject line"
+		)
+		email_account = frappe.get_doc("Email Account", "_Test Email Account 1")
+		inbound_mail = InboundMail(mail_content, email_account, 12345, 1)
+
+		no_subject_fields = frappe._dict(subject_field=None, sender_field=None)
+		with patch.object(InboundMail, "get_email_fields", return_value=no_subject_fields):
+			# Should return None instead of raising an exception
+			self.assertIsNone(inbound_mail.match_record_by_subject_and_sender("ToDo"))
+
+	def test_subject_match_when_append_to_doctype_has_no_sender_field(self):
+		"""Subject matching must skip the sender filter (not crash) when sender_field is absent."""
+		mail_content = self.get_test_mail(fname="incoming-subject-placeholder.raw").replace(
+			"{{ subject }}", "RE: An unmatched subject line"
+		)
+		email_account = frappe.get_doc("Email Account", "_Test Email Account 1")
+		inbound_mail = InboundMail(mail_content, email_account, 12345, 1)
+
+		# subject_field set, sender_field absent: must build the subject filter and skip the sender one.
+		no_sender_field = frappe._dict(subject_field="description", sender_field=None)
+		with patch.object(InboundMail, "get_email_fields", return_value=no_sender_field):
+			self.assertIsNone(inbound_mail.match_record_by_subject_and_sender("ToDo"))
 
 	def test_reference_document_by_subject_match_with_accents(self):
 		subject = "Nouvelle tâche à faire 😃"

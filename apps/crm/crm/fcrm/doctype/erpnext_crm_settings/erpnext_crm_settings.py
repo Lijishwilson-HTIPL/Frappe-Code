@@ -92,14 +92,7 @@ class ERPNextCRMSettings(Document):
 					"fieldtype": "Data",
 					"label": "Customer in ERPNext",
 					"insert_after": "lead_name",
-				},
-				{
-					"fieldname": "erpnext_invoice",
-					"fieldtype": "Data",
-					"label": "Invoice in ERPNext",
-					"insert_after": "erpnext_customer",
-					"read_only": 1,
-				},
+				}
 			]
 		}
 		_create_custom_fields(custom_fields, ignore_validate=True)
@@ -312,15 +305,22 @@ def create_customer_in_erpnext(doc, method):
 	):
 		return
 
-	if not doc.organization:
-		frappe.throw(_("Organization is required to create a customer"))
-
 	contacts = get_contacts(doc)
 	address = get_organization_address(doc.organization)
+
+	if doc.organization:
+		customer_title = doc.organization
+		customer_type = "Company"
+	else:
+		primary_contact = next((c for c in contacts if c.get("is_primary")), None)
+		customer_title = (primary_contact or {}).get("full_name") or doc.lead_name
+		if not customer_title:
+			frappe.throw(_("Organization or a primary Contact is required to create a customer"))
+		customer_type = "Individual"
+
 	customer_data = {
-		"customer_name": doc.organization,
-		"customer_group": "All Customer Groups",
-		"customer_type": "Company",
+		"customer_name": customer_title,
+		"customer_type": customer_type,
 		"territory": doc.territory,
 		"default_currency": doc.currency,
 		"industry": doc.industry,
@@ -337,9 +337,22 @@ def create_customer_in_erpnext(doc, method):
 			except ImportError:
 				frappe.throw(_("ERPNext is not installed in the current site"))
 
+			if doc.territory and not frappe.db.exists("Territory", doc.territory):
+				customer_data["territory"] = ""
+
+			if doc.industry and not frappe.db.exists("Industry Type", doc.industry):
+				customer_data["industry"] = ""
+
 			customer_name = create_customer(customer_data)
 		else:
 			client = get_erpnext_site_client(erpnext_crm_settings)
+
+			if doc.territory and not client.get_list("Territory", filters={"name": doc.territory}):
+				customer_data["territory"] = ""
+
+			if doc.industry and not client.get_list("Industry Type", filters={"name": doc.industry}):
+				customer_data["industry"] = ""
+
 			customer_name = client.post_api("erpnext.crm.frappe_crm_api.create_customer", customer_data)
 
 		if not customer_name:
@@ -355,67 +368,6 @@ def create_customer_in_erpnext(doc, method):
 	if customer_name:
 		frappe.db.set_value("CRM Deal", doc.name, "erpnext_customer", customer_name)
 		frappe.publish_realtime("crm_customer_created")
-		# Auto-create invoice once customer is ready
-		create_invoice_in_erpnext(doc, customer_name, erpnext_crm_settings)
-
-
-def create_invoice_in_erpnext(doc, customer_name, erpnext_crm_settings=None):
-	"""Create a Sales Invoice in ERPNext for the given CRM Deal."""
-	if not erpnext_crm_settings:
-		erpnext_crm_settings = frappe.get_single("ERPNext CRM Settings")
-
-	products = [
-		{
-			"product_code": p.product_code,
-			"product_name": p.product_name,
-			"qty": p.qty,
-			"rate": p.rate,
-		}
-		for p in doc.products
-	]
-
-	invoice_data = {
-		"customer_name": customer_name,
-		"crm_deal": doc.name,
-		"currency": doc.currency or "INR",
-		"company": erpnext_crm_settings.erpnext_company,
-		"deal_value": doc.deal_value,
-		"products": json.dumps(products),
-	}
-
-	try:
-		if not erpnext_crm_settings.is_erpnext_in_different_site:
-			try:
-				from erpnext.crm.frappe_crm_api import create_sales_invoice
-			except ImportError:
-				frappe.throw(_("ERPNext is not installed in the current site"))
-			invoice_name = create_sales_invoice(invoice_data)
-		else:
-			client = get_erpnext_site_client(erpnext_crm_settings)
-			invoice_name = client.post_api("erpnext.crm.frappe_crm_api.create_sales_invoice", invoice_data)
-
-		if invoice_name:
-			frappe.db.set_value("CRM Deal", doc.name, "erpnext_invoice", invoice_name)
-			frappe.publish_realtime("crm_invoice_created", {"invoice": invoice_name})
-	except frappe.ValidationError:
-		raise
-	except Exception:
-		_log_and_throw("Error while creating Sales Invoice in ERPNext, check error log for more details")
-
-
-@frappe.whitelist()
-def get_invoice_url(crm_deal: str):
-	erpnext_crm_settings = _get_enabled_settings()
-	invoice_name = frappe.db.get_value("CRM Deal", crm_deal, "erpnext_invoice")
-	if not invoice_name:
-		return ""
-
-	if not erpnext_crm_settings.is_erpnext_in_different_site:
-		from frappe.utils import get_url_to_form
-		return get_url_to_form("Sales Invoice", invoice_name)
-
-	site_url = erpnext_crm_settings.erpnext_site_url
-	return f"{site_url}/app/sales-invoice/{invoice_name}"
 
 
 @frappe.whitelist()
@@ -469,18 +421,6 @@ def get_crm_form_script():
 		}).catch((e) => {
 			toast.error(e.messages[0] || "Error while fetching customer link from ERPNext. Check error log in ERPNext for more details");
 		});
-
-		// Add View Invoice Button (shown only when invoice exists)
-		call("crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings.get_invoice_url", {
-			crm_deal: this.doc.name
-		}).then((invoice_url) => {
-			if (invoice_url) {
-				this.actions.push({
-					label: __("View Invoice"),
-					onClick: () => window.open(invoice_url, '_blank')
-				});
-			}
-		}).catch(() => {});
 	}
 }
 """

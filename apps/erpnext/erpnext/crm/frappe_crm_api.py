@@ -25,14 +25,6 @@ def create_custom_fields_for_frappe_crm():
 				"insert_after": "prospect_name",
 			}
 		],
-		"Sales Invoice": [
-			{
-				"fieldname": "crm_deal",
-				"fieldtype": "Data",
-				"label": "Frappe CRM Deal",
-				"insert_after": "customer",
-			}
-		],
 	}
 	create_custom_fields(custom_fields, ignore_validate=True)
 
@@ -40,20 +32,16 @@ def create_custom_fields_for_frappe_crm():
 @frappe.whitelist()
 def create_prospect_against_crm_deal():
 	doc = frappe.form_dict
-	prospect = frappe.get_doc(
-		{
-			"doctype": "Prospect",
-			"company_name": doc.organization or doc.lead_name,
-			"no_of_employees": doc.no_of_employees,
-			"prospect_owner": doc.deal_owner,
-			"company": doc.erpnext_company,
-			"crm_deal": doc.crm_deal,
-			"territory": doc.territory,
-			"industry": doc.industry,
-			"website": doc.website,
-			"annual_revenue": doc.annual_revenue,
-		}
-	)
+	prospect = frappe.new_doc("Prospect")
+	prospect.company_name = doc.organization or doc.lead_name
+	prospect.no_of_employees = doc.no_of_employees
+	prospect.prospect_owner = doc.deal_owner
+	prospect.company = doc.erpnext_company
+	prospect.crm_deal = doc.crm_deal
+	prospect.territory = doc.territory
+	prospect.industry = doc.industry
+	prospect.website = doc.website
+	prospect.annual_revenue = doc.annual_revenue
 
 	try:
 		prospect_name = frappe.db.get_value("Prospect", {"company_name": prospect.company_name})
@@ -159,87 +147,16 @@ def contact_exists(email, mobile_no):
 	return False
 
 
-@frappe.whitelist()
-def create_sales_invoice(invoice_data=None):
-	"""Create a Sales Invoice from a Frappe CRM Deal."""
-	if not invoice_data:
-		invoice_data = frappe.form_dict
-
-	if isinstance(invoice_data, str):
-		invoice_data = json.loads(invoice_data)
-
-	customer_name = invoice_data.get("customer_name")
-	crm_deal = invoice_data.get("crm_deal")
-	currency = invoice_data.get("currency") or "INR"
-	company = invoice_data.get("company")
-	products = invoice_data.get("products") or []
-
-	if isinstance(products, str):
-		products = json.loads(products)
-
-	if not customer_name:
-		frappe.throw(_("Customer is required to create a Sales Invoice"))
-
-	# Ensure Customer exists
-	if not frappe.db.exists("Customer", customer_name):
-		frappe.throw(_("Customer {0} does not exist in ERPNext").format(customer_name))
-
-	invoice = frappe.new_doc("Sales Invoice")
-	invoice.customer = customer_name
-	invoice.currency = currency
-	invoice.crm_deal = crm_deal
-	if company:
-		invoice.company = company
-
-	for p in products:
-		p = frappe._dict(p)
-		item_code = _get_or_create_item(p)
-		invoice.append(
-			"items",
-			{
-				"item_code": item_code,
-				"item_name": p.get("product_name") or item_code,
-				"qty": p.get("qty") or 1,
-				"rate": p.get("rate") or 0,
-				"description": p.get("product_name") or item_code,
-			},
-		)
-
-	if not invoice.items:
-		# Fallback: single line with deal total
-		invoice.append(
-			"items",
-			{
-				"item_code": _get_or_create_item(frappe._dict({"product_name": "Sales - CRM Deal", "product_code": "CRM-DEAL-ITEM"})),
-				"item_name": "Sales from CRM Deal",
-				"qty": 1,
-				"rate": invoice_data.get("deal_value") or 0,
-				"description": f"Invoice for CRM Deal: {crm_deal}",
-			},
-		)
-
-	invoice.set_missing_values()
-	invoice.insert(ignore_permissions=True)
-	return invoice.name
-
-
-def _get_or_create_item(product):
-	"""Return ERPNext Item code, creating a minimal Item if it doesn't exist."""
-	item_code = product.get("product_code") or product.get("product_name") or "CRM-DEAL-ITEM"
-	if not frappe.db.exists("Item", item_code):
-		item = frappe.get_doc(
-			{
-				"doctype": "Item",
-				"item_code": item_code,
-				"item_name": product.get("product_name") or item_code,
-				"item_group": "All Item Groups",
-				"stock_uom": "Nos",
-				"is_stock_item": 0,
-				"is_sales_item": 1,
-			}
-		)
-		item.insert(ignore_permissions=True)
-	return item_code
+CUSTOMER_ALLOWED_FIELDS = {
+	"customer_name",
+	"customer_group",
+	"customer_type",
+	"territory",
+	"default_currency",
+	"industry",
+	"website",
+	"crm_deal",
+}
 
 
 @frappe.whitelist()
@@ -250,9 +167,11 @@ def create_customer(customer_data=None):
 	try:
 		customer_name = frappe.db.exists("Customer", {"customer_name": customer_data.get("customer_name")})
 		if not customer_name:
-			customer = frappe.get_doc({"doctype": "Customer", **customer_data}).insert(
-				ignore_permissions=True
-			)
+			customer = frappe.new_doc("Customer")
+			for field in CUSTOMER_ALLOWED_FIELDS:
+				if customer_data.get(field) is not None:
+					customer.set(field, customer_data.get(field))
+			customer.insert(ignore_permissions=True)
 			customer_name = customer.name
 
 		contacts = json.loads(customer_data.get("contacts"))

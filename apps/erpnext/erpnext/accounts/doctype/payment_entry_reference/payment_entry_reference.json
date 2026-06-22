@@ -38,7 +38,7 @@
    "search_index": 1
   },
   {
-   "columns": 2,
+   "columns": 4,
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
    "in_global_search": 1,
@@ -49,8 +49,10 @@
    "search_index": 1
   },
   {
+   "columns": 2,
    "fieldname": "due_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Due Date",
    "read_only": 1
   },
@@ -181,7 +183,8 @@
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

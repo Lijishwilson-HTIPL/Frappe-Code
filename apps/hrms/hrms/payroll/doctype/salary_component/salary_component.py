@@ -19,6 +19,8 @@ class SalaryComponent(Document):
 	def validate(self):
 		self.validate_abbr()
 		self.validate_accounts()
+		self.validate_accrual_component()
+		self.valide_arrear_component()
 
 	def on_update(self):
 		# set old values (allowing multiline strings for better readability in the doctype form)
@@ -58,8 +60,44 @@ class SalaryComponent(Document):
 				indicator="orange",
 			)
 
+	def validate_accrual_component(self):
+		if self.type != "Earning" and self.accrual_component:
+			frappe.throw(
+				_("Accrual Component can only be set for Earning Salary Components."),
+				title=_("Invalid Accrual Component"),
+			)
+
+		if self.is_flexible_benefit:
+			requires_accrual = self.payout_method in [
+				"Accrue and payout at end of payroll period",
+				"Accrue per cycle, pay only on claim",
+			]
+
+			if requires_accrual and not self.accrual_component:
+				frappe.throw(
+					_(
+						"Accrual Component must be set for Flexible Benefit Salary Components with accrual payout methods."
+					),
+					title=_("Invalid Accrual Component"),
+				)
+
+			if not requires_accrual and self.accrual_component:
+				frappe.throw(
+					_(
+						"Accrual Component can only be set for Flexible Benefit Salary Components with accrual payout methods."
+					),
+					title=_("Invalid Accrual Component"),
+				)
+
+	def valide_arrear_component(self):
+		if self.variable_based_on_taxable_salary and self.arrear_component:
+			frappe.throw(
+				_("Arrear Component cannot be set for Salary Components based on taxable salary."),
+				title=_("Invalid Arrear Component"),
+			)
+
 	@frappe.whitelist()
-	def get_structures_to_be_updated(self):
+	def get_structures_to_be_updated(self) -> list[str]:
 		SalaryStructure = frappe.qb.DocType("Salary Structure")
 		SalaryDetail = frappe.qb.DocType("Salary Detail")
 		return (
@@ -72,7 +110,9 @@ class SalaryComponent(Document):
 		)
 
 	@frappe.whitelist()
-	def update_salary_structures(self, field, value, structures=None):
+	def update_salary_structures(
+		self, field: str, value: str | int | float | None, structures: list | None = None
+	) -> None:
 		is_formula_related = field == "formula"
 
 		if not structures:
@@ -101,3 +141,7 @@ class SalaryComponent(Document):
 				"label": _("via Salary Component sync"),
 			}
 			salary_structure.save_version()
+			# db_update_all() does not invalidate cached Salary Structure documents.
+			# Clear the cache so salary slip generation picks up updated formulas
+			# and conditions immediately.
+			salary_structure.clear_cache()

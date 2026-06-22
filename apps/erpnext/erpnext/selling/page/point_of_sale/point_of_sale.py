@@ -6,7 +6,7 @@ import json
 
 import frappe
 from frappe.query_builder import DocType, Order
-from frappe.utils import cint
+from frappe.utils import cint, get_datetime
 from frappe.utils.nestedset import get_root_of
 
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_item_group, get_stock_availability
@@ -122,11 +122,13 @@ def filter_result_items(result, pos_profile):
 
 
 @frappe.whitelist()
-def get_parent_item_group():
-	# Using get_all to ignore user permission
-	item_group = frappe.get_all("Item Group", {"lft": 1, "is_group": 1}, pluck="name")
-	if item_group:
-		return item_group[0]
+def get_parent_item_group(pos_profile):
+	item_groups = get_item_groups(pos_profile)
+
+	if not item_groups:
+		item_groups = frappe.get_all("Item Group", {"lft": 1, "is_group": 1}, pluck="name")
+
+	return item_groups[0] if item_groups else None
 
 
 @frappe.whitelist()
@@ -275,6 +277,8 @@ def add_search_fields_condition(search_term):
 	search_fields = frappe.get_all("POS Search Fields", fields=["fieldname"])
 	if search_fields:
 		for field in search_fields:
+			if not field.get("fieldname"):
+				continue
 			condition += " or item.`{}` like {}".format(
 				field["fieldname"], frappe.db.escape("%" + search_term + "%")
 			)
@@ -349,9 +353,9 @@ def get_past_order_list(search_term, status, limit=20):
 	invoice_list = []
 
 	if search_term and status:
-		invoices_by_customer = frappe.db.get_list(
+		pos_invoices_by_customer = frappe.db.get_list(
 			"POS Invoice",
-			filters={"status": status},
+			filters=get_invoice_filters("POS Invoice", status),
 			or_filters={
 				"customer_name": ["like", f"%{search_term}%"],
 				"customer": ["like", f"%{search_term}%"],
@@ -359,60 +363,137 @@ def get_past_order_list(search_term, status, limit=20):
 			fields=fields,
 			page_length=limit,
 		)
-		invoices_by_name = frappe.db.get_list(
+
+		pos_invoices_by_name = frappe.db.get_list(
 			"POS Invoice",
-			filters={"name": ["like", f"%{search_term}%"], "status": status},
+			filters=get_invoice_filters("POS Invoice", status, name=search_term),
 			fields=fields,
 			page_length=limit,
 		)
 
-		invoice_list = invoices_by_customer + invoices_by_name
-	elif status:
-		invoice_list = frappe.db.get_list(
-			"POS Invoice", filters={"status": status}, fields=fields, page_length=limit
+		pos_invoice_list = add_doctype_to_results(
+			"POS Invoice", pos_invoices_by_customer + pos_invoices_by_name
 		)
+
+		sales_invoices_by_customer = frappe.db.get_list(
+			"Sales Invoice",
+			filters=get_invoice_filters("Sales Invoice", status),
+			or_filters={
+				"customer_name": ["like", f"%{search_term}%"],
+				"customer": ["like", f"%{search_term}%"],
+			},
+			fields=fields,
+			page_length=limit,
+		)
+		sales_invoices_by_name = frappe.db.get_list(
+			"Sales Invoice",
+			filters=get_invoice_filters("Sales Invoice", status, name=search_term),
+			fields=fields,
+			page_length=limit,
+		)
+
+		sales_invoice_list = add_doctype_to_results(
+			"Sales Invoice", sales_invoices_by_customer + sales_invoices_by_name
+		)
+
+	elif status:
+		pos_invoice_list = frappe.db.get_list(
+			"POS Invoice",
+			filters=get_invoice_filters("POS Invoice", status),
+			fields=fields,
+			page_length=limit,
+		)
+		pos_invoice_list = add_doctype_to_results("POS Invoice", pos_invoice_list)
+
+		sales_invoice_list = frappe.db.get_list(
+			"Sales Invoice",
+			filters=get_invoice_filters("Sales Invoice", status),
+			fields=fields,
+			page_length=limit,
+		)
+		sales_invoice_list = add_doctype_to_results("Sales Invoice", sales_invoice_list)
+
+	invoice_list = order_results_by_posting_date([*pos_invoice_list, *sales_invoice_list])
 
 	return invoice_list
 
 
 @frappe.whitelist()
 def set_customer_info(fieldname, customer, value=""):
+	customer_doc = frappe.get_doc("Customer", customer)
+	customer_doc.check_permission("write")
+
 	if fieldname == "loyalty_program":
-		frappe.db.set_value("Customer", customer, "loyalty_program", value)
+		customer_doc.loyalty_program = value
+	else:
+		contact = customer_doc.get("customer_primary_contact")
+		if not contact:
+			Contact = DocType("Contact")
+			DynamicLink = DocType("Dynamic Link")
 
-	contact = frappe.get_cached_value("Customer", customer, "customer_primary_contact")
-	if not contact:
-		contact = frappe.db.sql(
-			"""
-			SELECT parent FROM `tabDynamic Link`
-			WHERE
-				parenttype = 'Contact' AND
-				parentfield = 'links' AND
-				link_doctype = 'Customer' AND
-				link_name = %s
-			""",
-			(customer),
-			as_dict=1,
-		)
-		contact = contact[0].get("parent") if contact else None
+			# Inner join with Contact DocType, to priorities records that have is_primary_contact set.
+			query = (
+				frappe.qb.from_(DynamicLink)
+				.join(Contact)
+				.on(DynamicLink.parent == Contact.name)
+				.select(DynamicLink.parent)
+				.where(
+					(DynamicLink.link_name == customer)
+					& (DynamicLink.parentfield == "links")
+					& (DynamicLink.parenttype == "Contact")
+					& (DynamicLink.link_doctype == "Customer")
+				)
+				.orderby(Contact.is_primary_contact, order=Order.desc)
+			)
 
-	if not contact:
-		new_contact = frappe.new_doc("Contact")
-		new_contact.is_primary_contact = 1
-		new_contact.first_name = customer
-		new_contact.set("links", [{"link_doctype": "Customer", "link_name": customer}])
-		new_contact.save()
-		contact = new_contact.name
-		frappe.db.set_value("Customer", customer, "customer_primary_contact", contact)
+			contacts = query.run(pluck=DynamicLink.parent)
 
-	contact_doc = frappe.get_doc("Contact", contact)
-	if fieldname == "email_id":
-		contact_doc.set("email_ids", [{"email_id": value, "is_primary": 1}])
-		frappe.db.set_value("Customer", customer, "email_id", value)
-	elif fieldname == "mobile_no":
-		contact_doc.set("phone_nos", [{"phone": value, "is_primary_mobile_no": 1}])
-		frappe.db.set_value("Customer", customer, "mobile_no", value)
-	contact_doc.save()
+			contact = contacts[0] if contacts else None
+
+		if not contact:
+			new_contact = frappe.new_doc("Contact")
+			new_contact.is_primary_contact = 1
+			new_contact.first_name = customer
+			new_contact.set("links", [{"link_doctype": "Customer", "link_name": customer}])
+			new_contact.save()
+			contact = new_contact.name
+
+		def set_primary_phone_no_email(field, value):
+			# Create new record instead deleting existing email or phone_no and setting the new row as primary.
+			field_mapper = {
+				"email_ids": {"field": "email_id", "primary": "is_primary"},
+				"phone_nos": {"field": "phone", "primary": "is_primary_mobile_no"},
+			}
+
+			value_already_exists = False
+			for d in contact_doc.get(field):
+				if d.get(field_mapper[field].get("field")) == value and not value_already_exists:
+					d.set(field_mapper[field]["primary"], 1)
+					value_already_exists = True
+					continue
+				d.set(field_mapper[field]["primary"], 0)
+
+			if not value_already_exists:
+				contact_doc.append(
+					field, {field_mapper[field]["field"]: value, field_mapper[field]["primary"]: 1}
+				)
+
+		contact_doc = frappe.get_doc("Contact", contact)
+		# setting is_primary_contact = 1 on Contact to refetch the same contact incase it's removed from Customer records.
+		contact_doc.set("is_primary_contact", 1)
+		if fieldname == "email_id":
+			set_primary_phone_no_email("email_ids", value)
+		elif fieldname == "mobile_no":
+			set_primary_phone_no_email("phone_nos", value)
+		# Saving contact_doc to set mobile_no and email.
+		contact_doc.save()
+
+		# Auto-fetches from Contact DocType, no need to set values separately.
+		customer_doc.customer_primary_contact = contact
+
+	# using save method instead db.set_value which bypasses the validation for loyalty program
+	# and auto sets the mobile_no and email field on customer records.
+	customer_doc.save()
 
 
 @frappe.whitelist()
@@ -427,3 +508,77 @@ def get_pos_profile_data(pos_profile):
 
 	pos_profile.customer_groups = _customer_groups_with_children
 	return pos_profile
+
+
+def add_doctype_to_results(doctype, results):
+	for result in results:
+		result["doctype"] = doctype
+
+	return results
+
+
+def order_results_by_posting_date(results):
+	return sorted(
+		results,
+		key=lambda x: get_datetime(f"{x.get('posting_date')} {x.get('posting_time')}"),
+		reverse=True,
+	)
+
+
+def get_invoice_filters(doctype, status, name=None):
+	filters = {}
+
+	if name:
+		filters["name"] = ["like", f"%{name}%"]
+	if doctype == "POS Invoice":
+		filters["status"] = status
+		if status == "Partly Paid":
+			filters["status"] = ["in", ["Partly Paid", "Overdue", "Unpaid"]]
+		return filters
+
+	if doctype == "Sales Invoice":
+		filters["is_created_using_pos"] = 1
+		filters["is_consolidated"] = 0
+
+		if status == "Consolidated":
+			filters["pos_closing_entry"] = ["is", "set"]
+		else:
+			filters["pos_closing_entry"] = ["is", "not set"]
+			if status == "Draft":
+				filters["docstatus"] = 0
+			elif status == "Partly Paid":
+				filters["status"] = ["in", ["Partly Paid", "Overdue", "Unpaid"]]
+			else:
+				filters["docstatus"] = 1
+				if status == "Paid":
+					filters["is_return"] = 0
+				if status == "Return":
+					filters["is_return"] = 1
+
+	return filters
+
+
+@frappe.whitelist()
+def get_customer_recent_transactions(customer):
+	sales_invoices = frappe.db.get_list(
+		"Sales Invoice",
+		filters={
+			"customer": customer,
+			"docstatus": 1,
+			"is_pos": 1,
+			"is_consolidated": 0,
+			"is_created_using_pos": 1,
+		},
+		fields=["name", "grand_total", "status", "posting_date", "posting_time", "currency"],
+		page_length=20,
+	)
+
+	pos_invoices = frappe.db.get_list(
+		"POS Invoice",
+		filters={"customer": customer, "docstatus": 1},
+		fields=["name", "grand_total", "status", "posting_date", "posting_time", "currency"],
+		page_length=20,
+	)
+
+	invoices = order_results_by_posting_date(sales_invoices + pos_invoices)
+	return invoices

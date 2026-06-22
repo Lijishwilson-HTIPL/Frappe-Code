@@ -11,8 +11,8 @@
 					{% let doctype = transactions[i].items[j]; %}
 					<div class="document-link" data-doctype="{{ doctype }}">
 						<div class="document-link-badge" data-doctype="{{ doctype }}">
-							<span class="count hidden"></span>
 							<a class="badge-link">{{ __(doctype) }}</a>
+							<span class="count hidden"></span>
 						</div>
 						<span class="open-notification hidden"
 							title="{{ __("Open {0}", [__(doctype)])}}">
@@ -20,7 +20,7 @@
 						{% if !internal_links[doctype] %}
 							<button class="btn btn-new btn-secondary btn-xs icon-btn hidden"
 								data-doctype="{{ doctype }}">
-								<svg class="icon icon-sm"><use href="#icon-add"></use></svg>
+								<svg class="icon icon-sm"><use href="#icon-plus"></use></svg>
 							</button>
 						{% endif %}
 					</div>

@@ -10,6 +10,7 @@ import frappe.desk.form.meta
 from frappe import _
 from frappe.core.doctype.file.utils import extract_images_from_html
 from frappe.desk.form.document_follow import follow_document
+from frappe.query_builder.functions import IfNull
 
 if TYPE_CHECKING:
 	from frappe.core.doctype.comment.comment import Comment
@@ -27,8 +28,7 @@ def add_comment(
 	reference_doctype: str, reference_name: str, content: str, comment_email: str, comment_by: str
 ) -> "Comment":
 	"""Allow logged user with permission to read document to add a comment"""
-	reference_doc = frappe.get_doc(reference_doctype, reference_name)
-	reference_doc.check_permission()
+	reference_doc = frappe.get_lazy_doc(reference_doctype, reference_name, check_permission=True)
 
 	comment = frappe.new_doc("Comment")
 	comment.update(
@@ -58,8 +58,7 @@ def update_comment(name, content):
 		frappe.throw(_("Comment can only be edited by the owner"), frappe.PermissionError)
 
 	if doc.reference_doctype and doc.reference_name:
-		reference_doc = frappe.get_doc(doc.reference_doctype, doc.reference_name)
-		reference_doc.check_permission()
+		reference_doc = frappe.get_lazy_doc(doc.reference_doctype, doc.reference_name, check_permission=True)
 
 		doc.content = extract_images_from_html(reference_doc, content, is_private=True)
 	else:
@@ -85,7 +84,7 @@ def get_next(
 	prev: str | int,
 	filters: dict | str | None = None,
 	sort_order: str = "desc",
-	sort_field: str = "modified",
+	sort_field: str = "creation",
 ):
 	prev = int(prev)
 	if not filters:
@@ -94,9 +93,15 @@ def get_next(
 		filters = json.loads(filters)
 
 	table = frappe.qb.DocType(doctype)
-	sort_column = table[sort_field]
 	name_column = table.name
 	current_sort_value = frappe.db.get_value(doctype, value, sort_field)
+	fallback = _sort_field_fallback(doctype, sort_field)
+	if fallback is not None:
+		sort_column = IfNull(table[sort_field], fallback)
+		if current_sort_value is None:
+			current_sort_value = fallback
+	else:
+		sort_column = table[sort_field]
 
 	is_ascending = sort_order.lower() == "asc"
 	if prev == is_ascending:
@@ -111,7 +116,7 @@ def get_next(
 		order = frappe.qb.asc
 
 	query = (
-		frappe.qb.get_query(doctype, filters=filters, fields=["name"])
+		frappe.qb.get_query(doctype, filters=filters, fields=["name"], ignore_permissions=False)
 		.orderby(sort_column, order=order)
 		.orderby(name_column, order=order)
 		.where(composite_condition)
@@ -123,6 +128,23 @@ def get_next(
 
 	frappe.msgprint(_("No further records"))
 	return None
+
+
+def _sort_field_fallback(doctype: str, fieldname: str):
+	if fieldname in ("name", "modified", "creation", "modified_by", "owner", "idx", "docstatus"):
+		return None
+	df = frappe.get_meta(doctype).get_field(fieldname)
+	if df is None:
+		return ""
+	if df.fieldtype in ("Check", "Float", "Int", "Currency", "Percent"):
+		return None
+	if getattr(df, "not_nullable", False):
+		return None
+	if df.fieldtype in ("Date", "Datetime"):
+		return "0001-01-01"
+	if df.fieldtype == "Time":
+		return "00:00:00"
+	return ""
 
 
 def get_pdf_link(doctype, docname, print_format="Standard", no_letterhead=0):

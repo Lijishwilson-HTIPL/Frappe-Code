@@ -48,7 +48,7 @@
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2020-09-18 17:26:09.703215",
+ "modified": "2026-04-16 14:29:17.778497",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim Type",
@@ -67,8 +67,16 @@
   {
    "read": 1,
    "role": "Employee"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR User",
+   "write": 1
   }
  ],
- "sort_field": "modified",
- "sort_order": "ASC"
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
 }

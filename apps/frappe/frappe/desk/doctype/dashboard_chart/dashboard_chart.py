@@ -6,11 +6,11 @@ import json
 
 import frappe
 from frappe import _
-from frappe.boot import get_allowed_report_names
-from frappe.config import get_modules_from_all_apps_for_user
+from frappe.desk.desk_views import DeskViews
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
 from frappe.modules.export_file import export_to_files
+from frappe.permissions import get_doctypes_with_read
 from frappe.utils import cint, flt, get_datetime, getdate, has_common, now_datetime, nowdate
 from frappe.utils.dashboard import cache_source
 from frappe.utils.data import format_date
@@ -20,6 +20,7 @@ from frappe.utils.dateutils import (
 	get_period,
 	get_period_beginning,
 )
+from frappe.utils.modules import get_modules_from_all_apps_for_user
 
 
 def get_permission_query_conditions(user):
@@ -38,9 +39,9 @@ def get_permission_query_conditions(user):
 	module_condition = False
 
 	allowed_doctypes = [frappe.db.escape(doctype) for doctype in frappe.permissions.get_doctypes_with_read()]
-	allowed_reports = [frappe.db.escape(report) for report in get_allowed_report_names()]
+	allowed_reports = [frappe.db.escape(report) for report in DeskViews.get_allowed_report_names(user=user)]
 	allowed_modules = [
-		frappe.db.escape(module.get("module_name")) for module in get_modules_from_all_apps_for_user()
+		frappe.db.escape(module.get("module_name")) for module in get_modules_from_all_apps_for_user(user)
 	]
 
 	if allowed_doctypes:
@@ -76,10 +77,10 @@ def has_permission(doc, ptype, user):
 		if has_common(roles, allowed):
 			return True
 	elif doc.chart_type == "Report":
-		if doc.report_name in get_allowed_report_names():
+		if doc.report_name in DeskViews.get_allowed_report_names(user=user):
 			return True
 	else:
-		allowed_doctypes = frappe.permissions.get_doctypes_with_read()
+		allowed_doctypes = get_doctypes_with_read(user)
 		if doc.document_type in allowed_doctypes:
 			return True
 
@@ -125,7 +126,7 @@ def get(
 		filters = []
 
 	# don't include cancelled documents
-	filters.append([chart.document_type, "docstatus", "<", 2, False])
+	filters.append([chart.document_type, "docstatus", "<", 2])
 
 	if chart.chart_type == "Group By":
 		chart_config = get_group_by_chart_config(chart, filters)
@@ -196,12 +197,12 @@ def get_chart_config(chart, filters, timespan, timegrain, from_date, to_date):
 	from_date = from_date.strftime("%Y-%m-%d")
 	to_date = to_date
 
-	filters.append([doctype, datefield, ">=", from_date, False])
-	filters.append([doctype, datefield, "<=", to_date, False])
+	filters.append([doctype, datefield, ">=", from_date])
+	filters.append([doctype, datefield, "<=", to_date])
 
 	data = frappe.get_list(
 		doctype,
-		fields=[datefield, f"SUM({value_field})", "COUNT(*)"],
+		fields=[datefield, {"SUM": value_field}, {"COUNT": "*"}],
 		filters=filters,
 		group_by=datefield,
 		order_by=datefield,
@@ -231,8 +232,8 @@ def get_heatmap_chart_config(chart, filters, heatmap_year):
 	year_start_date = datetime.date(year, 1, 1).strftime("%Y-%m-%d")
 	next_year_start_date = datetime.date(year + 1, 1, 1).strftime("%Y-%m-%d")
 
-	filters.append([doctype, datefield, ">", f"{year_start_date}", False])
-	filters.append([doctype, datefield, "<", f"{next_year_start_date}", False])
+	filters.append([doctype, datefield, ">", f"{year_start_date}"])
+	filters.append([doctype, datefield, "<", f"{next_year_start_date}"])
 
 	if frappe.db.db_type == "mariadb":
 		timestamp_field = f"unix_timestamp({datefield})"
@@ -244,7 +245,7 @@ def get_heatmap_chart_config(chart, filters, heatmap_year):
 			doctype,
 			fields=[
 				timestamp_field,
-				f"{aggregate_function}({value_field})",
+				{aggregate_function: value_field},
 			],
 			filters=filters,
 			group_by=f"date({datefield})",
@@ -270,7 +271,7 @@ def get_group_by_chart_config(chart, filters) -> dict | None:
 		doctype,
 		fields=[
 			f"{group_by_field} as name",
-			f"{aggregate_function}({value_field}) as count",
+			{aggregate_function: value_field, "as": "count"},
 		],
 		filters=filters,
 		parent_doctype=chart.parent_document_type,
@@ -279,9 +280,21 @@ def get_group_by_chart_config(chart, filters) -> dict | None:
 		ignore_ifnull=True,
 	)
 
+	group_by_field_field = frappe.get_meta(doctype).get_field(
+		group_by_field
+	)  # get info about @group_by_field
+
+	if data and group_by_field_field.fieldtype == "Link":  # if @group_by_field is link
+		meta = frappe.get_meta(group_by_field_field.options)  # get title field
+		for item in data:  # replace chart labels from name to title value
+			if meta.title_field:
+				item.name = frappe.get_value(group_by_field_field.options, item.name, meta.title_field)
+			elif meta.translated_doctype:
+				item.name = _(item.get("name", "Not Specified"))
+
 	if data:
 		return {
-			"labels": [item.get("name", "Not Specified") for item in data],
+			"labels": [item.name for item in data],
 			"datasets": [{"name": chart.name, "values": [item["count"] for item in data]}],
 		}
 	return None
@@ -306,7 +319,7 @@ def get_result(data, timegrain, from_date, to_date, chart_type):
 				d[1] += flt(data[data_index][1])
 				count += flt(data[data_index][2])
 				data_index += 1
-			if chart_type == "Average" and not count == 0:
+			if chart_type == "Average" and count != 0:
 				d[1] = d[1] / count
 			if chart_type == "Count":
 				d[1] = count
@@ -366,8 +379,8 @@ class DashboardChart(Document):
 		value_based_on: DF.Literal[None]
 		x_field: DF.Literal[None]
 		y_axis: DF.Table[DashboardChartField]
-
 	# end: auto-generated types
+
 	def on_update(self):
 		frappe.cache.delete_key(f"chart-data:{self.name}")
 		if frappe.conf.developer_mode and self.is_standard:

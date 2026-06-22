@@ -27,13 +27,24 @@ frappe.dom = {
 	},
 	eval: function (txt) {
 		if (!txt) return;
-		var el = document.createElement("script");
-		el.appendChild(document.createTextNode(txt));
-		// execute the script globally
-		document.getElementsByTagName("head")[0].appendChild(el);
+		new Function(txt)();
 	},
+
 	remove_script_and_style: function (txt) {
 		const evil_tags = ["script", "style", "noscript", "title", "meta", "base", "head"];
+		const unsafe_tags = ["link"];
+
+		if (!this.unsafe_tags_regex) {
+			const evil_and_unsafe_tags = evil_tags.concat(unsafe_tags);
+			const regex_str = evil_and_unsafe_tags.map((t) => `<([\\s]*)${t}`).join("|");
+			this.unsafe_tags_regex = new RegExp(regex_str, "im");
+		}
+
+		// if no unsafe tags are present return as is to prevent unncessary expensive parsing
+		if (!txt || !this.unsafe_tags_regex.test(txt)) {
+			return txt;
+		}
+
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(txt, "text/html");
 		const body = doc.body;
@@ -282,7 +293,7 @@ frappe.timeout = (seconds) => {
 	});
 };
 
-frappe.scrub = function (text, spacer = "_") {
+frappe.scrub = frappe.slug = function (text, spacer = "_") {
 	return text.replace(/ /g, spacer).toLowerCase();
 };
 
@@ -301,20 +312,20 @@ frappe.get_data_pill = (
 		style = "";
 	if (colored) {
 		color = frappe.get_palette(label);
+		style = `background-color: var(${color[0]}); color: var(${color[1]})`;
 	}
-	style = `background-color: var(${color[0]}); color: var(${color[1]})`;
 	let data_pill_wrapper = $(`
 		<button class="data-pill btn" style="${style}">
 			<div class="flex align-center ellipsis">
 				${image ? image : ""}
-				<span class="pill-label">${label} </span>
+				<span class="pill-label ellipsis">${label} </span>
 			</div>
 		</button>
 	`);
 	if (remove_action) {
 		let remove_btn = $(`
-			<span class="remove-btn cursor-pointer">
-				${frappe.utils.icon("close", "sm")}
+			<span class="remove-btn cursor-pointer flex align-items-center">
+				${frappe.utils.icon("x", "sm")}
 			</span>
 		`);
 		if (typeof remove_action === "function") {
@@ -336,12 +347,12 @@ frappe.get_modal = function (title, content) {
 						<span class="indicator hidden"></span>
 						<h4 class="modal-title">${title}</h4>
 					</div>
-					<div class="modal-actions">
-						<button class="btn btn-modal-minimize btn-link hide">
+					<div class="modal-actions d-flex">
+						<button class="btn btn-ghost btn-modal-minimize icon-btn hide">
 							${frappe.utils.icon("collapse")}
 						</button>
-						<button class="btn btn-modal-close btn-link" data-dismiss="modal">
-							${frappe.utils.icon("close-alt", "sm", "close-alt")}
+						<button class="btn btn-ghost btn-modal-close icon-btn" data-dismiss="modal">
+							${frappe.utils.icon("x", "sm")}
 						</button>
 					</div>
 				</div>

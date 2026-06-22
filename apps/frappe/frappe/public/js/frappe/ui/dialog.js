@@ -12,9 +12,22 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 		super();
 		this.display = false;
 		this.is_dialog = true;
+		this.last_focus = null;
 
-		$.extend(this, { animate: true, size: null }, opts);
-		this.make();
+		$.extend(
+			this,
+			{
+				animate: true,
+				size: null,
+				auto_make: true,
+				centered: false,
+				keep_grid_form_open: false,
+			},
+			opts
+		);
+		if (this.auto_make) {
+			this.make();
+		}
 	}
 
 	make() {
@@ -31,6 +44,7 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 		if (!this.size) this.set_modal_size();
 
 		this.wrapper = this.$wrapper.find(".modal-dialog").get(0);
+		if (this.centered) $(this.wrapper).addClass("modal-dialog-centered");
 		if (this.size == "small") $(this.wrapper).addClass("modal-sm");
 		else if (this.size == "large") $(this.wrapper).addClass("modal-lg");
 		else if (this.size == "extra-large") $(this.wrapper).addClass("modal-xl");
@@ -90,8 +104,10 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 				me.display = false;
 				me.is_minimized = false;
 				me.hide_scrollbar(false);
-				// hide any grid row form if open
-				frappe.ui.form.get_open_grid_form?.()?.hide_form();
+				if (!me.keep_grid_form_open) {
+					// hide any grid row form if open
+					frappe.ui.form.get_open_grid_form?.()?.hide_form();
+				}
 
 				if (frappe.ui.open_dialogs[frappe.ui.open_dialogs.length - 1] === me) {
 					frappe.ui.open_dialogs.pop();
@@ -124,7 +140,31 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 				) {
 					$input.blur();
 				}
+			})
+			.on("keydown", function (e) {
+				if (e.key === "Escape" || e.keyCode === 27) {
+					// _awesomplete_was_open is set in the capture-phase listener below, before
+					// Awesomplete's own keydown handler closes the dropdown and clears aria-expanded.
+					if (me._awesomplete_was_open) {
+						me._awesomplete_was_open = false;
+						e.stopImmediatePropagation();
+					}
+				}
 			});
+
+		// Runs in capture phase, before Awesomplete's bubble-phase keydown handler on the input,
+		// so aria-expanded is still "true" when the dropdown is open.
+		me.$wrapper[0].addEventListener(
+			"keydown",
+			function (e) {
+				if (e.key === "Escape" || e.keyCode === 27) {
+					me._awesomplete_was_open =
+						me.display &&
+						!!me.$wrapper.find(".awesomplete input[aria-expanded='true']").length;
+				}
+			},
+			true // capture phase
+		);
 	}
 
 	set_modal_size() {
@@ -158,6 +198,20 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 
 	get_minimize_btn() {
 		return this.$wrapper.find(".modal-header .btn-modal-minimize");
+	}
+
+	set_alert(text, alert_class = "info") {
+		this.clear_alert();
+		this.$alert = $(`<div class="alert alert-${alert_class}">${text}</div>`).prependTo(
+			this.body
+		);
+		this.$message.text(text);
+	}
+
+	clear_alert() {
+		if (this.$alert) {
+			this.$alert.remove();
+		}
 	}
 
 	set_message(text) {
@@ -231,6 +285,10 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 
 	show() {
 		// show it
+		if (window.location.pathname.startsWith("/desk")) {
+			this.handle_focus();
+		}
+
 		if (this.animate) {
 			this.$wrapper.addClass("fade");
 		} else {
@@ -256,6 +314,21 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 	hide() {
 		this.$wrapper.modal("hide");
 		this.is_visible = false;
+	}
+
+	handle_focus() {
+		const me = this;
+		if (frappe.get_route?.()) {
+			if (frappe.get_route()[0] == "Form") {
+				if (!me.last_focus) me.last_focus = document.activeElement;
+			}
+			$(document).on("escape", function () {
+				if (me.last_focus) {
+					me.last_focus.focus();
+					me.last_focus = null;
+				}
+			});
+		}
 	}
 
 	get_close_btn() {
@@ -301,6 +374,8 @@ frappe.ui.Dialog = class Dialog extends frappe.ui.FieldGroup {
 
 		action && action_button.click(action);
 	}
+
+	add_custom_button() {}
 };
 
 frappe.ui.hide_open_dialog = () => {

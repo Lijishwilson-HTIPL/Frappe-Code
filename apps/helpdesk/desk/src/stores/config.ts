@@ -4,15 +4,21 @@ import { defineStore } from "pinia";
 import { computed, ComputedRef } from "vue";
 
 export const useConfigStore = defineStore("config", () => {
-  const configRes = createResource({
+  const configResource = createResource({
     url: "helpdesk.api.config.get_config",
     auto: true,
   });
 
-  const config = computed(() => configRes.data || {});
+  const config = computed(() => configResource.data || {});
+  const brandName = computed(() => config.value.brand_name);
   const brandLogo = computed(() => config.value.brand_logo);
+  const favicon = computed(() => config.value.favicon);
+
   const teamRestrictionApplied = computed(
     () => !!parseInt(config.value.restrict_tickets_by_agent_group)
+  );
+  const disableGlobalScopeForSavedReplies = computed(
+    () => !!parseInt(config.value.disable_saved_replies_global_scope)
   );
   const assignWithinTeam = computed(
     () => !!parseInt(config.value.assign_within_team)
@@ -26,16 +32,24 @@ export const useConfigStore = defineStore("config", () => {
   const isFeedbackMandatory = computed(
     () => !!parseInt(config.value.is_feedback_mandatory)
   );
+  const enableCommentReactions = computed(
+    () => !!parseInt(config.value.enable_comment_reactions)
+  );
 
-  socket.on("helpdesk:settings-updated", () => configRes.reload());
+  socket.on("helpdesk:settings-updated", () => configResource.reload());
 
   return {
+    configResource,
+    brandName,
     brandLogo,
+    favicon,
     config,
     preferKnowledgeBase,
     skipEmailWorkflow,
     isFeedbackMandatory,
     teamRestrictionApplied,
     assignWithinTeam,
+    disableGlobalScopeForSavedReplies,
+    enableCommentReactions,
   };
 });

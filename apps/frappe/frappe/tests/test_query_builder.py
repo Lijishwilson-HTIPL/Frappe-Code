@@ -3,6 +3,8 @@ from collections.abc import Callable
 from datetime import time
 
 import frappe
+from frappe.core.doctype.doctype.test_doctype import new_doctype
+from frappe.database.operator_map import func_in
 from frappe.query_builder import Case
 from frappe.query_builder.builder import Function
 from frappe.query_builder.custom import ConstantColumn
@@ -12,23 +14,36 @@ from frappe.query_builder.functions import (
 	CombineDatetime,
 	Date,
 	GroupConcat,
+	JSONContains,
+	JSONExtract,
+	JSONValue,
 	Match,
 	Round,
 	Truncate,
 	UnixTimestamp,
 )
 from frappe.query_builder.utils import db_type_is
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
 def run_only_if(dbtype: db_type_is) -> Callable:
 	return unittest.skipIf(db_type_is(frappe.conf.db_type) != dbtype, f"Only runs for {dbtype.value}")
 
 
+def unimplemented_for(*dbtypes: db_type_is) -> Callable:
+	current_db_type = db_type_is(frappe.conf.db_type)
+	return unittest.skipIf(current_db_type in dbtypes, f"Not Implemented for {current_db_type.value}")
+
+
 @run_only_if(db_type_is.MARIADB)
-class TestCustomFunctionsMariaDB(FrappeTestCase):
+class TestCustomFunctionsMariaDB(IntegrationTestCase):
 	def test_concat(self):
-		self.assertEqual("GROUP_CONCAT('Notes')", GroupConcat("Notes").get_sql())
+		self.assertEqual("GROUP_CONCAT('Notes' SEPARATOR ',')", GroupConcat("Notes").get_sql())
+		user = frappe.qb.DocType("User")
+		query = frappe.qb.from_(user).select(GroupConcat(user.email).separator(" | ").as_("user_list"))
+		sql = query.get_sql()
+		self.assertIn("SEPARATOR ' | '", sql)
+		self.assertIn("`user_list`", sql)
 
 	def test_match(self):
 		query = Match("Notes")
@@ -164,9 +179,46 @@ class TestCustomFunctionsMariaDB(FrappeTestCase):
 		query = frappe.qb.from_(note).select(Truncate(note.price, 3))
 		self.assertEqual("select truncate(`price`,3) from `tabnote`", str(query).lower())
 
+	def test_json_extract(self):
+		note = frappe.qb.DocType("Note")
+		# Simple get_sql
+		self.assertEqual("JSON_EXTRACT(content,'$.key')", JSONExtract(note.content, "$.key").get_sql())
+
+		# In a SELECT query
+		query = frappe.qb.from_(note).select(JSONExtract(note.content, "$.key"))
+		self.assertIn("json_extract(`content`,'$.key')", str(query).lower())
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONExtract(note.content, "$.key") == "value")
+		self.assertIn("json_extract(`content`,'$.key')='value'", str(query).lower())
+
+	def test_json_value(self):
+		note = frappe.qb.DocType("Note")
+		# Simple get_sql
+		self.assertEqual(
+			"JSON_UNQUOTE(JSON_EXTRACT(content,'$.key'))", JSONValue(note.content, "$.key").get_sql()
+		)
+
+		# In a SELECT query
+		query = frappe.qb.from_(note).select(JSONValue(note.content, "$.key"))
+		self.assertIn("json_unquote(json_extract(`content`,'$.key'))", str(query).lower())
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONValue(note.content, "$.key") == "value")
+		self.assertIn("json_unquote(json_extract(`content`,'$.key'))='value'", str(query).lower())
+
+	def test_json_contains(self):
+		note = frappe.qb.DocType("Note")
+		# With a plain string candidate (auto-wrapped as JSON)
+		self.assertEqual("JSON_CONTAINS(content,'\"value\"')", JSONContains(note.content, "value").get_sql())
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONContains(note.content, "admin"))
+		self.assertIn("json_contains(`content`,'\"admin\"')", str(query).lower())
+
 
 @run_only_if(db_type_is.POSTGRES)
-class TestCustomFunctionsPostgres(FrappeTestCase):
+class TestCustomFunctionsPostgres(IntegrationTestCase):
 	def test_concat(self):
 		self.assertEqual("STRING_AGG('Notes',',')", GroupConcat("Notes").get_sql())
 
@@ -301,6 +353,41 @@ class TestCustomFunctionsPostgres(FrappeTestCase):
 		query = frappe.qb.from_(note).select(Truncate(note.price, 3))
 		self.assertEqual('select truncate("price",3) from "tabnote"', str(query).lower())
 
+	def test_json_extract(self):
+		note = frappe.qb.DocType("Note")
+		# Simple get_sql
+		self.assertEqual("\"content\"->'$.key'", JSONExtract(note.content, "$.key").get_sql())
+
+		# In a SELECT query
+		query = frappe.qb.from_(note).select(JSONExtract(note.content, "$.key"))
+		self.assertIn("\"content\"->'$.key'", str(query))
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONExtract(note.content, "$.key") == "value")
+		self.assertIn("\"content\"->'$.key'='value'", str(query))
+
+	def test_json_value(self):
+		note = frappe.qb.DocType("Note")
+		# Simple get_sql
+		self.assertEqual("\"content\"->>'$.key'", JSONValue(note.content, "$.key").get_sql())
+
+		# In a SELECT query
+		query = frappe.qb.from_(note).select(JSONValue(note.content, "$.key"))
+		self.assertIn("\"content\"->>'$.key'", str(query))
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONValue(note.content, "$.key") == "value")
+		self.assertIn("\"content\"->>'$.key'='value'", str(query))
+
+	def test_json_contains(self):
+		note = frappe.qb.DocType("Note")
+		# With a plain string candidate
+		self.assertEqual("\"content\"@>'admin'", JSONContains(note.content, "admin").get_sql())
+
+		# In a WHERE clause
+		query = frappe.qb.from_(note).select(note.name).where(JSONContains(note.content, "admin"))
+		self.assertIn("\"content\"@>'admin'", str(query))
+
 
 class TestBuilderBase:
 	def test_adding_tabs(self):
@@ -316,26 +403,36 @@ class TestBuilderBase:
 		self.assertIsInstance(data, list)
 
 	def test_agg_funcs(self):
-		frappe.db.truncate("Communication")
+		doc = new_doctype(
+			fields=[
+				{
+					"fieldname": "number",
+					"fieldtype": "Int",
+					"label": "Number",
+					"reqd": 1,  # mandatory
+				},
+			],
+		)
+		doc.insert()
+		self.doctype_name = doc.name
+		frappe.db.truncate(self.doctype_name)
 		sample_data = {
-			"doctype": "Communication",
-			"communication_type": "Communication",
-			"content": "testing",
-			"rating": 1,
+			"doctype": self.doctype_name,
+			"number": 1,
 		}
-		frappe.get_doc(sample_data).insert()
-		sample_data["rating"] = 3
-		frappe.get_doc(sample_data).insert()
-		sample_data["rating"] = 4
-		frappe.get_doc(sample_data).insert()
-		self.assertEqual(frappe.qb.max("Communication", "rating"), 4)
-		self.assertEqual(frappe.qb.min("Communication", "rating"), 1)
-		self.assertAlmostEqual(frappe.qb.avg("Communication", "rating"), 2.666, places=2)
-		self.assertEqual(frappe.qb.sum("Communication", "rating"), 8.0)
+		frappe.get_doc(sample_data).insert(ignore_mandatory=True)
+		sample_data["number"] = 3
+		frappe.get_doc(sample_data).insert(ignore_mandatory=True)
+		sample_data["number"] = 4
+		frappe.get_doc(sample_data).insert(ignore_mandatory=True)
+		self.assertEqual(frappe.qb.max(self.doctype_name, "number"), 4)
+		self.assertEqual(frappe.qb.min(self.doctype_name, "number"), 1)
+		self.assertAlmostEqual(frappe.qb.avg(self.doctype_name, "number"), 2.666, places=2)
+		self.assertEqual(frappe.qb.sum(self.doctype_name, "number"), 8.0)
 		frappe.db.rollback()
 
 
-class TestParameterization(FrappeTestCase):
+class TestParameterization(IntegrationTestCase):
 	def test_where_conditions(self):
 		DocType = frappe.qb.DocType("DocType")
 		query = frappe.qb.from_(DocType).select(DocType.name).where(DocType.owner == "Administrator' --")
@@ -426,7 +523,7 @@ class TestParameterization(FrappeTestCase):
 
 
 @run_only_if(db_type_is.MARIADB)
-class TestBuilderMaria(FrappeTestCase, TestBuilderBase):
+class TestBuilderMaria(IntegrationTestCase, TestBuilderBase):
 	def test_adding_tabs_in_from(self):
 		self.assertEqual("SELECT * FROM `tabNotes`", frappe.qb.from_("Notes").select("*").get_sql())
 		self.assertEqual("SELECT * FROM `__Auth`", frappe.qb.from_("__Auth").select("*").get_sql())
@@ -439,7 +536,7 @@ class TestBuilderMaria(FrappeTestCase, TestBuilderBase):
 
 
 @run_only_if(db_type_is.POSTGRES)
-class TestBuilderPostgres(FrappeTestCase, TestBuilderBase):
+class TestBuilderPostgres(IntegrationTestCase, TestBuilderBase):
 	def test_adding_tabs_in_from(self):
 		self.assertEqual('SELECT * FROM "tabNotes"', frappe.qb.from_("Notes").select("*").get_sql())
 		self.assertEqual('SELECT * FROM "__Auth"', frappe.qb.from_("__Auth").select("*").get_sql())
@@ -461,7 +558,7 @@ class TestBuilderPostgres(FrappeTestCase, TestBuilderBase):
 		self.assertEqual('SELECT * FROM "tabDocType"', qb().from_("DocType").select("*").get_sql())
 
 
-class TestMisc(FrappeTestCase):
+class TestMisc(IntegrationTestCase):
 	def test_custom_func(self):
 		rand_func = frappe.qb.functions("rand", "45")
 		self.assertIsInstance(rand_func, Function)
@@ -487,3 +584,74 @@ class TestMisc(FrappeTestCase):
 		roles = frappe.qb.from_(role).select(role.name)
 
 		self.assertEqual(set(users.run() + roles.run()), set((users + roles).run()))
+
+
+class TestOperatorIn(IntegrationTestCase):
+	def test_func_in_without_empty_values(self):
+		note = frappe.qb.DocType("Note")
+		query = func_in(note.name, ["n1", "n2", "n3"])
+		sql_str = str(query).lower()
+
+		self.assertIn("in", sql_str)
+		self.assertNotIn("coalesce", sql_str)
+
+	def test_func_in_with_none_converts_to_empty_string(self):
+		note = frappe.qb.DocType("Note")
+		query = func_in(note.name, [None, "user1"])
+		sql_str = str(query).lower()
+
+		self.assertNotIn("coalesce", sql_str)
+		self.assertIn("is null", sql_str)
+		self.assertIn("user1", sql_str)
+		self.assertTrue("''" in sql_str or "%(" in sql_str, msg=sql_str)
+
+	def test_func_in_with_empty_string_uses_or_is_null(self):
+		note = frappe.qb.DocType("Note")
+		query = func_in(note.name, ["", "user1"])
+		sql_str = str(query).lower()
+
+		self.assertNotIn("coalesce", sql_str)
+		self.assertIn("is null", sql_str)
+		self.assertIn("user1", sql_str)
+		self.assertTrue("''" in sql_str or "%(" in sql_str, msg=sql_str)
+
+	def test_func_in_with_mixed_none_and_values(self):
+		note = frappe.qb.DocType("Note")
+		query = func_in(note.name, ["val1", None, "val2"])
+		sql_str = str(query).lower()
+
+		self.assertNotIn("coalesce", sql_str)
+		self.assertIn("is null", sql_str)
+
+	def test_in_filter_matches_null_and_empty_columns(self):
+		test_doctype = new_doctype(
+			fields=[
+				{
+					"fieldname": "test_field",
+					"fieldtype": "Data",
+					"label": "Test Field",
+				},
+			],
+		)
+		test_doctype.insert()
+		self.test_doctype_name = test_doctype.name
+		self.addCleanup(frappe.delete_doc, "DocType", self.test_doctype_name)
+
+		frappe.db.truncate(self.test_doctype_name)
+
+		doc_null = frappe.get_doc({"doctype": self.test_doctype_name, "test_field": None})
+		doc_null.insert()
+		doc_empty = frappe.get_doc({"doctype": self.test_doctype_name, "test_field": ""})
+		doc_empty.insert()
+		doc_user = frappe.get_doc({"doctype": self.test_doctype_name, "test_field": "user1"})
+		doc_user.insert()
+
+		results = frappe.get_all(
+			self.test_doctype_name,
+			filters={"test_field": ["in", [None, "user1"]]},
+			pluck="test_field",
+		)
+
+		self.assertIn("user1", results)
+		blank_like = sum(1 for r in results if r in (None, ""))
+		self.assertGreaterEqual(blank_like, 2, msg=repr(results))

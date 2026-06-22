@@ -5,16 +5,20 @@
 import json
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import change_settings
 from frappe.utils import add_days, today
 
 from erpnext.buying.doctype.supplier_quotation.supplier_quotation import make_purchase_order
 from erpnext.controllers.accounts_controller import InvalidQtyError, update_child_qty_rate
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestPurchaseOrder(FrappeTestCase):
+class TestPurchaseOrder(ERPNextTestSuite):
+	def setUp(self):
+		self.load_test_records("Supplier Quotation")
+
 	def test_update_child_supplier_quotation_add_item(self):
-		sq = frappe.copy_doc(test_records[0])
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
 		sq.submit()
 
 		trans_item = json.dumps(
@@ -25,20 +29,17 @@ class TestPurchaseOrder(FrappeTestCase):
 					"qty": 5,
 					"docname": sq.items[0].name,
 				},
-				{
-					"item_code": "_Test Item 2",
-					"rate": 300,
-					"qty": 3,
-				},
+				{"item_code": "_Test Item 2", "rate": 300, "qty": 3, "description": "test"},
 			]
 		)
 		update_child_qty_rate("Supplier Quotation", trans_item, sq.name)
 		sq.reload()
 		self.assertEqual(sq.get("items")[0].qty, 5)
 		self.assertEqual(sq.get("items")[1].rate, 300)
+		self.assertEqual(sq.get("items")[1].description, "test")
 
 	def test_update_supplier_quotation_child_rate(self):
-		sq = frappe.copy_doc(test_records[0])
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
 		sq.submit()
 		trans_item = json.dumps(
 			[
@@ -71,7 +72,7 @@ class TestPurchaseOrder(FrappeTestCase):
 		)
 
 	def test_update_supplier_quotation_child_remove_item(self):
-		sq = frappe.copy_doc(test_records[0])
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
 		sq.submit()
 		po = make_purchase_order(sq.name)
 
@@ -128,7 +129,7 @@ class TestPurchaseOrder(FrappeTestCase):
 		self.assertEqual(len(sq.get("items")), 1)
 
 	def test_supplier_quotation_qty(self):
-		sq = frappe.copy_doc(test_records[0])
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
 		sq.items[0].qty = 0
 		with self.assertRaises(InvalidQtyError):
 			sq.save()
@@ -138,8 +139,19 @@ class TestPurchaseOrder(FrappeTestCase):
 		sq.save()
 		self.assertEqual(sq.items[0].qty, 1)
 
+	def test_supplier_quotation_zero_qty(self):
+		"""
+		Test if RFQ with zero qty (Unit Price Item) is conditionally allowed.
+		"""
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
+		sq.items[0].qty = 0
+
+		with change_settings("Buying Settings", {"allow_zero_qty_in_supplier_quotation": 1}):
+			sq.save()
+			self.assertEqual(sq.items[0].qty, 0)
+
 	def test_make_purchase_order(self):
-		sq = frappe.copy_doc(test_records[0]).insert()
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0]).insert()
 
 		self.assertRaises(frappe.ValidationError, make_purchase_order, sq.name)
 
@@ -158,9 +170,9 @@ class TestPurchaseOrder(FrappeTestCase):
 
 		po.insert()
 
-	@change_settings("Buying Settings", {"allow_zero_qty_in_supplier_quotation": 1})
+	@ERPNextTestSuite.change_settings("Buying Settings", {"allow_zero_qty_in_supplier_quotation": 1})
 	def test_map_purchase_order_from_zero_qty_supplier_quotation(self):
-		sq = frappe.copy_doc(test_records[0]).insert()
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
 		sq.items[0].qty = 0
 		sq.submit()
 
@@ -168,6 +180,3 @@ class TestPurchaseOrder(FrappeTestCase):
 		self.assertEqual(len(po.get("items")), 1)
 		self.assertEqual(po.get("items")[0].qty, 0)
 		self.assertEqual(po.get("items")[0].item_code, sq.get("items")[0].item_code)
-
-
-test_records = frappe.get_test_records("Supplier Quotation")

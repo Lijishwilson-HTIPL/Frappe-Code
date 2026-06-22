@@ -1,12 +1,9 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and Contributors
 # See license.txt
-
 import unittest
 
-import frappe
-
-test_records = frappe.get_test_records("Warranty Claim")
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestWarrantyClaim(unittest.TestCase):
+class TestWarrantyClaim(ERPNextTestSuite):
 	pass

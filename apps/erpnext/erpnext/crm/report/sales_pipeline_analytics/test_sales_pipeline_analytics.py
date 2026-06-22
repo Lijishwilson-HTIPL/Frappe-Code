@@ -1,16 +1,13 @@
 import unittest
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.crm.report.sales_pipeline_analytics.sales_pipeline_analytics import execute
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestSalesPipelineAnalytics(FrappeTestCase):
+class TestSalesPipelineAnalytics(ERPNextTestSuite):
 	def setUp(self):
-		frappe.db.delete("Opportunity")
-		create_company()
-		create_customer()
 		create_opportunity()
 
 	def test_sales_pipeline_analytics(self):
@@ -182,24 +179,6 @@ class TestSalesPipelineAnalytics(FrappeTestCase):
 		self.assertEqual(expected_data, report[1])
 
 
-def create_company():
-	doc = frappe.db.exists("Company", "Best Test")
-	if not doc:
-		doc = frappe.new_doc("Company")
-		doc.company_name = "Best Test"
-		doc.default_currency = "INR"
-		doc.insert()
-
-
-def create_customer():
-	doc = frappe.db.exists("Customer", "_Test NC")
-	if not doc:
-		doc = frappe.new_doc("Customer")
-		doc.customer_name = "_Test NC"
-		doc.customer_group = "Individual"
-		doc.insert()
-
-
 def create_opportunity():
 	doc = frappe.db.exists({"doctype": "Opportunity", "party_name": "_Test NC"})
 	if not doc:
@@ -208,7 +187,7 @@ def create_opportunity():
 		customer_name = frappe.db.get_value("Customer", {"customer_name": "_Test NC"}, ["customer_name"])
 		doc.party_name = customer_name
 		doc.opportunity_amount = 150000
-		doc.source = "Cold Calling"
+		doc.utm_source = "Cold Calling"
 		doc.currency = "INR"
 		doc.expected_closing = "2021-08-31"
 		doc.company = "Best Test"

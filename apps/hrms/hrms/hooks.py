@@ -1,18 +1,20 @@
 app_name = "hrms"
-app_title = "HR"
+app_title = "Frappe HR"
 app_publisher = "Frappe Technologies Pvt. Ltd."
 app_description = "Modern HR and Payroll Software"
 app_email = "contact@frappe.io"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/frappe/hrms"
+app_logo_url = "/assets/hrms/images/frappe-hr-logo.svg"
+app_home = "/desk/people"
 
 add_to_apps_screen = [
 	{
 		"name": "hrms",
-		"logo": "/assets/hrms/images/HRv2.png",
-		"title": "HR",
-		"route": "/app/hr",
+		"logo": "/assets/hrms/images/frappe-hr-logo.svg",
+		"title": "Frappe HR",
+		"route": "/desk/people",
 		"has_permission": "hrms.hr.utils.check_app_permission",
 	}
 ]
@@ -24,13 +26,8 @@ add_to_apps_screen = [
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
-	"/assets/hrms/js/theme_switcher.js?v=2",  # local-only; gitignored — adds uichange1–9 to theme toggle
 ]
-
-app_include_css = [
-	"hrms.bundle.css",
-	"/assets/hrms/css/layout_global.css?v=30",  # full-width layout + single scrollbar — all themes
-]
+app_include_css = "hrms.bundle.css"
 
 # website
 
@@ -212,10 +209,7 @@ doc_events = {
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
 		],
-		"after_insert": [
-			"hrms.overrides.employee_master.update_job_applicant_and_offer",
-			"hrms.overrides.employee_master.send_welcome_email",
-		],
+		"after_insert": "hrms.overrides.employee_master.update_job_applicant_and_offer",
 		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
 	},
@@ -255,7 +249,7 @@ scheduler_events = {
 	"monthly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_monthly"],
 }
 
-advance_payment_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
+advance_payment_payable_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
 
 invoice_doctypes = ["Expense Claim"]
 
@@ -377,3 +371,10 @@ company_data_to_be_ignored = [
 	"Employee Onboarding Template",
 	"Employee Separation Template",
 ]
+
+# List of apps whose translatable strings should be excluded from this app's translations.
+ignore_translatable_strings_from = ["frappe", "erpnext"]
+employee_holiday_list = ["hrms.utils.holiday_list.get_holiday_list_for_employee"]
+export_python_type_annotations = True
+require_type_annotated_api_methods = True
+repost_allowed_doctypes = ["Expense Claim"]

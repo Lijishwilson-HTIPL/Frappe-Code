@@ -5,7 +5,7 @@
 from urllib.parse import urlparse
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import change_settings
 from frappe.utils import nowdate
 
 from erpnext.buying.doctype.request_for_quotation.request_for_quotation import (
@@ -19,9 +19,10 @@ from erpnext.crm.doctype.opportunity.opportunity import make_request_for_quotati
 from erpnext.crm.doctype.opportunity.test_opportunity import make_opportunity
 from erpnext.stock.doctype.item.test_item import make_item
 from erpnext.templates.pages.rfq import check_supplier_has_docname_access
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestRequestforQuotation(FrappeTestCase):
+class TestRequestforQuotation(ERPNextTestSuite):
 	def test_rfq_qty(self):
 		rfq = make_request_for_quotation(qty=0, do_not_save=True)
 		with self.assertRaises(InvalidQtyError):
@@ -222,7 +223,7 @@ class TestRequestforQuotation(FrappeTestCase):
 		supplier_doc.reload()
 		self.assertTrue(supplier_doc.portal_users[0].user)
 
-	@change_settings("Buying Settings", {"allow_zero_qty_in_request_for_quotation": 1})
+	@ERPNextTestSuite.change_settings("Buying Settings", {"allow_zero_qty_in_request_for_quotation": 1})
 	def test_supplier_quotation_from_zero_qty_rfq(self):
 		rfq = make_request_for_quotation(qty=0)
 		sq = make_supplier_quotation_from_rfq(rfq.name, for_supplier=rfq.get("suppliers")[0].supplier)
@@ -231,7 +232,7 @@ class TestRequestforQuotation(FrappeTestCase):
 		self.assertEqual(sq.items[0].qty, 0)
 		self.assertEqual(sq.items[0].item_code, rfq.items[0].item_code)
 
-	@change_settings(
+	@ERPNextTestSuite.change_settings(
 		"Buying Settings",
 		{
 			"allow_zero_qty_in_request_for_quotation": 1,
@@ -263,6 +264,13 @@ def make_request_for_quotation(**args) -> "RequestforQuotation":
 
 	for data in supplier_data:
 		rfq.append("suppliers", data)
+		frappe.new_doc(
+			"Portal User",
+			user="Administrator",
+			parent=data.get("supplier"),
+			parentfield="portal_users",
+			parenttype="Supplier",
+		).insert()
 
 	rfq.append(
 		"items",

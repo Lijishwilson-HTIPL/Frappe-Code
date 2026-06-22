@@ -1,38 +1,38 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-
-import unittest
-
 import frappe
-from frappe.tests.utils import change_settings
 from frappe.utils import flt, nowdate
 
 from erpnext.accounts.doctype.account.test_account import get_inventory_account
 from erpnext.accounts.doctype.journal_entry.journal_entry import StockAccountInvalidTransaction
 from erpnext.exceptions import InvalidAccountCurrency
 from erpnext.selling.doctype.customer.test_customer import make_customer, set_credit_limit
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestJournalEntry(unittest.TestCase):
-	@change_settings("Accounts Settings", {"unlink_payment_on_cancellation_of_invoice": 1})
+class TestJournalEntry(ERPNextTestSuite):
+	def setUp(self):
+		self.load_test_records("Journal Entry")
+
+	@ERPNextTestSuite.change_settings("Accounts Settings", {"unlink_payment_on_cancellation_of_invoice": 1})
 	def test_journal_entry_with_against_jv(self):
-		jv_invoice = frappe.copy_doc(test_records[2])
-		base_jv = frappe.copy_doc(test_records[0])
+		jv_invoice = frappe.copy_doc(self.globalTestRecords["Journal Entry"][2])
+		base_jv = frappe.copy_doc(self.globalTestRecords["Journal Entry"][0])
 		self.jv_against_voucher_testcase(base_jv, jv_invoice)
 
 	def test_jv_against_sales_order(self):
 		from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
 
 		sales_order = make_sales_order(do_not_save=True)
-		base_jv = frappe.copy_doc(test_records[0])
+		base_jv = frappe.copy_doc(self.globalTestRecords["Journal Entry"][0])
 		self.jv_against_voucher_testcase(base_jv, sales_order)
 
 	def test_jv_against_purchase_order(self):
 		from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 
 		purchase_order = create_purchase_order(do_not_save=True)
-		base_jv = frappe.copy_doc(test_records[1])
+		base_jv = frappe.copy_doc(self.globalTestRecords["Journal Entry"][1])
 		self.jv_against_voucher_testcase(base_jv, purchase_order)
 
 	def jv_against_voucher_testcase(self, base_jv, test_voucher):
@@ -150,7 +150,6 @@ class TestJournalEntry(unittest.TestCase):
 
 		if account_bal == stock_bal:
 			self.assertRaises(StockAccountInvalidTransaction, jv.save)
-			frappe.db.rollback()
 		else:
 			jv.submit()
 			jv.cancel()
@@ -414,9 +413,9 @@ class TestJournalEntry(unittest.TestCase):
 		from erpnext.accounts.doctype.cost_center.test_cost_center import create_cost_center
 
 		# Configure Repost Accounting Ledger for JVs
-		settings = frappe.get_doc("Repost Accounting Ledger Settings")
-		if not [x for x in settings.allowed_types if x.document_type == "Journal Entry"]:
-			settings.append("allowed_types", {"document_type": "Journal Entry", "allowed": True})
+		settings = frappe.get_doc("Accounts Settings")
+		if "Journal Entry" not in [x.document_type for x in settings.repost_allowed_types]:
+			settings.append("repost_allowed_types", {"document_type": "Journal Entry"})
 		settings.save()
 
 		# Create JV with defaut cost center - _Test Cost Center
@@ -524,7 +523,7 @@ class TestJournalEntry(unittest.TestCase):
 		jv = frappe.new_doc("Journal Entry")
 		jv.posting_date = nowdate()
 		jv.company = "_Test Company"
-		jv.user_remark = "test"
+		jv.remark = "test"
 		jv.extend(
 			"accounts",
 			[
@@ -593,6 +592,14 @@ class TestJournalEntry(unittest.TestCase):
 
 		self.assertEqual(jv.pay_to_recd_from, "_Test Receiver 2")
 
+	def test_custom_remark(self):
+		# When custom_remark is enabled, remark should not be auto-overwritten on save
+		jv = make_journal_entry("_Test Cash - _TC", "_Test Bank - _TC", 100, save=False)
+		jv.custom_remark = 1
+		jv.remark = "My custom remark text"
+		jv.insert()
+		self.assertEqual(jv.remark, "My custom remark text")
+
 	def test_credit_limit_for_customer(self):
 		customer = make_customer("_Test New Customer")
 		set_credit_limit("_Test New Customer", "_Test Company", 50)
@@ -621,7 +628,7 @@ def make_journal_entry(
 	jv = frappe.new_doc("Journal Entry")
 	jv.posting_date = posting_date or nowdate()
 	jv.company = company or "_Test Company"
-	jv.user_remark = "test"
+	jv.remark = "test"
 	jv.multi_currency = 1
 	jv.set(
 		"accounts",
@@ -651,6 +658,3 @@ def make_journal_entry(
 			jv.submit()
 
 	return jv
-
-
-test_records = frappe.get_test_records("Journal Entry")

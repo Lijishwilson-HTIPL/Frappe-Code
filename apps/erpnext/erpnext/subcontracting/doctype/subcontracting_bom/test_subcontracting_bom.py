@@ -2,10 +2,11 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestSubcontractingBOM(FrappeTestCase):
+class TestSubcontractingBOM(ERPNextTestSuite):
 	pass
 
 

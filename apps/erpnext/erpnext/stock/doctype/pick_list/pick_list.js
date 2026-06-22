@@ -9,6 +9,22 @@ frappe.ui.form.on("Pick List", {
 		}, 500);
 	},
 
+	set_warehouse_query: function (frm, fieldname, parentfield = null) {
+		const query = () => {
+			let filters = { company: frm.doc.company };
+
+			frm.doc.consider_rejected_warehouses ? null : (filters.is_rejected_warehouse = 0);
+
+			return { filters };
+		};
+
+		if (parentfield) {
+			frm.set_query(fieldname, parentfield, query);
+		} else {
+			frm.set_query(fieldname, query);
+		}
+	},
+
 	setup: (frm) => {
 		frm.ignore_doctypes_on_cancel_all = ["Serial and Batch Bundle"];
 
@@ -21,21 +37,8 @@ frappe.ui.form.on("Pick List", {
 			"Stock Entry": "Stock Entry",
 		};
 
-		frm.set_query("warehouse", "locations", () => {
-			return {
-				filters: {
-					company: frm.doc.company,
-				},
-			};
-		});
-
-		frm.set_query("parent_warehouse", () => {
-			return {
-				filters: {
-					company: frm.doc.company,
-				},
-			};
-		});
+		frm.events.set_warehouse_query(frm, "warehouse", "locations");
+		frm.events.set_warehouse_query(frm, "parent_warehouse");
 
 		frm.set_query("work_order", () => {
 			return {
@@ -81,7 +84,6 @@ frappe.ui.form.on("Pick List", {
 			};
 		});
 	},
-
 	set_item_locations: (frm, save) => {
 		if (!(frm.doc.locations && frm.doc.locations.length)) {
 			frappe.msgprint(__("Add items in the Item Locations table"));
@@ -101,35 +103,16 @@ frappe.ui.form.on("Pick List", {
 		}
 	},
 
-	pick_manually: function (frm) {
-		// Update warehouse field read-only property
+	pick_manually: (frm) => {
+		frm.trigger("update_warehouse_property");
+	},
+
+	update_warehouse_property: (frm) => {
 		frm.fields_dict.locations.grid.update_docfield_property(
 			"warehouse",
 			"read_only",
 			!frm.doc.pick_manually
 		);
-
-		// Clear auto-assigned serial numbers and related fields when switching to manual picking
-		if (frm.doc.pick_manually && frm.doc.locations) {
-			let has_changes = false;
-			frm.doc.locations.forEach((row) => {
-				if (row.serial_no || row.batch_no || row.serial_and_batch_bundle) {
-					row.serial_no = "";
-					row.batch_no = "";
-					row.serial_and_batch_bundle = "";
-					row.picked_qty = 0;
-					has_changes = true;
-				}
-			});
-
-			if (has_changes) {
-				frappe.show_alert(
-					__("Cleared auto-assigned serial numbers and batch numbers for manual picking"),
-					3
-				);
-				frm.refresh_field("locations");
-			}
-		}
 	},
 
 	get_item_locations: (frm) => {
@@ -138,6 +121,9 @@ frappe.ui.form.on("Pick List", {
 	},
 	refresh: (frm) => {
 		frm.trigger("add_get_items_button");
+		frm.trigger("update_warehouse_property");
+		erpnext.toggle_serial_batch_fields(frm);
+
 		if (frm.doc.docstatus === 1) {
 			const status_completed = frm.doc.status === "Completed";
 
@@ -148,13 +134,18 @@ frappe.ui.form.on("Pick List", {
 
 				if (frm.doc.purpose === "Delivery") {
 					frm.add_custom_button(
-						__("Create Delivery Note"),
-						() => frm.trigger("create_delivery_note"),
+						__("Delivery Note"),
+						() => frm.events.create_delivery(frm, "Delivery Note"),
+						__("Create")
+					);
+					frm.add_custom_button(
+						__("Sales Invoice"),
+						() => frm.events.create_delivery(frm, "Sales Invoice"),
 						__("Create")
 					);
 				} else {
 					frm.add_custom_button(
-						__("Create Stock Entry"),
+						__("Stock Entry"),
 						() => frm.trigger("create_stock_entry"),
 						__("Create")
 					);
@@ -246,9 +237,12 @@ frappe.ui.form.on("Pick List", {
 		frm.clear_table("locations");
 		frm.trigger("add_get_items_button");
 	},
-	create_delivery_note: (frm) => {
+	create_delivery(frm, doctype) {
 		frappe.model.open_mapped_doc({
-			method: "erpnext.stock.doctype.pick_list.pick_list.create_delivery_note",
+			method: "erpnext.stock.doctype.pick_list.pick_list.create_delivery",
+			args: {
+				target: doctype,
+			},
 			frm: frm,
 		});
 	},
@@ -296,7 +290,7 @@ frappe.ui.form.on("Pick List", {
 			max_qty_field: "qty",
 			dont_allow_new_row: true,
 			prompt_qty: frm.doc.prompt_qty,
-			serial_no_field: "serial_no",
+			serial_no_field: "not_supported", // doesn't make sense for picklist without a separate field.
 		};
 		const barcode_scanner = new erpnext.utils.BarcodeScanner(opts);
 		barcode_scanner.process_scan();

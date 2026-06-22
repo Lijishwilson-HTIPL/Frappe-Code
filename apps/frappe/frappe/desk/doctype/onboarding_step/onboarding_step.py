@@ -18,7 +18,7 @@ class OnboardingStep(Document):
 		from frappe.types import DF
 
 		action: DF.Literal[
-			"Create Entry", "Update Settings", "Show Form Tour", "View Report", "Go to Page", "Watch Video"
+			"Create Entry", "Update Settings", "Show Form Tour", "View Report", "Go to Page", "View Docs"
 		]
 		action_label: DF.Data | None
 		callback_message: DF.SmallText | None
@@ -36,14 +36,15 @@ class OnboardingStep(Document):
 		report_description: DF.Data | None
 		report_reference_doctype: DF.Data | None
 		report_type: DF.Data | None
+		route_options: DF.Code | None
 		show_form_tour: DF.Check
 		show_full_form: DF.Check
 		title: DF.Data
 		validate_action: DF.Check
 		value_to_validate: DF.Data | None
 		video_url: DF.Data | None
-
 	# end: auto-generated types
+
 	def before_export(self, doc):
 		doc.is_complete = 0
 		doc.is_skipped = 0

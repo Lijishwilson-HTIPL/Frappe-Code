@@ -23,8 +23,12 @@ const routes = [
   // Agent Portal Routes
   {
     path: "/",
+    redirect: "/home",
+  },
+  {
+    path: "/home",
     name: "Home",
-    redirect: "/tickets",
+    component: () => import("@/pages/home/Home.vue"),
   },
 
   {
@@ -101,11 +105,6 @@ const routes = [
     path: "/teams/:teamId",
     name: "Team",
     redirect: "/tickets",
-  },
-  {
-    path: "/canned-responses",
-    name: "CannedResponses",
-    component: () => import("@/pages/CannedResponses.vue"),
   },
   {
     path: "/dashboard",
@@ -188,7 +187,7 @@ const routes = [
   },
 ];
 
-const handleMobileView = (componentName) => {
+const handleMobileView = (componentName: string) => {
   return isMobileView.value ? `Mobile${componentName}` : componentName;
 };
 

@@ -77,7 +77,7 @@ def get_language(lang_list: list | None = None) -> str:
 			return parent_language
 
 	# fallback to language set in System Settings or "en"
-	return frappe.db.get_default("lang") or "en"
+	return frappe.get_system_settings("language") or "en"
 
 
 @functools.lru_cache
@@ -100,7 +100,7 @@ def get_user_lang(user: str | None = None) -> str:
 	# User.language => Session Defaults => frappe.local.lang => 'en'
 	return (
 		frappe.get_cached_value("User", user, "language")
-		or frappe.db.get_default("lang")
+		or frappe.get_system_settings("language")
 		or frappe.local.lang
 		or "en"
 	)
@@ -163,8 +163,6 @@ def get_all_translations(lang: str) -> dict[str, str]:
 	try:
 		return frappe.cache.hget(MERGED_TRANSLATION_KEY, lang, generator=_merge_translations)
 	except Exception:
-		if frappe.flags and frappe.flags.in_test:
-			raise
 		# People mistakenly call translation function on global variables
 		# where locals are not initialized, translations don't make much sense there
 		frappe.logger().error("Unable to load translations", exc_info=True)
@@ -369,7 +367,7 @@ def get_messages_from_workflow(doctype=None, app_name=None):
 	else:
 		fixtures = frappe.get_hooks("fixtures", app_name=app_name) or []
 		for fixture in fixtures:
-			if isinstance(fixture, str) and fixture == "Worflow":
+			if isinstance(fixture, str) and fixture == "Workflow":
 				workflows = frappe.get_all("Workflow")
 				break
 			elif isinstance(fixture, dict) and fixture.get("dt", fixture.get("doctype")) == "Workflow":
@@ -809,7 +807,6 @@ def migrate_translations(source_app, target_app):
 	"""Migrate target-app-specific translations from source-app to target-app"""
 	strings_in_source_app = [m[1] for m in frappe.translate.get_messages_for_app(source_app)]
 	strings_in_target_app = [m[1] for m in frappe.translate.get_messages_for_app(target_app)]
-
 	strings_in_target_app_but_not_in_source_app = list(
 		set(strings_in_target_app) - set(strings_in_source_app)
 	)
@@ -923,24 +920,9 @@ def update_translations_for_source(source=None, translation_dict=None):
 	return translation_records
 
 
-@frappe.whitelist()
-def get_translations(source_text):
-	if is_html(source_text):
-		source_text = strip_html_tags(source_text)
-
-	return frappe.db.get_list(
-		"Translation",
-		fields=["name", "language", "translated_text as translation"],
-		filters={"source_text": source_text},
-	)
-
-
 @frappe.whitelist(allow_guest=True)
 def get_all_languages(with_language_name: bool = False) -> list:
 	"""Return all enabled language codes ar, ch etc."""
-
-	def get_language_codes():
-		return frappe.get_all("Language", filters={"enabled": 1}, pluck="name")
 
 	def get_all_language_with_name():
 		return frappe.get_all("Language", ["language_code", "language_name"], {"enabled": 1})
@@ -948,7 +930,11 @@ def get_all_languages(with_language_name: bool = False) -> list:
 	if with_language_name:
 		return frappe.cache.get_value("languages_with_name", get_all_language_with_name)
 	else:
-		return frappe.cache.get_value("languages", get_language_codes)
+		languages = frappe.client_cache.get_value("languages")
+		if not languages:
+			languages = frappe.get_all("Language", filters={"enabled": 1}, pluck="name")
+			frappe.client_cache.set_value("languages", languages)
+		return languages
 
 
 def get_preferred_language_cookie():
@@ -981,17 +967,20 @@ def print_language(language: str):
 
 	# remember original values
 	_lang = frappe.local.lang
-	_jenv = frappe.local.jenv
+	_jenv_restricted = getattr(frappe.local, "jenv_restricted", None)
+	_jenv_unrestricted = getattr(frappe.local, "jenv_unrestricted", None)
 
 	# set language, empty any existing lang_full_dict and jenv
 	frappe.local.lang = language
-	frappe.local.jenv = None
+	frappe.local.jenv_restricted = None
+	frappe.local.jenv_unrestricted = None
 
 	yield
 
 	# restore original values
 	frappe.local.lang = _lang
-	frappe.local.jenv = _jenv
+	frappe.local.jenv_restricted = _jenv_restricted
+	frappe.local.jenv_unrestricted = _jenv_unrestricted
 
 
 # Backward compatibility

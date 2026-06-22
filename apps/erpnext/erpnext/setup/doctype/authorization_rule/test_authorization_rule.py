@@ -1,10 +1,9 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
-# test_records = frappe.get_test_records('Authorization Rule')
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestAuthorizationRule(unittest.TestCase):
+class TestAuthorizationRule(ERPNextTestSuite):
 	pass

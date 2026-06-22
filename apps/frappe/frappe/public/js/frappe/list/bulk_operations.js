@@ -308,21 +308,30 @@ export default class BulkOperations {
 	}
 
 	edit(docnames, field_mappings, done) {
-		let field_options = Object.keys(field_mappings).sort(function (a, b) {
+		const field_options = Object.keys(field_mappings).sort(function (a, b) {
 			return __(cstr(field_mappings[a].label)).localeCompare(
 				cstr(__(field_mappings[b].label))
 			);
 		});
+		// Same strings as legacy Select (`options`: sorted mapping keys)—parent `Label (Doctype)`,
+		// child `Child Label (Table column)`, so labels stay distinguishable after Autocomplete swap.
+		const field_autocomplete_options = field_options.map((key) => ({
+			label: __(cstr(key)),
+			value: key,
+		}));
 		const status_regex = /status/i;
 
-		const default_field = field_options.find((value) => status_regex.test(value));
+		const default_field =
+			field_options.find((value) => status_regex.test(value)) ||
+			field_options.find((value) => field_mappings[value]?.fieldtype === "Select");
 
 		const dialog = new frappe.ui.Dialog({
 			title: __("Bulk Edit"),
 			fields: [
 				{
-					fieldtype: "Select",
-					options: field_options,
+					fieldtype: "Autocomplete",
+					options: field_autocomplete_options,
+					max_items: Infinity,
 					default: default_field,
 					label: __("Field"),
 					fieldname: "field",
@@ -341,8 +350,22 @@ export default class BulkOperations {
 				},
 			],
 			primary_action: ({ value }) => {
-				const fieldname = field_mappings[dialog.get_value("field")].fieldname;
+				const selected_field = field_mappings[dialog.get_value("field")];
+				const { fieldname, is_child_field, child_doctype } = selected_field;
 				dialog.disable_primary_action();
+				let update_data = {};
+				if (is_child_field) {
+					// For child table fields, we need to update all rows in the child table
+					update_data = {
+						child_table_updates: {
+							[child_doctype]: {
+								[fieldname]: value || null,
+							},
+						},
+					};
+				} else {
+					update_data[fieldname] = value || null;
+				}
 				frappe
 					.call({
 						method: "frappe.desk.doctype.bulk_update.bulk_update.submit_cancel_or_update_docs",
@@ -351,9 +374,7 @@ export default class BulkOperations {
 							freeze: true,
 							docnames: docnames,
 							action: "update",
-							data: {
-								[fieldname]: value || null,
-							},
+							data: update_data,
 						},
 					})
 					.then((r) => {
@@ -401,11 +422,15 @@ export default class BulkOperations {
 			new_df.onchange = show_help_text;
 
 			delete new_df.depends_on;
+			delete new_df.is_child_field;
+			delete new_df.child_doctype;
 			dialogObj.replace_field("value", new_df);
 			show_help_text();
 		}
 
 		function show_help_text() {
+			if (dialog.get_primary_btn().is(":focus, :active")) return;
+
 			let value = dialog.get_value("value");
 			if (value == null || value === "") {
 				dialog.set_df_property(
@@ -473,3 +498,5 @@ export default class BulkOperations {
 		});
 	}
 }
+
+frappe.ui.BulkOperations = BulkOperations;

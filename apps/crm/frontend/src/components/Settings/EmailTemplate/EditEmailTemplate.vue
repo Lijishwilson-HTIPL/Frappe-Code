@@ -48,7 +48,7 @@
             :label="__('For')"
             :options="[
               {
-                label: __('Opportunity'),
+                label: __('Deal'),
                 value: 'CRM Deal',
               },
               {
@@ -56,7 +56,7 @@
                 value: 'CRM Lead',
               },
             ]"
-            :placeholder="__('Opportunity')"
+            :placeholder="__('Deal')"
           />
         </div>
       </div>

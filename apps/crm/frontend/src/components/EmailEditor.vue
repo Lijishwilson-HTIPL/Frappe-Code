@@ -37,12 +37,11 @@
           :class="from.length ? '' : 'border-t pt-2.5'"
         >
           <span class="text-xs text-ink-gray-4 mr-2">{{ __('TO') }}:</span>
-          <EmailMultiSelect
+          <MultiSelectEmailInput
             v-model="toEmails"
             class="flex-1"
             variant="ghost"
             :validate="validateEmail"
-            :fetchContacts="true"
             :error-message="
               (value) => __('{0} is an invalid email address', [value])
             "
@@ -72,7 +71,7 @@
         </div>
         <div v-if="cc" class="sm:mx-10 mx-4 flex items-center gap-2">
           <span class="text-xs text-ink-gray-4">{{ __('CC') }}:</span>
-          <EmailMultiSelect
+          <MultiSelectEmailInput
             ref="ccInput"
             v-model="ccEmails"
             class="flex-1"
@@ -86,7 +85,7 @@
         </div>
         <div v-if="bcc" class="sm:mx-10 mx-4 flex items-center gap-2">
           <span class="text-xs text-ink-gray-4">{{ __('BCC') }}:</span>
-          <EmailMultiSelect
+          <MultiSelectEmailInput
             ref="bccInput"
             v-model="bccEmails"
             class="flex-1"
@@ -176,7 +175,6 @@
           </div>
           <div class="mt-2 flex items-center justify-end space-x-2 sm:mt-0">
             <Button v-bind="discardButtonProps || {}" :label="__('Discard')" />
-            <Button v-bind="draftButtonProps || {}" :label="__('Save Draft')" />
             <Button
               variant="solid"
               v-bind="submitButtonProps || {}"
@@ -200,7 +198,7 @@ import SmileIcon from '@/components/Icons/SmileIcon.vue'
 import EmailTemplateIcon from '@/components/Icons/EmailTemplateIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import AttachmentItem from '@/components/AttachmentItem.vue'
-import EmailMultiSelect from '@/components/Controls/EmailMultiSelect.vue'
+import MultiSelectEmailInput from '@/components/Controls/MultiSelectEmailInput.vue'
 import EmailTemplateSelectorModal from '@/components/Modals/EmailTemplateSelectorModal.vue'
 import {
   TextEditorBubbleMenu,
@@ -224,7 +222,6 @@ const props = defineProps({
   editorProps: { type: Object, default: () => ({}) },
   submitButtonProps: { type: Object, default: () => ({}) },
   discardButtonProps: { type: Object, default: () => ({}) },
-  draftButtonProps: { type: Object, default: () => ({}) },
 })
 
 const CustomParagraph = Paragraph.extend({

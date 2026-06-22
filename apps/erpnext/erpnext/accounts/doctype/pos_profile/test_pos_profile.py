@@ -1,6 +1,5 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
@@ -10,12 +9,12 @@ from erpnext.accounts.doctype.pos_profile.pos_profile import (
 	get_child_nodes,
 )
 from erpnext.stock.get_item_details import get_pos_profile
+from erpnext.tests.utils import ERPNextTestSuite
 
-test_dependencies = ["Item"]
 
-
-class TestPOSProfile(unittest.TestCase):
+class TestPOSProfile(ERPNextTestSuite):
 	def test_pos_profile(self):
+		frappe.set_user("Administrator")
 		make_pos_profile()
 
 		pos_profile = get_pos_profile("_Test Company") or {}
@@ -36,8 +35,6 @@ class TestPOSProfile(unittest.TestCase):
 
 			self.assertEqual(len(items), products_count[0][0])
 			self.assertEqual(len(customers), customers_count[0][0])
-
-		frappe.db.sql("delete from `tabPOS Profile`")
 
 	def test_disabled_pos_profile_creation(self):
 		make_pos_profile(name="_Test POS Profile 001", disabled=1)
@@ -70,7 +67,6 @@ class TestPOSProfile(unittest.TestCase):
 		)
 
 		test_user, pos_profile = init_user_and_profile()
-		frappe.db.delete("POS Opening Entry", {"pos_profile": pos_profile.name})
 
 		if pos_profile:
 			opening_entry = create_opening_entry(pos_profile, test_user.name)
@@ -96,12 +92,11 @@ def get_customers_list(pos_profile=None):
 			customer_groups.extend(
 				[d.get("name") for d in get_child_nodes("Customer Group", d.get("customer_group"))]
 			)
-		cond = "customer_group in (%s)" % (", ".join(["%s"] * len(customer_groups)))
+		cond = "customer_group in ({})".format(", ".join(["%s"] * len(customer_groups)))
 
 	return (
 		frappe.db.sql(
-			f""" select name, customer_name, customer_group,
-		territory, customer_pos_id from tabCustomer where disabled = 0
+			f""" select name, customer_name, customer_group, territory from tabCustomer where disabled = 0
 		and {cond}""",
 			tuple(customer_groups),
 			as_dict=1,
@@ -118,7 +113,7 @@ def get_items_list(pos_profile, company):
 		for d in pos_profile.get("item_groups"):
 			args_list.extend([d.name for d in get_child_nodes("Item Group", d.item_group)])
 		if args_list:
-			cond = "and i.item_group in (%s)" % (", ".join(["%s"] * len(args_list)))
+			cond = "and i.item_group in ({})".format(", ".join(["%s"] * len(args_list)))
 
 	return frappe.db.sql(
 		f"""

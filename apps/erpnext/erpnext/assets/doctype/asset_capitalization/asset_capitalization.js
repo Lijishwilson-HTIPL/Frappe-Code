@@ -16,11 +16,9 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 
 	refresh() {
 		this.show_general_ledger();
+		erpnext.toggle_serial_batch_fields(this.frm);
 
-		if (
-			(this.frm.doc.stock_items && this.frm.doc.stock_items.length) ||
-			!this.frm.doc.target_is_fixed_asset
-		) {
+		if (this.frm.doc.stock_items && this.frm.doc.stock_items.length) {
 			this.show_stock_ledger();
 		}
 
@@ -41,7 +39,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 
 		me.frm.set_query("target_asset", function () {
 			return {
-				filters: { is_composite_asset: 1, docstatus: 0 },
+				filters: { asset_type: "Composite Asset", docstatus: 0 },
 			};
 		});
 
@@ -134,10 +132,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 	}
 
 	target_asset() {
-		if (
-			this.frm.doc.target_asset &&
-			this.frm.doc.capitalization_method === "Choose a WIP composite asset"
-		) {
+		if (this.frm.doc.target_asset) {
 			this.set_consumed_stock_items_tagged_to_wip_composite_asset(this.frm.doc.target_asset);
 			this.get_target_asset_details();
 		}
@@ -243,10 +238,6 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 		this.calculate_totals();
 	}
 
-	target_qty() {
-		this.calculate_totals();
-	}
-
 	rate() {
 		this.calculate_totals();
 	}
@@ -328,7 +319,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 				method: "erpnext.assets.doctype.asset_capitalization.asset_capitalization.get_consumed_stock_item_details",
 				child: row,
 				args: {
-					args: {
+					ctx: {
 						item_code: row.item_code,
 						warehouse: row.warehouse,
 						stock_qty: flt(row.stock_qty),
@@ -356,7 +347,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 				method: "erpnext.assets.doctype.asset_capitalization.asset_capitalization.get_consumed_asset_details",
 				child: row,
 				args: {
-					args: {
+					ctx: {
 						asset: row.asset,
 						doctype: me.frm.doc.doctype,
 						name: me.frm.doc.name,
@@ -383,7 +374,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 				method: "erpnext.assets.doctype.asset_capitalization.asset_capitalization.get_service_item_details",
 				child: row,
 				args: {
-					args: {
+					ctx: {
 						item_code: row.item_code,
 						qty: flt(row.qty),
 						expense_account: row.expense_account,
@@ -488,10 +479,7 @@ erpnext.assets.AssetCapitalization = class AssetCapitalization extends erpnext.s
 			me.frm.doc.stock_items_total + me.frm.doc.asset_items_total + me.frm.doc.service_items_total;
 		me.frm.doc.total_value = flt(me.frm.doc.total_value, precision("total_value"));
 
-		me.frm.doc.target_qty = flt(me.frm.doc.target_qty, precision("target_qty"));
-		me.frm.doc.target_incoming_rate = me.frm.doc.target_qty
-			? me.frm.doc.total_value / flt(me.frm.doc.target_qty)
-			: me.frm.doc.total_value;
+		me.frm.doc.target_incoming_rate = me.frm.doc.total_value;
 
 		me.frm.refresh_fields();
 	}

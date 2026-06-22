@@ -18,9 +18,6 @@
       <LoadingIndicator class="h-6 w-6" />
       <span>{{ __('Loading...') }}</span>
     </div>
-    <div v-else-if="title == 'Events'" class="h-full activity">
-      <EventArea :doctype="doctype" :docname="docname" />
-    </div>
     <div
       v-else-if="
         activities?.length ||
@@ -65,7 +62,11 @@
                 <CommentIcon class="text-ink-gray-8" />
               </div>
             </div>
-            <CommentArea class="mb-4" :activity="comment" />
+            <CommentArea
+              class="mb-4"
+              :activity="comment"
+              @reload="all_activities.reload()"
+            />
           </div>
         </div>
       </div>
@@ -189,7 +190,10 @@
             :id="activity.name"
             class="mb-4"
           >
-            <CommentArea :activity="activity" />
+            <CommentArea
+              :activity="activity"
+              @reload="all_activities.reload()"
+            />
           </div>
           <div
             v-else-if="activity.activity_type == 'attachment_log'"
@@ -455,13 +459,11 @@ import UserAvatar from '@/components/UserAvatar.vue'
 import ActivityIcon from '@/components/Icons/ActivityIcon.vue'
 import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
-import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
-import EventArea from '@/components/Activities/EventArea.vue'
 import WhatsAppArea from '@/components/Activities/WhatsAppArea.vue'
 import WhatsAppBox from '@/components/Activities/WhatsAppBox.vue'
 import LoadingIndicator from '@/components/Icons/LoadingIndicator.vue'
@@ -483,7 +485,7 @@ import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
 import { timeAgo, formatDate, startCase } from '@/utils'
 import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
-import { whatsappEnabled } from '@/composables/settings'
+import { whatsappEnabled } from '@/composables/whatsapp'
 import { useDocument } from '@/data/document'
 import { useTelemetry } from 'frappe-ui/frappe'
 import { Button, Tooltip, createResource, toast } from 'frappe-ui'
@@ -554,10 +556,18 @@ const whatsappMessages = createResource({
     reference_doctype: props.doctype,
     reference_name: props.docname,
   },
-  auto: whatsappEnabled.value,
+  auto: false,
   transform: (data) => sortByCreation(data),
   onSuccess: () => nextTick(() => scroll()),
 })
+
+watch(
+  whatsappEnabled,
+  (enabled) => {
+    if (enabled) whatsappMessages.fetch()
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   $socket.off('whatsapp_message')
@@ -777,9 +787,6 @@ function timelineIcon(activity_type, is_lead) {
     case 'comment':
       icon = CommentIcon
       break
-    case 'event':
-      icon = CalendarIcon
-      break
     case 'incoming_call':
       icon = InboundCallIcon
       break
@@ -809,7 +816,7 @@ watch([reload, reload_email], ([reload_value, reload_email_value]) => {
 })
 
 function scroll(hash) {
-  if (['tasks', 'notes', 'events'].includes(route.hash?.slice(1))) return
+  if (['tasks', 'notes'].includes(route.hash?.slice(1))) return
   setTimeout(() => {
     let el
     if (!hash) {
