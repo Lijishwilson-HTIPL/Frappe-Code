@@ -40,6 +40,12 @@ fixtures = [
 					"CRM Deal-erpnext_quotation",
 					"CRM Deal-erpnext_quotation_status",
 					"CRM Deal-erpnext_last_synced",
+					"Lead-lost_reason",
+					"Lead-lost_notes",
+					"Lead-lead_stage",
+					"Opportunity-lead_stage",
+					"Opportunity-lost_reason",
+					"Opportunity-lost_notes",
 				],
 			]
 		],
@@ -47,6 +53,10 @@ fixtures = [
 	{
 		"dt": "Property Setter",
 		"filters": [["name", "=", "Quotation-quotation_to-link_filters"]],
+	},
+	{
+		"dt": "Kanban Board",
+		"filters": [["name", "in", ["Lead Pipeline", "Opportunity Pipeline"]]],
 	},
 ]
 

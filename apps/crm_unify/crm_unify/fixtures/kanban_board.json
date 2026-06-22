@@ -1,0 +1,35 @@
+[
+ {
+  "doctype": "Kanban Board",
+  "name": "Lead Pipeline",
+  "kanban_board_name": "Lead Pipeline",
+  "reference_doctype": "Lead",
+  "field_name": "lead_stage",
+  "columns": [
+   {"column_name": "New", "status": "Active"},
+   {"column_name": "Contacted", "status": "Active"},
+   {"column_name": "Qualified", "status": "Active"},
+   {"column_name": "Proposal Sent", "status": "Active"},
+   {"column_name": "Negotiation", "status": "Active"},
+   {"column_name": "Won", "status": "Active"},
+   {"column_name": "Lost", "status": "Active"}
+  ]
+ },
+ {
+  "doctype": "Kanban Board",
+  "name": "Opportunity Pipeline",
+  "kanban_board_name": "Opportunity Pipeline",
+  "reference_doctype": "Opportunity",
+  "field_name": "lead_stage",
+  "columns": [
+   {"column_name": "Qualification", "status": "Active"},
+   {"column_name": "Needs Analysis", "status": "Active"},
+   {"column_name": "Value Proposition", "status": "Active"},
+   {"column_name": "Decision Makers", "status": "Active"},
+   {"column_name": "Proposal", "status": "Active"},
+   {"column_name": "Negotiation", "status": "Active"},
+   {"column_name": "Closed Won", "status": "Active"},
+   {"column_name": "Closed Lost", "status": "Active"}
+  ]
+ }
+]
