@@ -1,5 +1,9 @@
 # Changelog Draft
 
+## 2026-06-22
+
+- [2026-06-22] feat(crm_unify): add ERPNext Lead/Opportunity pipeline fields (lead_stage, lost_reason, lost_notes), Kanban Board fixtures, and track_changes audit trail for CRM-first workflow (branch: version-migration)
+
 ## 2026-06-15
 
 - feat(task): add `blocked_by_task` Link field — when `is_blocked` is checked the form now prompts to select the blocking task; banner shows the task ID with a hover tooltip (subject, status, priority, due date); clicking the ID navigates to the blocking task form; server-side validation prevents saving with `is_blocked=1` but no blocker set; self-blocking guard added (branch: Hilton-Project-module)
