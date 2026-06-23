@@ -20,6 +20,7 @@
   "country",
   "column_break_enue",
   "status",
+  "recruitment_stage",
   "applicant_rating",
   "section_break_6",
   "resume_link",
@@ -33,6 +34,14 @@
   "source_name",
   "column_break_13",
   "employee_referral",
+  "career_inquiry_section",
+  "role_applying_for",
+  "years_of_experience",
+  "linkedin_profile_url",
+  "col_break_career",
+  "portfolio_site",
+  "how_did_you_hear",
+  "other_source",
   "salary_expectation_tab",
   "currency",
   "column_break_18",
@@ -64,6 +73,15 @@
    "label": "Status",
    "options": "Open\nReplied\nShortlisted\nRejected\nHold\nAccepted",
    "reqd": 1
+  },
+  {
+   "fieldname": "recruitment_stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Recruitment Stage",
+   "options": "Applied\nScreening\nAssessment\nInterview\nOffered\nOnboard",
+   "default": "Applied"
   },
   {
    "fieldname": "column_break_3",
@@ -191,6 +209,47 @@
   {
    "fieldname": "column_break_enue",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "career_inquiry_section",
+   "fieldtype": "Section Break",
+   "label": "Career Inquiry Details"
+  },
+  {
+   "fieldname": "role_applying_for",
+   "fieldtype": "Data",
+   "label": "Role Applying For"
+  },
+  {
+   "fieldname": "years_of_experience",
+   "fieldtype": "Data",
+   "label": "Years of Experience"
+  },
+  {
+   "fieldname": "linkedin_profile_url",
+   "fieldtype": "Data",
+   "label": "LinkedIn Profile URL"
+  },
+  {
+   "fieldname": "col_break_career",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "portfolio_site",
+   "fieldtype": "Data",
+   "label": "Portfolio / Personal Site"
+  },
+  {
+   "fieldname": "how_did_you_hear",
+   "fieldtype": "Select",
+   "label": "How Did You Hear About Us?",
+   "options": "\nGoogle Search\nLinkedIn\nSocial Media\nReferral\nConference/Event\nBlog/Article\nOther"
+  },
+  {
+   "fieldname": "other_source",
+   "fieldtype": "Small Text",
+   "label": "Please Specify",
+   "depends_on": "eval: doc.how_did_you_hear == 'Other'"
   },
   {
    "fieldname": "salary_expectation_tab",

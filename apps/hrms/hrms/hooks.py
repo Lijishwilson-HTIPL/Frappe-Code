@@ -1,20 +1,18 @@
-app_name = "hrms"
-app_title = "Frappe HR"
+﻿app_name = "hrms"
+app_title = "HR"
 app_publisher = "Frappe Technologies Pvt. Ltd."
 app_description = "Modern HR and Payroll Software"
 app_email = "contact@frappe.io"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/frappe/hrms"
-app_logo_url = "/assets/hrms/images/frappe-hr-logo.svg"
-app_home = "/desk/people"
 
 add_to_apps_screen = [
 	{
 		"name": "hrms",
-		"logo": "/assets/hrms/images/frappe-hr-logo.svg",
-		"title": "Frappe HR",
-		"route": "/desk/people",
+		"logo": "/assets/hrms/images/HRv2.png",
+		"title": "HR",
+		"route": "/app/hr",
 		"has_permission": "hrms.hr.utils.check_app_permission",
 	}
 ]
@@ -22,28 +20,14 @@ add_to_apps_screen = [
 # Includes in <head>
 # ------------------
 
-# include js, css files in header of desk.html
-# app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
 ]
-app_include_css = "hrms.bundle.css"
 
-# website
-
-# include js, css files in header of web template
-# web_include_css = "/assets/hrms/css/hrms.css"
-# web_include_js = "/assets/hrms/js/hrms.js"
-
-# include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "hrms/public/scss/website"
-
-# include js, css files in header of web form
-# webform_include_js = {"doctype": "public/js/doctype.js"}
-# webform_include_css = {"doctype": "public/css/doctype.css"}
-
-# include js in page
-# page_js = {"page" : "public/js/file.js"}
+app_include_css = [
+	"hrms.bundle.css",
+	"/assets/hrms/css/layout_global.css?v=30",  # full-width layout + single scrollbar — all themes
+]
 
 # include js in doctype views
 doctype_js = {
@@ -56,37 +40,22 @@ doctype_js = {
 	"Delivery Trip": "public/js/erpnext/delivery_trip.js",
 	"Bank Transaction": "public/js/erpnext/bank_transaction.js",
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
-# doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
-# doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
-
-# Home Pages
-# ----------
-
-# application home page (will override Website Settings)
-# home_page = "login"
-
-# website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
 
 calendars = ["Leave Application"]
 
 # Generators
 # ----------
 
-# automatically create page for each record of this doctype
 website_generators = ["Job Opening"]
 
 website_route_rules = [
 	{"from_route": "/hrms/<path:app_path>", "to_route": "hrms"},
 	{"from_route": "/hr/<path:app_path>", "to_route": "roster"},
 ]
+
 # Jinja
 # ----------
 
-# add methods and filters to jinja environment
 jinja = {
 	"methods": [
 		"hrms.utils.get_country",
@@ -96,7 +65,6 @@ jinja = {
 # Installation
 # ------------
 
-# before_install = "hrms.install.before_install"
 after_install = "hrms.install.after_install"
 after_migrate = "hrms.setup.update_select_perm_after_install"
 
@@ -106,47 +74,18 @@ setup_wizard_complete = "hrms.subscription_utils.update_erpnext_access"
 # ------------
 
 before_uninstall = "hrms.uninstall.before_uninstall"
-# after_uninstall = "hrms.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
-# To set up dependencies/integrations with other apps
-# Name of the app being installed is passed as an argument
 
-# before_app_install = "hrms.utils.before_app_install"
 after_app_install = "hrms.setup.after_app_install"
 
-# Integration Cleanup
-# -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
-
 before_app_uninstall = "hrms.setup.before_app_uninstall"
-# after_app_uninstall = "hrms.utils.after_app_uninstall"
-
-# Desk Notifications
-# ------------------
-# See frappe.core.notifications.get_notification_config
-
-# notification_config = "hrms.notifications.get_notification_config"
-
-# Permissions
-# -----------
-# Permissions evaluated in scripted ways
-
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
 
 # DocType Class
 # ---------------
-# Override standard doctype classes
 
 override_doctype_class = {
 	"Employee": "hrms.overrides.employee_master.EmployeeMaster",
@@ -157,7 +96,6 @@ override_doctype_class = {
 
 # Document Events
 # ---------------
-# Hook on document methods and events
 
 doc_events = {
 	"User": {
@@ -209,7 +147,10 @@ doc_events = {
 			"hrms.overrides.employee_master.update_approver_role",
 			"hrms.overrides.employee_master.publish_update",
 		],
-		"after_insert": "hrms.overrides.employee_master.update_job_applicant_and_offer",
+		"after_insert": [
+			"hrms.overrides.employee_master.update_job_applicant_and_offer",
+			"hrms.overrides.employee_master.send_welcome_email",
+		],
 		"on_trash": "hrms.overrides.employee_master.update_employee_transfer",
 		"after_delete": "hrms.overrides.employee_master.publish_update",
 	},
@@ -249,7 +190,7 @@ scheduler_events = {
 	"monthly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_monthly"],
 }
 
-advance_payment_payable_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
+advance_payment_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
 
 invoice_doctypes = ["Expense Claim"]
 
@@ -270,10 +211,6 @@ bank_reconciliation_doctypes = ["Expense Claim"]
 
 before_tests = "hrms.tests.test_utils.before_tests"
 
-# Overriding Methods
-# -----------------------------
-
-# get matching queries for Bank Reconciliation
 get_matching_queries = "hrms.hr.utils.get_matching_queries"
 
 regional_overrides = {
@@ -284,7 +221,6 @@ regional_overrides = {
 	},
 }
 
-# ERPNext doctypes for Global Search
 global_search_doctypes = {
 	"Default": [
 		{"doctype": "Salary Slip", "index": 19},
@@ -299,13 +235,6 @@ global_search_doctypes = {
 	],
 }
 
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "hrms.event.get_events"
-# }
-#
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
 override_doctype_dashboards = {
 	"Employee": "hrms.overrides.dashboard_overrides.get_dashboard_for_employee",
 	"Holiday List": "hrms.overrides.dashboard_overrides.get_dashboard_for_holiday_list",
@@ -315,50 +244,7 @@ override_doctype_dashboards = {
 	"Bank Account": "hrms.overrides.dashboard_overrides.get_dashboard_for_bank_account",
 }
 
-# exempt linked doctypes from being automatically cancelled
-#
-# auto_cancel_exempted_doctypes = ["Auto Repeat"]
-
 ignore_links_on_delete = ["PWA Notification"]
-
-# User Data Protection
-# --------------------
-
-# user_data_fields = [
-# 	{
-# 		"doctype": "{doctype_1}",
-# 		"filter_by": "{filter_by}",
-# 		"redact_fields": ["{field_1}", "{field_2}"],
-# 		"partial": 1,
-# 	},
-# 	{
-# 		"doctype": "{doctype_2}",
-# 		"filter_by": "{filter_by}",
-# 		"partial": 1,
-# 	},
-# 	{
-# 		"doctype": "{doctype_3}",
-# 		"strict": False,
-# 	},
-# 	{
-# 		"doctype": "{doctype_4}"
-# 	}
-# ]
-
-# Authentication and authorization
-# --------------------------------
-
-# auth_hooks = [
-# 	"hrms.auth.validate"
-# ]
-
-# Translation
-# --------------------------------
-
-# Make link fields search translated document names for these DocTypes
-# Recommended only for DocTypes which have limited documents with untranslated names
-# For example: Role, Gender, etc.
-# translated_search_doctypes = []
 
 company_data_to_be_ignored = [
 	"Salary Component Account",
@@ -371,10 +257,3 @@ company_data_to_be_ignored = [
 	"Employee Onboarding Template",
 	"Employee Separation Template",
 ]
-
-# List of apps whose translatable strings should be excluded from this app's translations.
-ignore_translatable_strings_from = ["frappe", "erpnext"]
-employee_holiday_list = ["hrms.utils.holiday_list.get_holiday_list_for_employee"]
-export_python_type_annotations = True
-require_type_annotated_api_methods = True
-repost_allowed_doctypes = ["Expense Claim"]

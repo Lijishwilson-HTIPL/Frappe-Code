@@ -1,0 +1,192 @@
+﻿/* layout_global.css — Full-width layout + single scrollbar fix
+   Applies to ALL themes (built-in Frappe + custom uichange1-9).
+   Loaded via app_include_css in hooks.py */
+
+/* 1. Single scrollbar */
+html, body {
+  overflow: hidden !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.desk-wrapper,
+.page-wrapper {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100vh !important;
+}
+
+/* FIX: Extend sidebar background flush to viewport left/bottom edge — 2026-06-16 */
+.desk-wrapper,
+.desk {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+/* Give the nav sidebar a solid background that fills its full height.
+   --bg-color is the page background tint (light purple in default theme, near-black in dark
+   themes) — different from --fg-color (pure white) used by the content area, so the sidebar
+   visually separates from the main content in every built-in theme.
+   uichange themes override this with their own higher-specificity rules. */
+.desk-sidebar.body-sidebar-container {
+  margin-left: 0 !important;
+  background-color: var(--bg-color) !important;
+  min-height: 100vh !important;
+}
+
+/* FIX: uichange themes 1-9 — extend sidebar background to fill full viewport height.
+   Without min-height the themed colour stops at the last item, leaving white below. */
+html[data-hrms-theme] .desk-sidebar,
+html[data-hrms-theme] .body-sidebar-container,
+html[data-hrms-theme] .desk-sidebar.body-sidebar-container {
+  min-height: 100vh !important;
+}
+/* END FIX */
+
+/* 2. Full-width content — .page-body is a Bootstrap .container (max-width:1140px),
+   must be overridden to stretch to full viewport */
+.page-container,
+.page-content,
+.desk-page,
+.layout-main-section,
+.main-section {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Bootstrap .row has margin-left:-15px which pushes .layout-main left of its container.
+   Combined with overflow-x:hidden on .page-wrapper this clips the filter sidebar text. */
+.layout-main.row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.page-body {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 15px !important;
+  padding-right: 15px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 3b. Page head — padding applied directly so it works on both DocType views
+   (which have .page-head > .container) and custom Pages (which do not).
+   The container inside gets 0 so there is no double-indent. */
+.page-head {
+  padding-left: 15px !important;
+  box-sizing: border-box !important;
+}
+.page-head > .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+/* Cancel Bootstrap .row negative margins inside page-head */
+.page-head .row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 3. Navbar - keep padding so items do not hug the edges */
+header.navbar .container,
+header.navbar .container-fluid,
+.navbar.navbar-expand .container,
+.navbar.navbar-expand .container-fluid {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 15px !important;
+  padding-right: 60px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 5. Workspace new-block-button (Frappe hardcodes left:-22px) */
+.new-block-button {
+  left: 20px !important;
+}
+
+/* 8. Sidebar toggle — "Toggle Full Width" hides/shows the left nav sidebar */
+body.hrms-sidebar-hidden .layout-side-section {
+  display: none !important;
+}
+body.hrms-sidebar-hidden .layout-main-section-wrapper {
+  max-width: 100% !important;
+  flex: 1 1 0% !important;
+}
+
+/* 6. Fixed sidebar width — px so it's identical on laptop and desktop */
+.layout-main .layout-side-section {
+  flex: 0 0 250px !important;
+  max-width: 250px !important;
+  width: 250px !important;
+  min-width: 250px !important;
+  padding-left: 0 !important;  /* .page-body provides the global left inset */
+}
+
+/* FIX: Extend themed sidebar flush to left viewport edge — 2026-06-16 (v2)
+   Root cause: .page-body has padding-left:15px → white gap before sidebar.
+   Fix: zero .page-body padding for themed pages so sidebar background reaches x=0.
+   Breathing room is restored at the sidebar content level (10px padding-left on the
+   .layout-side-section so filter text / workspace links are not flush against the edge)
+   and at the content wrapper level (15px when no sidebar, 20px gap via sibling rule). */
+html[data-hrms-theme] .page-body {
+  padding-left: 0 !important;
+}
+/* Sidebar padding: background covers full width to x=0; content sits 10px in */
+html[data-hrms-theme] .layout-main .layout-side-section {
+  padding-left: 10px !important;
+}
+/* Restore left breathing room for the main content area */
+html[data-hrms-theme] .layout-main .layout-main-section-wrapper {
+  padding-left: 15px !important;
+}
+/* When sidebar IS present the sibling rule below overrides content wrapper to 20px */
+
+/* 9. Sidebar indent — items indented, NOT the container (container padding creates a
+   white gap because .desk-sidebar has no explicit background of its own) */
+.desk-sidebar {
+  padding-left: 0 !important;
+}
+.desk-sidebar .standard-sidebar-section {
+  padding-left: 10px !important;
+}
+.desk-sidebar .standard-sidebar-item > a,
+.desk-sidebar .standard-sidebar-item {
+  padding-left: 10px !important;
+}
+
+/* 7. Content wrapper — stretch to fill all space after the fixed sidebar.
+   .page-body provides the global horizontal inset; no extra right padding needed here. */
+.layout-main .layout-main-section-wrapper {
+  min-width: 0 !important;
+  flex: 1 1 0% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Gap between form sidebar and form content — only when sidebar is present. */
+.layout-main .layout-side-section ~ .layout-main-section-wrapper {
+  padding-left: 20px !important;
+}
+
+/* Global list bottom gap — all list views, all doctypes.
+   ::after adds 60px to scrollable content so the last row is never
+   flush against the bottom edge. Works regardless of Frappes
+
+/* Global list bottom gap — all list views, all doctypes.
+   ::after adds 60px to scrollable content so the last row is never
+   flush against the bottom edge. Works regardless of Frappe's inline
+   max-height because pseudo-element content participates in overflow scroll. */
+.frappe-list .result::after {
+  content: "";
+  display: block;
+  height: 60px;
+}
