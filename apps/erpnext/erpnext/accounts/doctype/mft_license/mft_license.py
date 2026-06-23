@@ -41,6 +41,7 @@ PLAN_PREFIX = {
 @frappe.whitelist(allow_guest=True)
 def process_payment(stripe_session_id, name, org, email,
                     plan="lifetime", item_code=None):
+	frappe.set_user("Administrator")
 	plan = (plan or "lifetime").lower()
 	if plan not in PLAN_ITEM_MAP:
 		plan = "lifetime"
@@ -102,6 +103,7 @@ def process_payment(stripe_session_id, name, org, email,
 			"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 			"remarks": f"Stripe Renewal | Session: {stripe_session_id} | Plan: {plan}",
 		})
+		si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 		si.insert(ignore_permissions=True)
 		si.submit()
 		frappe.db.commit()
@@ -160,6 +162,7 @@ def process_payment(stripe_session_id, name, org, email,
 		"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 		"remarks": f"Stripe | Session: {stripe_session_id} | Plan: {plan}",
 	})
+	si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 	si.insert(ignore_permissions=True)
 	si.submit()
 	frappe.db.commit()
@@ -291,6 +294,7 @@ def _plan_rank(plan):
 
 @frappe.whitelist(allow_guest=True)
 def extend_license(stripe_session_id, email, plan, invoice_name):
+	frappe.set_user("Administrator")
 	plan = (plan or "monthly").lower()
 	if plan not in PLAN_ITEM_MAP or plan == "lifetime":
 		frappe.throw("extend_license is not applicable for this plan")
@@ -434,6 +438,7 @@ def send_renewal_requests():
 				"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 				"remarks": f"MFT Renewal | License: {lic.name} | Plan: {plan}",
 			})
+			si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 			si.insert(ignore_permissions=True)
 			si.submit()
 			frappe.db.commit()
