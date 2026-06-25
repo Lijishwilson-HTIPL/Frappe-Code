@@ -86,7 +86,7 @@
    "no_copy": 1,
    "oldfieldname": "status",
    "oldfieldtype": "Select",
-   "options": "Open\nCompleted\nCancelled",
+   "options": "Open\nCompleted\nCancelled\nHold",
    "search_index": 1
   },
   {

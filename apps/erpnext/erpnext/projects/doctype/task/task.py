@@ -63,7 +63,7 @@ class Task(NestedSet):
 		rgt: DF.Int
 		start: DF.Int
 		status: DF.Literal[
-			"Open", "Working", "Pending Review", "Overdue", "Template", "Completed", "Cancelled"
+			"Open", "Working", "Pending Review", "Overdue", "Hold", "Completed", "Cancelled"
 		]
 		subject: DF.Data
 		task_weight: DF.Float
