@@ -1,0 +1,17 @@
+{
+ "creation": "2017-09-22 11:47:40.071498",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projects",
+ "name": "task-assignment-board",
+ "owner": "Administrator",
+ "page_name": "task-assignment-board",
+ "restrict_to_domain": "",
+ "roles": [],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Task Assignment Board"
+}

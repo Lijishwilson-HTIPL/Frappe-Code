@@ -14,6 +14,7 @@ html, body {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   height: 100vh !important;
+  scrollbar-gutter: stable !important;
 }
 
 /* FIX: Extend sidebar background flush to viewport left/bottom edge — 2026-06-16 */
@@ -128,6 +129,19 @@ body.hrms-sidebar-hidden .layout-main-section-wrapper {
   width: 250px !important;
   min-width: 250px !important;
   padding-left: 0 !important;  /* .page-body provides the global left inset */
+}
+
+/* FIX: Form right sidebar scrollbar overlapping content.
+   scrollbar-gutter reserves space so the scrollbar never covers text.
+   padding-right ensures older browsers (no scrollbar-gutter support) also get clearance. */
+.layout-side-section .form-sidebar,
+.layout-side-section .sidebar-image-section,
+.form-sidebar {
+  scrollbar-gutter: stable !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 4px !important;
+  box-sizing: border-box !important;
 }
 
 /* FIX: Extend themed sidebar flush to left viewport edge — 2026-06-16 (v2)

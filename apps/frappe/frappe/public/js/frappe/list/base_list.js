@@ -374,7 +374,7 @@ frappe.views.BaseList = class BaseList {
 						${paging_values
 							.map(
 								(value) => `
-							<button type="button" class="btn btn-default btn-sm btn-paging"
+							<button type="button" class="btn btn-default btn-xs btn-paging"
 								data-value="${value}">
 								${value}
 							</button>
@@ -384,7 +384,7 @@ frappe.views.BaseList = class BaseList {
 					</div>
 				</div>
 				<div class="level-right">
-					<button class="btn btn-default btn-more btn-sm">
+					<button class="btn btn-default btn-more btn-xs">
 						${__("Load More")}
 					</button>
 				</div>

@@ -8,4 +8,12 @@ frappe.listview_settings["Project"] = {
 			return [__(doc.status), frappe.utils.guess_colour(doc.status), "status,=," + doc.status];
 		}
 	},
+	button: {
+		show: () => true,
+		get_label: () => __("View Tasks"),
+		get_description: (doc) => __("View tasks for {0}", [doc.project_name || doc.name]),
+		action: (doc) => {
+			frappe.set_route("List", "Task", { project: doc.name });
+		},
+	},
 };

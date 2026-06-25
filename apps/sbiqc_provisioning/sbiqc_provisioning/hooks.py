@@ -20,3 +20,12 @@ add_to_apps_screen = [
 
 # ── Desk Asset Includes ──
 app_include_css = ["/assets/sbiqc_provisioning/css/sbiqc_provisioning.css"]
+
+# ── White Labelling ──
+default_mail_footer = "Sent via SBIQC"
+
+extend_bootinfo = "sbiqc_provisioning.whitelabel.extend_bootinfo"
+
+after_migrate = [
+    "sbiqc_provisioning.whitelabel.apply_branding",
+]

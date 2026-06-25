@@ -6,14 +6,20 @@ import frappe
 
 
 def get_context(context):
+	if frappe.session.user == "Guest":
+		raise frappe.PermissionError
+
 	project_user = frappe.db.get_value(
 		"Project User",
 		{"parent": frappe.form_dict.project, "user": frappe.session.user},
 		["user", "view_attachments", "hide_timesheets"],
 		as_dict=True,
 	)
-	if frappe.session.user != "Administrator" and (not project_user or frappe.session.user == "Guest"):
-		raise frappe.PermissionError
+
+	# Allow if: Administrator, in Project User table, or has role-based Project read access
+	if frappe.session.user != "Administrator" and not project_user:
+		if not frappe.has_permission("Project", "read", frappe.form_dict.project):
+			raise frappe.PermissionError
 
 	context.no_cache = 1
 	context.show_sidebar = True

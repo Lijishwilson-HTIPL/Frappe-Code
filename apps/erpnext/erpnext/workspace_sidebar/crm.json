@@ -1,6 +1,6 @@
 {
  "app": "erpnext",
- "creation": "2025-10-26 21:53:46.562339",
+ "creation": "2026-06-22 15:35:26.538326",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "crm",
@@ -15,6 +15,18 @@
    "label": "Home",
    "link_to": "CRM",
    "link_type": "Dashboard",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Leads Journey",
+   "link_to": "leads-journey",
+   "link_type": "Page",
    "show_arrow": 0,
    "type": "Link"
   },
@@ -474,7 +486,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-04-28 14:11:15.910719",
+ "modified": "2026-06-22 15:48:42.933895",
  "modified_by": "Administrator",
  "module": "CRM",
  "name": "CRM",

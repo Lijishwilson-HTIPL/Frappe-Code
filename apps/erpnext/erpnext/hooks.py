@@ -501,14 +501,7 @@ scheduler_events = {
 
 email_brand_image = "assets/erpnext/images/erpnext-logo.jpg"
 
-default_mail_footer = """
-	<span>
-		Sent via
-		<a class="text-muted" href="https://frappe.io/erpnext?source=via_email_footer" target="_blank">
-			ERPNext
-		</a>
-	</span>
-"""
+# default_mail_footer intentionally removed — sbiqc_provisioning/hooks.py sets "Sent via SBIQC"
 
 get_translated_dict = {("doctype", "Global Defaults"): "frappe.geo.country_info.get_translated_dict"}
 

@@ -2,9 +2,9 @@ import frappe
 
 
 @frappe.whitelist()
-def get_leads_journey(page=1, status=None):
+def get_leads_journey(page=1, status=None, page_size=20):
 	page = int(page)
-	page_size = 20
+	page_size = int(page_size)
 
 	filters = {"status": ["!=", "Converted"]}
 	if status and status != "null":

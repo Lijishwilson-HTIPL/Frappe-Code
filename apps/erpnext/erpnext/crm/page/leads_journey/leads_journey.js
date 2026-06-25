@@ -22,6 +22,7 @@ frappe.pages['leads-journey'].on_page_load = function (wrapper) {
 	};
 
 	let currentPage = 1;
+	let currentPageSize = 20;
 	let selectedStatus = null;
 	let data = {};
 
@@ -93,7 +94,7 @@ frappe.pages['leads-journey'].on_page_load = function (wrapper) {
 		`;
 	}
 
-	function renderFilters(statuses) {
+	function renderFilters() {
 		const allStatuses = ['New', 'Contacted', 'Interested', 'Replied', 'Opportunity', 'Converted', 'Do Not Contact', 'Junk'];
 		const pills = allStatuses.map(s => {
 			const active = selectedStatus === s;
@@ -136,21 +137,39 @@ frappe.pages['leads-journey'].on_page_load = function (wrapper) {
 	}
 
 	function renderPagination(total, pageSize) {
-		const totalPages = Math.ceil(total / pageSize);
-		if (totalPages <= 1) return '';
-		const start = (currentPage - 1) * pageSize + 1;
+		const totalPages = Math.ceil(total / pageSize) || 1;
+		const start = total ? (currentPage - 1) * pageSize + 1 : 0;
 		const end = Math.min(currentPage * pageSize, total);
-		let pages = '';
-		for (let p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
-			pages += `<button class="lj-page-btn ${p === currentPage ? 'lj-page-active' : ''}" data-page="${p}">${p}</button>`;
-		}
-		return `
-			<div class="lj-pagination">
-				<span class="lj-page-info">${__('Showing')} ${start}–${end} ${__('of')} ${total}</span>
+
+		let pageNav = '';
+		if (totalPages > 1) {
+			let pages = '';
+			for (let p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
+				pages += `<button class="lj-page-btn ${p === currentPage ? 'lj-page-active' : ''}" data-page="${p}">${p}</button>`;
+			}
+			pageNav = `
 				<div class="lj-page-nav">
 					<button class="lj-page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>‹</button>
 					${pages}
 					<button class="lj-page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>›</button>
+				</div>
+			`;
+		}
+
+		const pageSizes = [20, 50, 100];
+		const pageSizeBtns = pageSizes.map(v =>
+			`<button class="btn btn-default btn-xs lj-pagesize-btn ${v === currentPageSize ? 'active' : ''}" data-size="${v}">${v}</button>`
+		).join('');
+
+		return `
+			<div class="lj-pagination">
+				<div style="display:flex;align-items:center;gap:8px;">
+					<span class="lj-page-info">${__('Show')}:</span>
+					<div class="btn-group">${pageSizeBtns}</div>
+				</div>
+				<div style="display:flex;align-items:center;gap:8px;">
+					${total ? `<span class="lj-page-info">${__('Showing')} ${start}–${end} ${__('of')} ${total}</span>` : ''}
+					${pageNav}
 				</div>
 			</div>
 		`;
@@ -160,49 +179,57 @@ frappe.pages['leads-journey'].on_page_load = function (wrapper) {
 		const s = data.stats || {};
 		const leads = data.leads || [];
 		const total = data.total || 0;
-		const pageSize = data.page_size || 20;
+		const pageSize = data.page_size || currentPageSize;
+
+		const topOffset = page.main.offset().top;
+		page.main.css({ padding: '0', overflow: 'hidden', height: `calc(100vh - ${topOffset}px)` });
 
 		page.main.html(`
 			<style>
-				.lj-stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px 16px 8px; }
-				.lj-stat-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; }
-				.lj-stat-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
-				.lj-stat-value { font-size:24px; font-weight:700; color:#111827; }
-				.lj-filter-bar { display:flex; flex-wrap:wrap; gap:8px; padding:8px 16px 12px; }
-				.lj-pill { padding:4px 14px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; font-size:13px; font-weight:500; color:#6b7280; cursor:pointer; }
+				.lj-stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:10px 16px 6px; }
+				.lj-stat-card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; }
+				.lj-stat-label { font-size:11px; color:#6b7280; margin-bottom:2px; }
+				.lj-stat-value { font-size:18px; font-weight:700; color:#111827; }
+				.lj-filter-bar { display:flex; flex-wrap:wrap; gap:6px; padding:6px 16px 8px; }
+				.lj-pill { padding:3px 10px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; font-size:12px; font-weight:500; color:#6b7280; cursor:pointer; }
 				.lj-pill-active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
-				.lj-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; margin:0 16px 10px; padding:16px; }
-				.lj-card-body { display:flex; align-items:center; gap:24px; }
-				.lj-lead-info { display:flex; align-items:flex-start; gap:12px; width:200px; flex-shrink:0; }
-				.lj-avatar { width:40px; height:40px; border-radius:8px; background:#7c3aed; color:#fff; font-weight:600; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-				.lj-lead-name { font-size:13px; font-weight:600; color:#111827; }
-				.lj-lead-org { font-size:12px; color:#6b7280; margin:2px 0 4px; }
+				.lj-card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin:0 16px 6px; padding:10px; }
+				.lj-card-body { display:flex; align-items:center; gap:16px; }
+				.lj-lead-info { display:flex; align-items:flex-start; gap:8px; width:180px; flex-shrink:0; }
+				.lj-avatar { width:30px; height:30px; border-radius:6px; background:#7c3aed; color:#fff; font-weight:600; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+				.lj-lead-name { font-size:12px; font-weight:600; color:#111827; }
+				.lj-lead-org { font-size:11px; color:#6b7280; margin:1px 0 3px; }
 				.lj-pipeline { flex:1; }
 				.lj-pipeline-inner { display:flex; align-items:center; }
 				.lj-step { display:flex; flex-direction:column; align-items:center; }
-				.lj-dot { width:12px; height:12px; border-radius:50%; border:2px solid #d1d5db; background:#fff; }
+				.lj-dot { width:10px; height:10px; border-radius:50%; border:2px solid #d1d5db; background:#fff; }
 				.lj-dot-done { border-color:#7c3aed; background:#7c3aed; }
-				.lj-dot-active { width:16px; height:16px; border-color:#7c3aed; background:#fff; }
+				.lj-dot-active { width:14px; height:14px; border-color:#7c3aed; background:#fff; }
 				.lj-dot-inactive { border-color:#d1d5db; background:#f3f4f6; }
-				.lj-label { font-size:10px; color:#9ca3af; margin-top:6px; text-align:center; white-space:nowrap; }
+				.lj-label { font-size:9px; color:#9ca3af; margin-top:4px; text-align:center; white-space:nowrap; }
 				.lj-label-active { color:#7c3aed; font-weight:600; }
-				.lj-connector { height:2px; flex:1; background:#e5e7eb; margin-bottom:20px; }
+				.lj-connector { height:2px; flex:1; background:#e5e7eb; margin-bottom:14px; }
 				.lj-connector-done { background:#7c3aed; }
-				.lj-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px solid #f3f4f6; }
-				.lj-meta { font-size:12px; color:#9ca3af; }
-				.lj-actions { display:flex; gap:8px; }
-				.lj-empty { text-align:center; color:#9ca3af; padding:60px 0; font-size:15px; }
-				.lj-pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #e5e7eb; margin-top:4px; }
-				.lj-page-info { font-size:13px; color:#6b7280; }
-				.lj-page-nav { display:flex; gap:4px; }
-				.lj-page-btn { min-width:32px; height:32px; padding:0 8px; border-radius:6px; border:1px solid #e5e7eb; background:#fff; font-size:13px; cursor:pointer; color:#374151; }
+				.lj-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #f3f4f6; }
+				.lj-meta { font-size:11px; color:#9ca3af; }
+				.lj-actions { display:flex; gap:6px; }
+				.lj-empty { text-align:center; color:#9ca3af; padding:40px 0; font-size:14px; }
+				.lj-wrapper { display:flex; flex-direction:column; height:100%; }
+				.lj-list-area { flex:1; overflow-y:auto; padding-bottom:4px; min-height:0; }
+				.lj-pagination { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-top:1px solid #e5e7eb; background:#fff; flex-shrink:0; }
+				.lj-page-info { font-size:11px; color:#6b7280; }
+				.lj-page-nav { display:flex; gap:3px; }
+				.lj-page-btn { min-width:24px; height:24px; padding:0 6px; border-radius:4px; border:1px solid #e5e7eb; background:#fff; font-size:11px; cursor:pointer; color:#374151; }
 				.lj-page-active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
 				.lj-page-btn:disabled { opacity:0.4; cursor:default; }
+				.lj-pagesize-btn.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
 			</style>
-			${renderStats(s)}
-			${renderFilters()}
-			<div id="lj-leads-list">${renderLeads(leads)}</div>
-			${renderPagination(total, pageSize)}
+			<div class="lj-wrapper">
+				${renderStats(s)}
+				${renderFilters()}
+				<div id="lj-leads-list" class="lj-list-area">${renderLeads(leads)}</div>
+				${renderPagination(total, pageSize)}
+			</div>
 		`);
 
 		// Bind events
@@ -223,15 +250,21 @@ frappe.pages['leads-journey'].on_page_load = function (wrapper) {
 			currentPage = p;
 			load();
 		});
+
+		page.main.find('.lj-pagesize-btn').on('click', function () {
+			currentPageSize = parseInt($(this).data('size'));
+			currentPage = 1;
+			load();
+		});
 	}
 
 	function load() {
-		page.main.find('#lj-leads-list').html(
+		page.main.find('.lj-list-area').html(
 			'<div style="text-align:center;padding:60px 0;color:#9ca3af;">Loading…</div>'
 		);
 		frappe.call({
-			method: 'crm_unify.crm_unify.page.leads_journey.leads_journey.get_leads_journey',
-			args: { page: currentPage, status: selectedStatus },
+			method: 'erpnext.crm.page.leads_journey.leads_journey.get_leads_journey',
+			args: { page: currentPage, status: selectedStatus, page_size: currentPageSize },
 			callback(r) {
 				data = r.message || {};
 				render();
