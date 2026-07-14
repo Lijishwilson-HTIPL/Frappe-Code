@@ -31,11 +31,21 @@ frappe.ui.form.on("Asset Repair", {
 			};
 		});
 
-		frm.set_query("purchase_invoice", function () {
+		frm.set_query("purchase_invoice", "invoices", function () {
 			return {
+				query: "erpnext.assets.doctype.asset_repair.asset_repair.get_purchase_invoice",
 				filters: {
 					company: frm.doc.company,
-					docstatus: 1,
+				},
+			};
+		});
+
+		frm.set_query("expense_account", "invoices", function (doc, cdt, cdn) {
+			let row = locals[cdt][cdn];
+			return {
+				query: "erpnext.assets.doctype.asset_repair.asset_repair.get_expense_accounts",
+				filters: {
+					purchase_invoice: row.purchase_invoice,
 				},
 			};
 		});
@@ -76,6 +86,26 @@ frappe.ui.form.on("Asset Repair", {
 		}
 	},
 
+	show_general_ledger: function (frm) {
+		if (frm.doc.docstatus > 0) {
+			frm.add_custom_button(
+				__("Accounting Ledger"),
+				function () {
+					frappe.route_options = {
+						voucher_no: frm.doc.name,
+						from_date: frm.doc.completion_date,
+						to_date: moment(frm.doc.modified).format("YYYY-MM-DD"),
+						company: frm.doc.company,
+						categorize_by: "",
+						show_cancelled_entries: frm.doc.docstatus === 2,
+					};
+					frappe.set_route("query-report", "General Ledger");
+				},
+				__("View")
+			);
+		}
+	},
+
 	repair_status: (frm) => {
 		if (frm.doc.completion_date && frm.doc.repair_status == "Completed") {
 			frappe.call({
@@ -107,41 +137,52 @@ frappe.ui.form.on("Asset Repair", {
 			frm.refresh_field("stock_items");
 		}
 	},
+});
 
-	purchase_invoice: function (frm) {
-		if (frm.doc.purchase_invoice) {
-			frappe.call({
-				method: "erpnext.assets.doctype.asset_repair.asset_repair.get_repair_cost_for_purchase_invoice",
-				args: {
-					purchase_invoice: frm.doc.purchase_invoice,
-				},
-				callback: function (r) {
-					frm.set_value("repair_cost", r.message || 0);
-				},
-			});
-		} else {
-			frm.set_value("repair_cost", 0);
-		}
+frappe.ui.form.on("Asset Repair Purchase Invoice", {
+	purchase_invoice: function (frm, cdt, cdn) {
+		frappe.model.set_value(cdt, cdn, {
+			expense_account: "",
+			repair_cost: 0,
+		});
 	},
 
-	show_general_ledger: (frm) => {
-		if (frm.doc.docstatus > 0) {
-			frm.add_custom_button(
-				__("Accounting Ledger"),
-				function () {
-					frappe.route_options = {
-						voucher_no: frm.doc.name,
-						from_date: moment(frm.doc.completion_date).format("YYYY-MM-DD"),
-						to_date: moment(frm.doc.modified).format("YYYY-MM-DD"),
-						company: frm.doc.company,
-						categorize_by: "",
-						show_cancelled_entries: frm.doc.docstatus === 2,
-					};
-					frappe.set_route("query-report", "General Ledger");
-				},
-				__("View")
-			);
+	expense_account: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+
+		if (!row.purchase_invoice || !row.expense_account) {
+			frappe.model.set_value(cdt, cdn, "repair_cost", 0);
+			return;
 		}
+
+		frappe.call({
+			method: "erpnext.assets.doctype.asset_repair.asset_repair.get_unallocated_repair_cost",
+			args: {
+				purchase_invoice: row.purchase_invoice,
+				expense_account: row.expense_account,
+			},
+			callback: function (r) {
+				if (r.message !== undefined) {
+					if (r.message > 0) {
+						frappe.model.set_value(cdt, cdn, "repair_cost", r.message);
+					} else {
+						frappe.model.set_value(cdt, cdn, "repair_cost", 0);
+						let pi_link = frappe.utils.get_form_link(
+							"Purchase Invoice",
+							row.purchase_invoice,
+							true
+						);
+						frappe.msgprint({
+							message: __(
+								"Row {0}: The entire expense amount for account {1} in {2} has already been allocated.",
+								[row.idx, row.expense_account.bold(), pi_link]
+							),
+							indicator: "orange",
+						});
+					}
+				}
+			},
+		});
 	},
 });
 

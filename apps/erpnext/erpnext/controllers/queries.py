@@ -16,7 +16,8 @@ from pypika import Order
 
 import erpnext
 from erpnext.accounts.utils import build_qb_match_conditions
-from erpnext.stock.get_item_details import _get_item_tax_template
+from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
+from erpnext.stock.utils import get_combine_datetime
 
 
 # searches for active employees
@@ -198,19 +199,39 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 
 	searchfields = searchfields + [
 		field
-		for field in [searchfield or "name", "item_code", "item_group", "item_name"]
+		for field in [
+			searchfield or "name",
+			"item_code",
+			"item_group",
+			"item_name",
+		]
 		if field not in searchfields
 	]
 	searchfields = " or ".join([field + " like %(txt)s" for field in searchfields])
 
 	if filters and isinstance(filters, dict):
 		if filters.get("customer") or filters.get("supplier"):
+			party_type = "Customer" if filters.get("customer") else "Supplier"
 			party = filters.get("customer") or filters.get("supplier")
+			group = "Customer Group" if filters.get("customer") else "Supplier Group"
 			item_rules_list = frappe.get_all(
 				"Party Specific Item",
-				filters={"party": party},
+				filters={
+					"party": ["!=", party],
+					"party_type": party_type,
+				},
 				fields=["restrict_based_on", "based_on_value"],
 			)
+
+			party_group_rules_list = frappe.get_all(
+				"Party Specific Item",
+				filters={"party_type": group},
+				fields=["party as party_group", "restrict_based_on", "based_on_value"],
+			)
+			current_party_group = frappe.get_value(party_type, party, frappe.scrub(group))
+			for rule in party_group_rules_list:
+				if current_party_group != rule.party_group:
+					item_rules_list.append(rule)
 
 			filters_dict = {}
 			for rule in item_rules_list:
@@ -222,7 +243,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 				filters_dict[rule.restrict_based_on].append(rule.based_on_value)
 
 			for filter in filters_dict:
-				filters[scrub(filter)] = ["in", filters_dict[filter]]
+				filters[scrub(filter)] = ["not in", filters_dict[filter]]
 
 			if filters.get("customer"):
 				del filters["customer"]
@@ -233,7 +254,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 			filters.pop("supplier", None)
 
 	description_cond = ""
-	if frappe.db.count(doctype, cache=True) < 50000:
+	if frappe.db.estimate_count(doctype) < 50000:
 		# scan description only if items are less than 50000
 		description_cond = "or tabItem.description LIKE %(txt)s"
 
@@ -369,10 +390,15 @@ def get_delivery_notes_to_be_billed(
 		.where((DeliveryNote.docstatus == 1) & (DeliveryNote.is_return == 0) & (DeliveryNote.per_billed > 0))
 	)
 
+	query = frappe.qb.get_query(
+		"Delivery Note",
+		fields=fields,
+		filters=filters,
+		ignore_permissions=False,
+	)
+
 	query = (
-		frappe.qb.from_(DeliveryNote)
-		.select(*[DeliveryNote[f] for f in fields])
-		.where(
+		query.where(
 			(DeliveryNote.docstatus == 1)
 			& (DeliveryNote.status.notin(["Stopped", "Closed"]))
 			& (DeliveryNote[searchfield].like(f"%{txt}%"))
@@ -386,12 +412,11 @@ def get_delivery_notes_to_be_billed(
 				)
 			)
 		)
+		.orderby(DeliveryNote[searchfield], order=Order.asc)
+		.limit(page_len)
+		.offset(start)
 	)
-	if filters and isinstance(filters, dict):
-		for key, value in filters.items():
-			query = query.where(DeliveryNote[key] == value)
 
-	query = query.orderby(DeliveryNote[searchfield], order=Order.asc).limit(page_len).offset(start)
 	return query.run(as_dict=as_dict)
 
 
@@ -476,6 +501,13 @@ def get_batches_from_stock_ledger_entries(searchfields, txt, filters, start=0, p
 		.limit(page_len)
 	)
 
+	if not filters.get("is_inward"):
+		if filters.get("posting_date") and filters.get("posting_time"):
+			query = query.where(
+				stock_ledger_entry.posting_datetime
+				<= get_combine_datetime(filters.get("posting_date"), filters.get("posting_time"))
+			)
+
 	if not filters.get("include_expired_batches"):
 		query = query.where((batch_table.expiry_date >= expiry_date) | (batch_table.expiry_date.isnull()))
 
@@ -528,6 +560,13 @@ def get_batches_from_serial_and_batch_bundle(searchfields, txt, filters, start=0
 		.offset(start)
 		.limit(page_len)
 	)
+
+	if not filters.get("is_inward"):
+		if filters.get("posting_date") and filters.get("posting_time"):
+			bundle_query = bundle_query.where(
+				stock_ledger_entry.posting_datetime
+				<= get_combine_datetime(filters.get("posting_date"), filters.get("posting_time"))
+			)
 
 	if not filters.get("include_expired_batches"):
 		bundle_query = bundle_query.where(
@@ -902,15 +941,17 @@ def get_tax_template(doctype, txt, searchfield, start, page_len, filters):
 		valid_from = filters.get("valid_from")
 		valid_from = valid_from[1] if isinstance(valid_from, list) else valid_from
 
-		args = {
-			"item_code": filters.get("item_code"),
-			"posting_date": valid_from,
-			"tax_category": filters.get("tax_category"),
-			"company": company,
-			"base_net_rate": filters.get("base_net_rate"),
-		}
+		ctx = ItemDetailsCtx(
+			{
+				"item_code": filters.get("item_code"),
+				"posting_date": valid_from,
+				"tax_category": filters.get("tax_category"),
+				"company": company,
+				"base_net_rate": filters.get("base_net_rate"),
+			}
+		)
 
-		taxes = _get_item_tax_template(args, taxes, for_validate=True)
+		taxes = _get_item_tax_template(ctx, taxes, for_validate=True)
 		txt = txt.lower()
 		return [(d,) for d in set(taxes) if not txt or txt in d.lower()]
 
@@ -973,7 +1014,7 @@ def get_filtered_child_rows(doctype, txt, searchfield, start, page_len, filters)
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_item_uom_query(doctype, txt, searchfield, start, page_len, filters):
-	if frappe.db.get_single_value("Stock Settings", "allow_uom_with_conversion_rate_defined_in_item"):
+	if frappe.get_single_value("Stock Settings", "allow_uom_with_conversion_rate_defined_in_item"):
 		query_filters = {"parent": filters.get("item_code")}
 
 		if txt:

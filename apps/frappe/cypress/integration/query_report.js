@@ -1,7 +1,7 @@
 context("Query Report", () => {
 	before(() => {
 		cy.login();
-		cy.visit("/app/website");
+		cy.visit("/desk/website");
 		cy.insert_doc(
 			"Report",
 			{
@@ -19,7 +19,7 @@ context("Query Report", () => {
 	});
 
 	it("add custom column in report", () => {
-		cy.visit("/app/query-report/Permitted Documents For User");
+		cy.visit("/desk/query-report/Permitted Documents For User");
 
 		cy.get(".page-form.flex", { timeout: 60000 })
 			.should("have.length", 1)
@@ -39,8 +39,17 @@ context("Query Report", () => {
 					.click({ force: true });
 				cy.get_open_dialog().get(".modal-title").should("contain", "Add Column");
 				cy.get('select[data-fieldname="doctype"]').select("Role (Name)", { force: true });
-				cy.get('select[data-fieldname="field"]').select("Role Name", { force: true });
-				cy.get('select[data-fieldname="insert_after"]').select("Name", { force: true });
+				cy.wait(500);
+				cy.get_open_dialog()
+					.find('.control-input > .awesomplete > input[data-fieldname="field"]')
+					.should("be.visible")
+					.clear({ force: true })
+					.type("Role Name{enter}", { delay: 150, force: true });
+				cy.get_open_dialog()
+					.find('.control-input > .awesomplete > input[data-fieldname="insert_after"]')
+					.should("be.visible")
+					.clear({ force: true })
+					.type("Name{enter}", { delay: 150, force: true });
 				cy.get_open_dialog()
 					.findByRole("button", { name: "Submit" })
 					.click({ force: true });
@@ -77,12 +86,12 @@ context("Query Report", () => {
 			.findByRole("button", { name: "Submit" })
 			.click({ timeout: 1000, force: true });
 
-		cy.visit("/app/query-report/" + report);
+		cy.visit("/desk/query-report/" + report);
 		cy.get(".datatable").should("exist");
 	};
 
 	it("test multi level query report", () => {
-		cy.visit("/app/query-report/Test ToDo Report");
+		cy.visit("/desk/query-report/Test ToDo Report");
 		cy.get(".datatable").should("exist");
 
 		save_report_and_open("Test ToDo Report 1", " 1");

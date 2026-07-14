@@ -6,6 +6,7 @@ erpnext.PointOfSale.ItemDetails = class {
 		this.allow_rate_change = settings.allow_rate_change;
 		this.allow_discount_change = settings.allow_discount_change;
 		this.current_item = {};
+		this.frm_doctype = settings.frm_doctype;
 
 		this.init_component();
 	}
@@ -128,24 +129,26 @@ erpnext.PointOfSale.ItemDetails = class {
 			return ``;
 		}
 
-		this.$item_name.html(item_name);
+		this.$item_name.html(frappe.utils.escape_html(item_name));
 		this.$item_description.html(get_description_html());
 		this.$item_price.html(format_currency(price_list_rate, this.currency));
 		if (!this.hide_images && image) {
 			this.$item_image.html(
 				`<img
 					onerror="cur_pos.item_details.handle_broken_image(this)"
-					class="h-full" src="${image}"
-					alt="${frappe.get_abbr(item_name)}"
+					class="h-full" src="${frappe.utils.escape_html(image)}"
+					alt="${frappe.utils.escape_html(frappe.get_abbr(item_name))}"
 					style="object-fit: cover;">`
 			);
 		} else {
-			this.$item_image.html(`<div class="item-abbr">${frappe.get_abbr(item_name)}</div>`);
+			this.$item_image.html(
+				`<div class="item-abbr">${frappe.utils.escape_html(frappe.get_abbr(item_name))}</div>`
+			);
 		}
 	}
 
 	handle_broken_image($img) {
-		const item_abbr = $($img).attr("alt");
+		const item_abbr = frappe.utils.escape_html($($img).attr("alt"));
 		$($img).replaceWith(`<div class="item-abbr">${item_abbr}</div>`);
 	}
 
@@ -332,7 +335,9 @@ erpnext.PointOfSale.ItemDetails = class {
 			this.uom_control.refresh();
 		}
 
-		frappe.model.on("POS Invoice Item", "*", (fieldname, value, item_row) => {
+		const frm_doctype = this.events.get_frm().doc.doctype;
+
+		frappe.model.on(`${frm_doctype} Item`, "*", (fieldname, value, item_row) => {
 			const field_control = this[`${fieldname}_control`];
 			const item_row_is_being_edited = this.compare_with_current_item(item_row);
 			if (
@@ -432,7 +437,7 @@ erpnext.PointOfSale.ItemDetails = class {
 					warehouse: this.warehouse_control.get_value() || "",
 					batch_nos: this.current_item.batch_no || "",
 					posting_date: expiry_date,
-					for_doctype: "POS Invoice",
+					for_doctype: this.frm_doctype,
 				},
 			});
 

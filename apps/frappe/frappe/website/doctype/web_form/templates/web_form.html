@@ -4,6 +4,18 @@
 	{% include "templates/includes/meta_block.html" %}
 {% endblock %}
 
+{% block navbar %}
+	{% if not hide_navbar %}
+        {% include "templates/includes/navbar/navbar.html" %}
+	{% endif %}
+{% endblock %}
+
+{% block footer %}
+	{% if not hide_footer %}
+        {% include "templates/includes/footer/footer.html" %}
+	{% endif %}
+{% endblock %}
+
 {% block breadcrumbs %}{% endblock %}
 
 {% block header %}
@@ -167,7 +179,7 @@
 
 {% block script %}
 	<script>
-		frappe.boot = {{ boot | json }};
+		frappe.boot = {{ frappe.utils.orjson_dumps(boot, default=frappe.json_handler) }};
 		frappe._messages = {{ translated_messages }};
 		frappe.web_form_doc = {{ web_form_doc | json }};
 		frappe.reference_doc = {{ reference_doc | json }};

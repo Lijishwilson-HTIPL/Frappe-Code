@@ -16,18 +16,32 @@ class StockRepostingSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		do_not_fetch_incoming_rate_from_serial_no: DF.Check
+		enable_parallel_reposting: DF.Check
+		enable_separate_reposting_for_gl: DF.Check
 		end_time: DF.Time | None
 		item_based_reposting: DF.Check
 		limit_reposting_timeslot: DF.Check
 		limits_dont_apply_on: DF.Literal[
 			"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 		]
+		no_of_parallel_reposting: DF.Int
 		notify_reposting_error_to_role: DF.Link | None
 		start_time: DF.Time | None
 	# end: auto-generated types
 
 	def validate(self):
 		self.set_minimum_reposting_time_slot()
+
+	def before_save(self):
+		self.reset_parallel_reposting_settings()
+
+	def reset_parallel_reposting_settings(self):
+		if not self.item_based_reposting and self.enable_parallel_reposting:
+			self.enable_parallel_reposting = 0
+
+		if self.enable_parallel_reposting and not self.no_of_parallel_reposting:
+			self.no_of_parallel_reposting = 4
 
 	def set_minimum_reposting_time_slot(self):
 		"""Ensure that timeslot for reposting is at least 12 hours."""
@@ -45,7 +59,7 @@ class StockRepostingSettings(Document):
 		if diff < 10:
 			self.end_time = get_time_str(add_to_date(self.start_time, hours=10, as_datetime=True))
 
-	@frappe.whitelist()
+	@frappe.whitelist(methods=["POST"])
 	def convert_to_item_wh_reposting(self):
 		"""Convert Transaction reposting to Item Warehouse based reposting if Item Based Reposting has enabled."""
 

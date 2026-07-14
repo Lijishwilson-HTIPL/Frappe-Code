@@ -1,0 +1,50 @@
+[
+ {
+  "default_value": null,
+  "doc_type": "Quotation",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "quotation_to",
+  "is_system_generated": 1,
+  "modified": "2026-04-21 15:33:11.164700",
+  "module": null,
+  "name": "Quotation-quotation_to-link_filters",
+  "property": "link_filters",
+  "property_type": "JSON",
+  "row_name": null,
+  "value": "[[\"DocType\",\"name\",\"in\", [\"Customer\", \"Lead\", \"Prospect\", \"CRM Deal\"]]]"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Lead",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": "main",
+  "is_system_generated": 1,
+  "modified": "2026-06-22 00:00:00.000000",
+  "module": null,
+  "name": "Lead-main-track_changes",
+  "property": "track_changes",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "1"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Opportunity",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": "main",
+  "is_system_generated": 1,
+  "modified": "2026-06-22 00:00:00.000000",
+  "module": null,
+  "name": "Opportunity-main-track_changes",
+  "property": "track_changes",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "1"
+ }
+]

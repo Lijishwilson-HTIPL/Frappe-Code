@@ -1,4 +1,5 @@
 import "./alt_keyboard_shortcuts";
+import { DropdownConsole } from "./dropdown_console";
 
 frappe.provide("frappe.ui.keys.handlers");
 
@@ -21,6 +22,13 @@ frappe.ui.keys.setup = function () {
 
 let standard_shortcuts = [];
 frappe.ui.keys.standard_shortcuts = standard_shortcuts;
+frappe.ui.keys.get_shortcut_label = function (shortcut) {
+	let label = shortcut.split("+").map(frappe.utils.to_title_case).join("+");
+	if (frappe.utils.is_mac()) {
+		label = label.replace("Ctrl", "⌘").replace("Alt", "⌥");
+	}
+	return label.replace("Shift", "⇧");
+};
 frappe.ui.keys.add_shortcut = ({
 	shortcut,
 	action,
@@ -89,22 +97,29 @@ frappe.ui.keys.show_keyboard_shortcut_dialog = () => {
 		if (!shortcuts.length) {
 			return "";
 		}
-		let html = shortcuts
+		let deduped = [];
+		let seen = {};
+		shortcuts
 			.filter((s) => (s.condition ? s.condition() : true))
 			.filter((s) => !!s.description)
-			.map((shortcut) => {
-				let shortcut_label = shortcut.shortcut
-					.split("+")
-					.map(frappe.utils.to_title_case)
-					.join("+");
-				if (frappe.utils.is_mac()) {
-					shortcut_label = shortcut_label.replace("Ctrl", "⌘").replace("Alt", "⌥");
+			.forEach((shortcut) => {
+				if (seen[shortcut.description] !== undefined) {
+					deduped[seen[shortcut.description]].keys.push(shortcut.shortcut);
+				} else {
+					seen[shortcut.description] = deduped.length;
+					deduped.push({ ...shortcut, keys: [shortcut.shortcut] });
 				}
-
-				shortcut_label = shortcut_label.replace("Shift", "⇧");
-
+			});
+		let html = deduped
+			.map((shortcut) => {
+				let shortcut_label = shortcut.keys
+					.map((k) => {
+						let label = frappe.ui.keys.get_shortcut_label(k);
+						return `<kbd>${label}</kbd>`;
+					})
+					.join(" / ");
 				return `<tr>
-					<td width="40%"><kbd>${shortcut_label}</kbd></td>
+					<td width="40%">${shortcut_label}</td>
 					<td width="60%">${shortcut.description || ""}</td>
 				</tr>`;
 			})
@@ -187,40 +202,31 @@ frappe.ui.keys.off = function (key, page) {
 frappe.ui.keys.add_shortcut({
 	shortcut: "ctrl+s",
 	action: function (e) {
+		document.activeElement?.blur();
 		frappe.app.trigger_primary_action();
 		e.preventDefault();
 		return false;
 	},
-	description: __("Trigger Primary Action"),
+	description: __("Trigger primary action"),
+	ignore_inputs: true,
+});
+
+frappe.ui.keys.add_shortcut({
+	shortcut: "ctrl+k",
+	action: function (e) {
+		return frappe.search.open_awesomebar_from_global_search_shortcut?.(e);
+	},
+	description: __("Open Awesomebar"),
 	ignore_inputs: true,
 });
 
 frappe.ui.keys.add_shortcut({
 	shortcut: "ctrl+g",
 	action: function (e) {
-		$("#navbar-search").focus();
-		e.preventDefault();
-		return false;
+		return frappe.search.open_global_search_from_navbar_shortcut?.(e);
 	},
-	description: __("Open Awesomebar"),
-});
-
-frappe.ui.keys.add_shortcut({
-	shortcut: "ctrl+h",
-	action: function (e) {
-		e.preventDefault();
-		$(".navbar-home img").click();
-	},
-	description: __("Navigate Home"),
-});
-
-frappe.ui.keys.add_shortcut({
-	shortcut: "alt+s",
-	action: function (e) {
-		e.preventDefault();
-		$(".dropdown-navbar-user button").eq(0).click();
-	},
-	description: __("Open Settings"),
+	description: __("Open Global Search"),
+	ignore_inputs: true,
 });
 
 frappe.ui.keys.add_shortcut({
@@ -228,16 +234,7 @@ frappe.ui.keys.add_shortcut({
 	action: function () {
 		frappe.ui.keys.show_keyboard_shortcut_dialog();
 	},
-	description: __("Show Keyboard Shortcuts"),
-});
-
-frappe.ui.keys.add_shortcut({
-	shortcut: "alt+h",
-	action: function (e) {
-		e.preventDefault();
-		$(".dropdown-help button").eq(0).click();
-	},
-	description: __("Open Help"),
+	description: __("Show keyboard shortcuts"),
 });
 
 frappe.ui.keys.on("escape", function (e) {
@@ -255,19 +252,25 @@ frappe.ui.keys.on("enter", function (e) {
 });
 
 frappe.ui.keys.on("ctrl+down", function (e) {
-	var grid_row = frappe.ui.form.get_open_grid_form();
-	grid_row &&
+	const grid_row = frappe.ui.form.get_open_grid_form();
+	if (grid_row?.has_next()) {
 		grid_row.toggle_view(false, function () {
 			grid_row.open_next();
 		});
+	} else {
+		e.preventDefault();
+	}
 });
 
 frappe.ui.keys.on("ctrl+up", function (e) {
-	var grid_row = frappe.ui.form.get_open_grid_form();
-	grid_row &&
+	const grid_row = frappe.ui.form.get_open_grid_form();
+	if (grid_row?.has_prev()) {
 		grid_row.toggle_view(false, function () {
 			grid_row.open_prev();
 		});
+	} else {
+		e.preventDefault();
+	}
 });
 
 frappe.ui.keys.add_shortcut({
@@ -275,7 +278,7 @@ frappe.ui.keys.add_shortcut({
 	action: function () {
 		frappe.ui.toolbar.clear_cache();
 	},
-	description: __("Clear Cache and Reload"),
+	description: __("Clear cache and reload"),
 });
 
 frappe.ui.keys.key_map = {
@@ -340,6 +343,23 @@ function close_grid_and_dialog() {
 		return false;
 	}
 }
+
+frappe.ui.keys.add_shortcut({
+	shortcut: "shift+t",
+	action: function (e) {
+		if (!frappe.model.can_write("System Console")) {
+			return;
+		}
+		if (cur_dialog?.is_minimized) {
+			cur_dialog.toggle_minimize();
+			cur_dialog.focus_on_first_input();
+		} else {
+			let dropdown_console = new DropdownConsole();
+			dropdown_console.show();
+		}
+	},
+	description: __("Open console"),
+});
 
 $.fn.enterKey = function (fnc) {
 	return this.each(function () {

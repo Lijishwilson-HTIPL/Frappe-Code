@@ -53,7 +53,9 @@ frappe.ui.Filter = class {
 			"Markdown Editor": ["Between", "Timespan", ">", "<", ">=", "<=", "in", "not in"],
 			Password: ["Between", "Timespan", ">", "<", ">=", "<=", "in", "not in"],
 			Rating: ["like", "not like", "Between", "in", "not in", "Timespan"],
+			Int: ["like", "not like", "Between", "in", "not in", "Timespan"],
 			Float: ["like", "not like", "Between", "in", "not in", "Timespan"],
+			Percent: ["like", "not like", "Between", "in", "not in", "Timespan"],
 		};
 
 		this.special_condition_labels = {
@@ -333,7 +335,6 @@ frappe.ui.Filter = class {
 			this.field.df.fieldname,
 			this.get_condition(),
 			this.get_selected_value(),
-			this.hidden,
 		];
 	}
 
@@ -490,7 +491,10 @@ frappe.ui.filter_utils = {
 					const parsed = JSON.parse(val);
 					val = Array.isArray(parsed) ? parsed : [String(parsed)];
 				} catch {
-					val = val.split(",").map((v) => strip(v));
+					val = val
+						.split(",")
+						.map((v) => strip(v))
+						.filter((v) => v != null && v !== "");
 				}
 			}
 		} else if (frappe.boot.additional_filters_config[condition]) {

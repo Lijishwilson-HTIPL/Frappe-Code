@@ -5,7 +5,6 @@
 import unittest
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
@@ -13,15 +12,13 @@ from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
 from erpnext.stock.doctype.item.test_item import make_item
 from erpnext.stock.get_item_details import get_item_details
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestPricingRule(FrappeTestCase):
+class TestPricingRule(ERPNextTestSuite):
 	def setUp(self):
-		delete_existing_pricing_rules()
 		setup_pricing_rule_data()
-
-	def tearDown(self):
-		delete_existing_pricing_rules()
+		self.enterClassContext(self.change_settings("Selling Settings", validate_selling_price=0))
 
 	def test_pricing_rule_for_discount(self):
 		from frappe import MandatoryError
@@ -415,6 +412,7 @@ class TestPricingRule(FrappeTestCase):
 		self.assertEqual(item.discount_amount, 110)
 		self.assertEqual(item.rate, 990)
 
+	@ERPNextTestSuite.change_settings("Selling Settings", {"allow_multiple_items": 1})
 	def test_pricing_rule_for_product_discount_on_same_item(self):
 		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		test_record = {
@@ -1190,6 +1188,7 @@ class TestPricingRule(FrappeTestCase):
 		si.delete()
 		rule.delete()
 
+	@ERPNextTestSuite.change_settings("Selling Settings", {"allow_multiple_items": 1})
 	def test_pricing_rule_for_product_free_item_rounded_qty_and_recursion(self):
 		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		test_record = {
@@ -1235,6 +1234,7 @@ class TestPricingRule(FrappeTestCase):
 		so.save()
 		self.assertEqual(len(so.items), 1)
 
+	@ERPNextTestSuite.change_settings("Selling Settings", {"allow_multiple_items": 1})
 	def test_pricing_rule_for_product_free_item_round_free_qty(self):
 		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		test_record = {
@@ -1521,9 +1521,6 @@ class TestPricingRule(FrappeTestCase):
 		pi.cancel()
 
 
-test_dependencies = ["Campaign"]
-
-
 def make_pricing_rule(**args):
 	args = frappe._dict(args)
 
@@ -1582,20 +1579,10 @@ def make_pricing_rule(**args):
 
 
 def setup_pricing_rule_data():
-	if not frappe.db.exists("Campaign", "_Test Campaign"):
+	if not frappe.db.exists("UTM Campaign", "_Test Campaign"):
 		frappe.get_doc(
-			{"doctype": "Campaign", "campaign_name": "_Test Campaign", "name": "_Test Campaign"}
+			{"doctype": "UTM Campaign", "description": "_Test Campaign", "name": "_Test Campaign"}
 		).insert()
-
-
-def delete_existing_pricing_rules():
-	for doctype in [
-		"Pricing Rule",
-		"Pricing Rule Item Code",
-		"Pricing Rule Item Group",
-		"Pricing Rule Brand",
-	]:
-		frappe.db.sql(f"delete from `tab{doctype}`")
 
 
 def make_item_price(item, price_list_name, item_price):

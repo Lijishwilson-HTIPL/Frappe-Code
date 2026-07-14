@@ -11,20 +11,50 @@
       <TicketSidebar />
     </div>
     <SetContactPhoneModal
+      v-if="ticket.doc.contact"
       v-model="showPhoneModal"
-      :name="ticket.data?.contact?.name"
+      :name="ticket.doc?.contact"
       @onUpdate="ticket.reload"
     />
+  </div>
+  <div
+    v-else-if="!ticket.doc && !ticket.get?.error"
+    class="grid h-full place-items-center"
+  >
+    <LoadingIndicator class="w-6 text-ink-gray-4" />
+  </div>
+
+  <div v-else class="grid h-full place-items-center px-4 py-20 text-center">
+    <div class="space-y-2">
+      <div class="flex justify-center items-center mx-auto">
+        <TicketIcon class="size-10 text-ink-gray-4" />
+      </div>
+      <div class="text-lg font-medium text-ink-gray-8">
+        {{ __("Ticket not found") }}
+      </div>
+      <div class="text-center text-p-base text-ink-gray-6 mt-1">
+        {{
+          __("You don't have access to this ticket, or it no longer exists.")
+        }}
+      </div>
+      <Button :route="{ name: 'TicketsAgent' }" variant="subtle">
+        <template #prefix
+          ><FeatherIcon name="arrow-left" class="size-4"
+        /></template>
+        {{ __("Back to Tickets") }}
+      </Button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import TicketIcon from "@/components/icons/TicketIcon.vue";
 import TicketActivityPanel from "@/components/ticket-agent/TicketActivityPanel.vue";
 import TicketHeader from "@/components/ticket-agent/TicketHeader.vue";
 import TicketSidebar from "@/components/ticket-agent/TicketSidebar.vue";
 import SetContactPhoneModal from "@/components/ticket/SetContactPhoneModal.vue";
 import { useActiveViewers } from "@/composables/realtime";
-import { useTicket } from "@/composables/useTicket";
+import { reloadTicket, useTicket } from "@/composables/useTicket";
 import { ticketsToNavigate } from "@/composables/useTicketNavigation";
 import { globalStore } from "@/stores/globalStore";
 import { useTelephonyStore } from "@/stores/telephony";
@@ -38,10 +68,16 @@ import {
   TicketContactSymbol,
   TicketSymbol,
 } from "@/types";
-import { createResource, toast, usePageMeta } from "frappe-ui";
+import {
+  createResource,
+  LoadingIndicator,
+  toast,
+  usePageMeta,
+} from "frappe-ui";
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { showCommentBox, showEmailBox } from "./modalStates";
+
 const telephonyStore = useTelephonyStore();
 
 const { $socket } = globalStore();
@@ -101,6 +137,9 @@ provide("makeCall", () => {
     docname: props.ticketId,
   });
 });
+provide("refreshTicket", () => reloadTicket(props.ticketId));
+provide("onCallEnded", () => reloadTicket(props.ticketId));
+
 const viewerComposable = computed(() => useActiveViewers(ticket.value.name));
 const viewers = computed(
   () => viewerComposable.value.currentViewers[props.ticketId] || []
@@ -142,17 +181,36 @@ onMounted(() => {
       toast.info(`User ${data.user} updated ${data.field} to ${data.value}`);
     }
   });
+
+  $socket.on("helpdesk:ticket-comment", (data: { ticket_id: string }) => {
+    if (data.ticket_id == props.ticketId) {
+      ticketComposable.value.activities.reload();
+    }
+  });
+
+  $socket.on("helpdesk:ticket-update", (data: { ticket_id: string }) => {
+    if (data.ticket_id == props.ticketId) {
+      reloadTicket(props.ticketId);
+    }
+  });
 });
 
 onBeforeUnmount(() => {
   stopViewing(props.ticketId);
   showEmailBox.value = false;
   showCommentBox.value = false;
-});
 
+  $socket.off("ticket_update");
+  $socket.off("helpdesk:ticket-comment");
+  $socket.off("helpdesk:ticket-update");
+});
 usePageMeta(() => {
+  if (!ticket.value?.doc?.name) {
+    return { title: props.ticketId };
+  }
+
   return {
-    title: props.ticketId,
+    title: props.ticketId + " - " + (ticket.value?.doc?.subject ?? ""),
   };
 });
 </script>

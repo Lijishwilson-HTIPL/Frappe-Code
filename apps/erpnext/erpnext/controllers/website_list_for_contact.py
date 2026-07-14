@@ -7,7 +7,7 @@ import json
 import frappe
 from frappe import _
 from frappe.modules.utils import get_module_app
-from frappe.utils import flt, has_common
+from frappe.utils import cint, flt, has_common
 from frappe.utils.user import is_website_user
 
 
@@ -35,7 +35,7 @@ def get_webform_list_context(module):
 
 
 def get_webform_transaction_list(
-	doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by="modified"
+	doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by="creation"
 ):
 	"""Get List of transactions for custom doctypes"""
 	from frappe.www.list import get_list
@@ -59,7 +59,7 @@ def get_webform_transaction_list(
 		limit_page_length,
 		ignore_permissions=False,
 		fields=None,
-		order_by="modified",
+		order_by="creation",
 	)
 
 
@@ -149,7 +149,7 @@ def get_list_for_transactions(
 		limit_start=limit_start,
 		limit_page_length=limit_page_length,
 		ignore_permissions=ignore_permissions,
-		order_by="modified desc",
+		order_by="creation desc",
 	):
 		data.append(d)
 
@@ -178,13 +178,16 @@ def get_list_for_transactions(
 
 
 def rfq_transaction_list(parties_doctype, doctype, parties, limit_start, limit_page_length):
-	data = frappe.db.sql(
-		"""select distinct parent as name, supplier from `tab{doctype}`
-			where supplier = '{supplier}' and docstatus=1  order by modified desc limit {start}, {len}""".format(
-			doctype=parties_doctype, supplier=parties[0], start=limit_start, len=limit_page_length
-		),
-		as_dict=1,
-	)
+	party = frappe.qb.DocType(parties_doctype)
+	data = (
+		frappe.qb.from_(party)
+		.select(party.parent.as_("name"), party.supplier)
+		.distinct()
+		.where((party.supplier == party[0]) & (party.docstatus == 1))
+		.orderby(party.creation, order=frappe.qb.desc)
+		.limit(limit_page_length)
+		.offset(limit_start)
+	).run(as_dict=True)
 
 	return post_process(doctype, data)
 

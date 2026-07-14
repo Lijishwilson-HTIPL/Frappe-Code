@@ -1,6 +1,9 @@
+import os.path
 import socket
+from pathlib import Path
 from urllib.parse import urlparse
 
+import frappe.utils
 from frappe import get_conf
 from frappe.exceptions import UrlSchemeNotSupported
 
@@ -78,6 +81,9 @@ def is_open(
 def check_database():
 	config = get_conf()
 	db_type = config.get("db_type", "mariadb")
+	if db_type == "sqlite":
+		db_path = Path(frappe.utils.get_site_path()) / "db" / f"{config.db_name}.db"
+		return {db_type: db_path.is_file() and os.access(db_path, os.R_OK | os.W_OK)}
 	if db_socket := config.get("db_socket"):
 		return {db_type: is_open("unix", None, None, db_socket)}
 	db_host = config.get("db_host", "127.0.0.1")

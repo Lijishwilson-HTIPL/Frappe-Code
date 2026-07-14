@@ -12,6 +12,7 @@ export default class ListSettings {
 		this.fields =
 			this.settings && this.settings.fields ? JSON.parse(this.settings.fields) : [];
 		this.subject_field = null;
+		this.max_number_of_fields = 50;
 
 		frappe.model.with_doctype("List View Settings", () => {
 			this.make();
@@ -29,7 +30,7 @@ export default class ListSettings {
 		let list_view_settings = frappe.get_meta("List View Settings");
 
 		me.dialog = new frappe.ui.Dialog({
-			title: __("{0} Settings", [__(me.doctype)]),
+			title: __("{0} List View Settings", [__(me.doctype)]),
 			fields: list_view_settings.fields,
 		});
 		me.dialog.set_values(me.settings);
@@ -54,8 +55,6 @@ export default class ListSettings {
 				},
 			});
 		});
-
-		me.dialog.fields_dict["total_fields"].df.onchange = () => me.refresh();
 	}
 
 	refresh() {
@@ -101,31 +100,35 @@ export default class ListSettings {
 		let fields_html = me.dialog.get_field("fields_html");
 		let wrapper = fields_html.$wrapper[0];
 		let fields = ``;
-		let total_fields = me.dialog.get_values().total_fields || me.settings.total_fields;
 
 		for (let idx in me.fields) {
-			if (idx == parseInt(total_fields)) {
+			if (idx == parseInt(this.max_number_of_fields)) {
 				break;
 			}
 			let is_sortable = idx == 0 ? `` : `sortable`;
 			let show_sortable_handle = idx == 0 ? `hide` : ``;
-			let can_remove = idx == 0 || is_status_field(me.fields[idx]) ? `hide` : ``;
+			let can_remove = idx == 0 || is_status_field(me.fields[idx]) ? `hide` : `d-flex`;
 
 			fields += `
-				<div class="control-input flex align-center form-control fields_order ${is_sortable}"
-					style="display: block; margin-bottom: 5px;" data-fieldname="${me.fields[idx].fieldname}"
-					data-label="${me.fields[idx].label}" data-type="${me.fields[idx].type}">
+				<div class="control-input form-control fields_order ${is_sortable} flex"
+	 				style="margin-bottom: 5px; padding-bottom: 1.5px;"
+	 				data-fieldname="${me.fields[idx].fieldname}"
+	 				data-label="${me.fields[idx].label}"
+	 				data-type="${me.fields[idx].type}">
 
-					<div class="row">
-						<div class="col-1">
+					<div class="row flex-fill align-items-center">
+						<div class="col-1 d-flex align-items-center justify-content-center px-1">
 							${frappe.utils.icon("drag", "xs", "", "", "sortable-handle " + show_sortable_handle)}
 						</div>
-						<div class="col-10" style="padding-left:0px;">
+
+						<div class="col d-flex align-items-center px-0">
 							${__(me.fields[idx].label, null, me.doctype)}
 						</div>
-						<div class="col-1 ${can_remove}">
-							<a class="text-muted remove-field" data-fieldname="${me.fields[idx].fieldname}">
-								${frappe.utils.icon("delete", "xs")}
+
+						<div class="col-1 d-flex align-items-center justify-content-center px-0">
+							<a class="text-muted remove-field align-items-center ${can_remove}"
+							   data-fieldname="${me.fields[idx].fieldname}">
+								${frappe.utils.icon("x", "xs")}
 							</a>
 						</div>
 					</div>
@@ -136,15 +139,15 @@ export default class ListSettings {
 			<div class="form-group">
 				<div class="clearfix">
 					<label class="control-label" style="padding-right: 0px;">${__("Fields")}</label>
+					<label class="text-extra-muted float-right">
+						<a class="add-new-fields text-muted">
+							${__("+ Add / Remove Fields")}
+						</a>
+					</label>
 				</div>
 				<div class="control-input-wrapper">
 				${fields}
 				</div>
-				<p class="help-box small text-muted">
-					<a class="add-new-fields text-muted">
-						${__("+ Add / Remove Fields")}
-					</a>
-				</p>
 			</div>
 		`);
 
@@ -233,7 +236,7 @@ export default class ListSettings {
 					click: () => me.reset_listview_fields(d),
 				},
 				{
-					label: __("Select Fields"),
+					label: __("Select Fields (Up to {0})", [this.max_number_of_fields]),
 					fieldtype: "MultiCheck",
 					fieldname: "fields",
 					options: me.get_doctype_fields(
@@ -261,7 +264,7 @@ export default class ListSettings {
 			for (let idx in values) {
 				let value = values[idx];
 
-				if (me.fields.length === parseInt(me.dialog.get_values().total_fields)) {
+				if (me.fields.length === parseInt(this.max_number_of_fields)) {
 					break;
 				} else if (value != me.subject_field.fieldname) {
 					let field = frappe.meta.get_docfield(me.doctype, value);

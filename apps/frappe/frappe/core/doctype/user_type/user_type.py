@@ -3,10 +3,11 @@
 
 import frappe
 from frappe import _
-from frappe.config import get_modules_from_app
+from frappe.core.doctype.custom_docperm.custom_docperm import update_custom_docperm
 from frappe.model.document import Document
 from frappe.permissions import add_permission, add_user_permission
 from frappe.utils import get_link_to_form
+from frappe.utils.modules import get_modules_from_app
 
 
 class UserType(Document):
@@ -31,8 +32,8 @@ class UserType(Document):
 		user_doctypes: DF.Table[UserDocumentType]
 		user_id_field: DF.Literal[None]
 		user_type_modules: DF.Table[UserTypeModule]
-
 	# end: auto-generated types
+
 	def validate(self):
 		self.set_modules()
 		self.add_select_perm_doctypes()
@@ -47,7 +48,6 @@ class UserType(Document):
 		if self.is_standard:
 			return
 
-		self.validate_document_type_limit()
 		self.validate_role()
 		self.add_role_permissions_for_user_doctypes()
 		self.add_role_permissions_for_select_doctypes()
@@ -73,37 +73,6 @@ class UserType(Document):
 		self.set("user_type_modules", [])
 		for module in modules:
 			self.append("user_type_modules", {"module": module})
-
-	def validate_document_type_limit(self):
-		limit = frappe.conf.get("user_type_doctype_limit", {}).get(frappe.scrub(self.name))
-
-		if not limit and frappe.session.user != "Administrator":
-			frappe.throw(
-				_("User does not have permission to create the new {0}").format(frappe.bold(_("User Type"))),
-				title=_("Permission Error"),
-			)
-
-		if limit is None:
-			frappe.msgprint(
-				_("The limit has not set for the user type {0} in the site config file.").format(
-					frappe.bold(self.name)
-				),
-				title=_("Set Limit"),
-			)
-			return
-
-		if self.user_doctypes and len(self.user_doctypes) > limit:
-			frappe.throw(
-				_("The total number of user document types limit has been crossed."),
-				title=_("User Document Types Limit Exceeded"),
-			)
-
-		custom_doctypes = [row.document_type for row in self.user_doctypes if row.is_custom]
-		if custom_doctypes and len(custom_doctypes) > 3:
-			frappe.throw(
-				_("You can only set the 3 custom doctypes in the Document Types table."),
-				title=_("Custom Document Types Limit Exceeded"),
-			)
 
 	def validate_role(self):
 		if not self.role:
@@ -143,7 +112,7 @@ class UserType(Document):
 			docperm = add_role_permissions(row.document_type, self.role)
 			values = {perm: row.get(perm, default=0) for perm in perms}
 
-			frappe.db.set_value("Custom DocPerm", docperm, values)
+			update_custom_docperm(docperm, values)
 
 	def add_select_perm_doctypes(self):
 		if frappe.flags.ignore_select_perm:
@@ -177,13 +146,11 @@ class UserType(Document):
 		for doctype in ["select_doctypes", "custom_select_doctypes"]:
 			for row in self.get(doctype):
 				docperm = add_role_permissions(row.document_type, self.role)
-				frappe.db.set_value(
-					"Custom DocPerm", docperm, {"select": 1, "read": 0, "create": 0, "write": 0}
-				)
+				update_custom_docperm(docperm, {"select": 1, "read": 0, "create": 0, "write": 0})
 
 	def add_role_permissions_for_file(self):
 		docperm = add_role_permissions("File", self.role)
-		frappe.db.set_value("Custom DocPerm", docperm, {"read": 1, "create": 1, "write": 1})
+		update_custom_docperm(docperm, {"read": 1, "create": 1, "write": 1})
 
 	def remove_permission_for_deleted_doctypes(self):
 		doctypes = [d.document_type for d in self.user_doctypes]
@@ -236,7 +203,7 @@ def get_user_linked_doctypes(doctype, txt, searchfield, start, page_len, filters
 		"DocType",
 		fields=["`tabDocType`.`name`"],
 		filters=filters,
-		order_by="`tabDocType`.`idx` desc",
+		order_by="idx desc",
 		limit_start=start,
 		limit_page_length=page_len,
 		as_list=1,
@@ -341,4 +308,6 @@ def apply_permissions_for_non_standard_user_type(doc, method=None):
 				user_doc.update_children()
 				add_user_permission(doc.doctype, doc.name, doc.get(data[1]))
 			else:
-				frappe.db.set_value("User Permission", perm_data[0], "user", doc.get(data[1]))
+				user_perm = frappe.get_doc("User Permission", perm_data[0])
+				user_perm.user = doc.get(data[1])
+				user_perm.save(ignore_permissions=True)

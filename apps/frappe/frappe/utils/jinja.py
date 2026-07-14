@@ -1,40 +1,79 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
-def get_jenv():
+from contextlib import contextmanager
+
+import frappe
+from frappe.utils.caching import site_cache
+
+
+def get_jenv(*, restrict_globals=None):
 	import frappe
+	from frappe.utils.safe_exec import get_safe_globals, is_render_exec_enabled, render_safe_globals
 
-	if not getattr(frappe.local, "jenv", None):
-		from jinja2 import DebugUndefined
-		from jinja2.sandbox import SandboxedEnvironment
+	if restrict_globals is None:
+		restrict_globals = is_render_exec_enabled()
 
-		from frappe.utils.safe_exec import UNSAFE_ATTRIBUTES, get_safe_globals
+	local_key = "jenv_restricted" if restrict_globals else "jenv_unrestricted"
+	if jenv := getattr(frappe.local, local_key, None):
+		return jenv
 
-		UNSAFE_ATTRIBUTES = UNSAFE_ATTRIBUTES - {"format", "format_map"}
+	default_jenv = _get_jenv()
+	jenv = default_jenv.overlay()
+	# XXX: This is safe to share between requests, the only reason why we are overlaying jenv is to
+	# reuse cache but still have request specific jenv object.
+	if not frappe._dev_server:
+		jenv.cache = default_jenv.cache
 
-		class FrappeSandboxedEnvironment(SandboxedEnvironment):
-			def is_safe_attribute(self, obj, attr, *args, **kwargs):
-				if attr in UNSAFE_ATTRIBUTES:
-					return False
+	# Note: Overlay by default is "linked", we need to copy everything we are updating.
+	jenv.globals = default_jenv.globals.copy()
+	jenv.filters = default_jenv.filters.copy()
 
-				return super().is_safe_attribute(obj, attr, *args, **kwargs)
-
-		# frappe will be loaded last, so app templates will get precedence
-		jenv = FrappeSandboxedEnvironment(loader=get_jloader(), undefined=DebugUndefined)
-		set_filters(jenv)
-
+	if restrict_globals:
+		jenv.globals.update(render_safe_globals())
+	else:
 		jenv.globals.update(get_safe_globals())
 
-		methods, filters = get_jinja_hooks()
-		jenv.globals.update(methods or {})
-		jenv.filters.update(filters or {})
+	methods, filters = get_jinja_hooks()
+	jenv.globals.update(methods or {})
+	jenv.filters.update(filters or {})
 
-		frappe.local.jenv = jenv
+	setattr(frappe.local, local_key, jenv)
 
-	return frappe.local.jenv
+	return jenv
+
+
+@site_cache(ttl=10 * 60, maxsize=4)
+def _get_jenv():
+	# XXX: DO NOT use any thread/request specific data in this function!
+	# Some functionality like `get_safe_globals` appears safe but internally uses request local
+	# data.
+
+	from jinja2 import DebugUndefined
+	from jinja2.sandbox import SandboxedEnvironment
+
+	from frappe.utils.safe_exec import UNSAFE_ATTRIBUTES
+
+	UNSAFE_ATTRIBUTES = UNSAFE_ATTRIBUTES - {"format", "format_map"}
+
+	class FrappeSandboxedEnvironment(SandboxedEnvironment):
+		def is_safe_attribute(self, obj, attr, *args, **kwargs):
+			if attr in UNSAFE_ATTRIBUTES:
+				return False
+
+			return super().is_safe_attribute(obj, attr, *args, **kwargs)
+
+	# frappe will be loaded last, so app templates will get precedence
+	jenv = FrappeSandboxedEnvironment(loader=get_jloader(), undefined=DebugUndefined, cache_size=32)
+	set_filters(jenv)
+
+	return jenv
 
 
 def get_template(path):
-	return get_jenv().get_template(path)
+	jenv = get_jenv()
+	# Note: jenv globals are reapplied here because we don't have true "global"/"local" separation.
+	# Ideally globals should never change as per Jinja design.
+	return jenv.get_template(path, globals=jenv.globals)
 
 
 def get_email_from_template(name, args):
@@ -54,7 +93,7 @@ def get_email_from_template(name, args):
 	return (message, text_content)
 
 
-def validate_template(html):
+def validate_template(html, restrict_globals=None):
 	"""Throws exception if there is a syntax error in the Jinja Template"""
 	from jinja2 import TemplateSyntaxError
 
@@ -62,44 +101,68 @@ def validate_template(html):
 
 	if not html:
 		return
-	jenv = get_jenv()
+	jenv = get_jenv(restrict_globals=restrict_globals)
 	try:
 		jenv.from_string(html)
 	except TemplateSyntaxError as e:
 		frappe.throw(f"Syntax error in template as line {e.lineno}: {e.message}")
 
 
-def render_template(template, context=None, is_path=None, safe_render=True):
+def render_template(template, context=None, is_path=None, safe_render=True, *, restrict_globals=None):
 	"""Render a template using Jinja
 
 	:param template: path or HTML containing the jinja template
 	:param context: dict of properties to pass to the template
 	:param is_path: (optional) assert that the `template` parameter is a path
 	:param safe_render: (optional) prevent server side scripting via jinja templating
+	:param restrict_globals: (optional) restrict globals in template rendering to render only globals.
 	"""
-
-	from jinja2 import TemplateError
-
-	from frappe import _, get_traceback, throw
-
 	if not template:
 		return ""
+
+	from jinja2 import TemplateError
+	from jinja2.sandbox import SandboxedEnvironment
+
+	from frappe import _, get_traceback, throw
 
 	if context is None:
 		context = {}
 
-	if is_path or guess_is_path(template):
-		return get_jenv().get_template(template).render(context)
-	else:
-		if safe_render and ".__" in template:
-			throw(_("Illegal template"))
-		try:
-			return get_jenv().from_string(template).render(context)
-		except TemplateError:
-			throw(
-				title="Jinja Template Error",
-				msg=f"<pre>{template}</pre><pre>{get_traceback()}</pre>",
-			)
+	try:
+		if is_path or guess_is_path(template):
+			is_path = True
+			compiled_template = get_template(template)
+		else:
+			jenv: SandboxedEnvironment = get_jenv(restrict_globals=restrict_globals)
+			if safe_render and ".__" in template:
+				throw(_("Illegal template"))
+			compiled_template = jenv.from_string(template)
+	except TemplateError:
+		import html
+
+		throw(
+			title="Jinja Template Error",
+			msg=f"<pre>{template}</pre><pre>{html.escape(get_traceback())}</pre>",
+		)
+
+	import time
+
+	from frappe.utils.logger import get_logger
+
+	logger = get_logger("render-template")
+	try:
+		start_time = time.monotonic()
+		with safe_render_flags():
+			return compiled_template.render(context)
+	except Exception as e:
+		import html
+
+		throw(title="Context Error", msg=f"<pre>{html.escape(get_traceback())}</pre>", exc=e)
+	finally:
+		if is_path:
+			logger.debug(f"Rendering time: {time.monotonic() - start_time:.6f} seconds ({template})")
+		else:
+			logger.debug(f"Rendering time: {time.monotonic() - start_time:.6f} seconds")
 
 
 def guess_is_path(template):
@@ -114,30 +177,32 @@ def guess_is_path(template):
 
 
 def get_jloader():
+	jloader = _get_jloader()
+	frappe.local.jloader = jloader  # backward compat
+	return jloader
+
+
+@site_cache(ttl=10 * 60, maxsize=8)
+def _get_jloader():
+	from jinja2 import ChoiceLoader, PackageLoader, PrefixLoader
+
 	import frappe
 
-	if not getattr(frappe.local, "jloader", None):
-		from jinja2 import ChoiceLoader, PackageLoader, PrefixLoader
+	apps = frappe.get_hooks("template_apps")
+	if not apps:
+		apps = list(reversed(frappe.get_installed_apps(_ensure_on_bench=True)))
 
-		apps = frappe.get_hooks("template_apps")
-		if not apps:
-			apps = list(
-				reversed(
-					frappe.local.flags.web_pages_apps or frappe.get_installed_apps(_ensure_on_bench=True)
-				)
-			)
+	if "frappe" not in apps:
+		apps.append("frappe")
 
-		if "frappe" not in apps:
-			apps.append("frappe")
+	jloader = ChoiceLoader(
+		# search for something like app/templates/...
+		[PrefixLoader({app: PackageLoader(app, ".") for app in apps})]
+		# search for something like templates/...
+		+ [PackageLoader(app, ".") for app in apps]
+	)
 
-		frappe.local.jloader = ChoiceLoader(
-			# search for something like app/templates/...
-			[PrefixLoader({app: PackageLoader(app, ".") for app in apps})]
-			# search for something like templates/...
-			+ [PackageLoader(app, ".") for app in apps]
-		)
-
-	return frappe.local.jloader
+	return jloader
 
 
 def set_filters(jenv):
@@ -156,7 +221,7 @@ def set_filters(jenv):
 
 
 def get_jinja_hooks():
-	"""Returns a tuple of (methods, filters) each containing a dict of method name and method definition pair."""
+	"""Return a tuple of (methods, filters) each containing a dict of method name and method definition pair."""
 	import frappe
 
 	if not getattr(frappe.local, "site", None):
@@ -189,3 +254,17 @@ def get_jinja_hooks():
 	filter_dict = get_obj_dict_from_paths(filters)
 
 	return method_dict, filter_dict
+
+
+@contextmanager
+def safe_render_flags():
+	if frappe.flags.in_render_safe_exec is None:
+		frappe.flags.in_render_safe_exec = 0
+
+	frappe.flags.in_render_safe_exec += 1
+
+	try:
+		yield
+	finally:
+		# Always ensure that the flag is decremented
+		frappe.flags.in_render_safe_exec -= 1

@@ -6,17 +6,20 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "hello@frappe.io"
 app_license = "AGPLv3"
-required_apps = ["frappe/telephony"]
+required_apps = ["telephony"]
+require_type_annotated_api_methods = True
 
 add_to_apps_screen = [
     {
         "name": "helpdesk",
-        "logo": "/assets/helpdesk/images/Helpdesk.png",
+        "logo": "/assets/helpdesk/desk/favicon.svg",
         "title": "Helpdesk",
         "route": "/helpdesk",
         "has_permission": "helpdesk.api.permission.has_app_permission",
     }
 ]
+
+get_site_info = "helpdesk.activation.get_site_info"
 
 after_install = "helpdesk.setup.install.after_install"
 after_migrate = [
@@ -36,6 +39,9 @@ scheduler_events = {
     ],
     "daily": [
         "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.close_tickets_after_n_days"
+    ],
+    "hourly_long": [
+        "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.update_sla_status_in_ticket"
     ],
 }
 
@@ -59,24 +65,45 @@ doc_events = {
     "Contact": {
         "before_insert": "helpdesk.overrides.contact.before_insert",
     },
+    "HD Ticket": {
+        "after_insert": "helpdesk.overrides.hd_ticket_hooks.send_ticket_acknowledgment",
+    },
     "Assignment Rule": {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
         "validate": "helpdesk.extends.assignment_rule.on_assignment_rule_validate",
     },
-    "Issue": {
-        "on_update": "helpdesk.overrides.issue.on_update",
+    "Customer": {
+        "after_insert": "helpdesk.integrations.erpnext.customer.after_insert",
+        "on_update": "helpdesk.integrations.erpnext.customer.on_update",
+        "before_rename": "helpdesk.integrations.erpnext.customer.before_rename",
+        "after_rename": "helpdesk.integrations.erpnext.customer.after_rename",
+        "on_trash": "helpdesk.integrations.erpnext.customer.on_trash",
     },
-    "HD Ticket": {
-        "after_insert": "helpdesk.overrides.hd_ticket_hooks.send_ticket_acknowledgment",
+    "User Permission": {
+        "before_validate": "helpdesk.integrations.erpnext.user_permission.before_validate",
+        "after_insert": "helpdesk.integrations.erpnext.user_permission.after_insert",
+        "on_update": "helpdesk.integrations.erpnext.user_permission.on_update",
+        "on_trash": "helpdesk.integrations.erpnext.user_permission.on_trash",
+    },
+    "DocShare": {
+        "before_validate": "helpdesk.integrations.erpnext.doc_share.before_validate",
+        "after_insert": "helpdesk.integrations.erpnext.doc_share.after_insert",
+        "on_update": "helpdesk.integrations.erpnext.doc_share.on_update",
+        "on_trash": "helpdesk.integrations.erpnext.doc_share.on_trash",
+    },
+    "Notification Log": {
+        "before_insert": "helpdesk.extends.notification_log.before_insert",
     },
 }
 
 has_permission = {
     "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.has_permission",
+    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.has_permission",
 }
 
 permission_query_conditions = {
     "HD Ticket": "helpdesk.helpdesk.doctype.hd_ticket.hd_ticket.permission_query",
+    "HD Saved Reply": "helpdesk.helpdesk.doctype.hd_saved_reply.hd_saved_reply.permission_query",
 }
 
 # DocType Class
@@ -101,3 +128,4 @@ setup_wizard_complete = "helpdesk.setup.setup_wizard.setup_complete"
 # ---------------
 
 before_tests = "helpdesk.test_utils.before_tests"
+auth_hooks = ["helpdesk.auth.authenticate"]

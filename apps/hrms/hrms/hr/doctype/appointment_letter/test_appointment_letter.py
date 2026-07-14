@@ -2,8 +2,8 @@
 # See license.txt
 
 # import frappe
-from frappe.tests.utils import FrappeTestCase
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestAppointmentLetter(FrappeTestCase):
+class TestAppointmentLetter(HRMSTestSuite):
 	pass

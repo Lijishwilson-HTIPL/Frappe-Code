@@ -2,9 +2,6 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import copy
-from collections import OrderedDict
-
 import frappe
 from frappe import _, _dict
 from frappe.query_builder import Criterion
@@ -18,6 +15,15 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from erpnext.accounts.report.financial_statements import get_cost_centers_with_children
 from erpnext.accounts.report.utils import convert_to_presentation_currency, get_currency
 from erpnext.accounts.utils import get_account_currency
+
+DEBIT_CREDIT_DICT = {
+	"debit": 0.0,
+	"credit": 0.0,
+	"debit_in_account_currency": 0.0,
+	"credit_in_account_currency": 0.0,
+	"debit_in_transaction_currency": None,
+	"credit_in_transaction_currency": None,
+}
 
 
 def execute(filters=None):
@@ -157,7 +163,7 @@ def get_gl_entries(filters, accounting_dimensions):
 		credit_in_account_currency """
 
 	if filters.get("show_remarks"):
-		if remarks_length := frappe.db.get_single_value("Accounts Settings", "general_ledger_remarks_length"):
+		if remarks_length := frappe.get_single_value("Accounts Settings", "general_ledger_remarks_length"):
 			select_fields += f",substr(remarks, 1, {remarks_length}) as 'remarks'"
 		else:
 			select_fields += """,remarks"""
@@ -218,9 +224,7 @@ def get_gl_entries(filters, accounting_dimensions):
 def get_conditions(filters):
 	conditions = []
 
-	ignore_is_opening = frappe.db.get_single_value(
-		"Accounts Settings", "ignore_is_opening_check_for_reporting"
-	)
+	ignore_is_opening = frappe.get_single_value("Accounts Settings", "ignore_is_opening_check_for_reporting")
 
 	if filters.get("account"):
 		filters.account = get_accounts_with_children(filters.account)
@@ -279,7 +283,15 @@ def get_conditions(filters):
 	if filters.get("party"):
 		conditions.append("party in %(party)s")
 
-	if not (
+	if filters.get("disable_opening_balance_calculation"):
+		if not ignore_is_opening:
+			conditions.append("(posting_date >=%(from_date)s or is_opening = 'Yes')")
+		else:
+			conditions.append("posting_date >=%(from_date)s")
+
+	# opening balance calculation is done only if filtered on account/party
+	# so from_date filter is not applied
+	elif not (
 		filters.get("account")
 		or filters.get("party")
 		or filters.get("categorize_by") in ["Categorize by Account", "Categorize by Party"]
@@ -320,10 +332,8 @@ def get_conditions(filters):
 
 	from frappe.desk.reportview import build_match_conditions
 
-	match_conditions = build_match_conditions("GL Entry")
-
-	if match_conditions:
-		conditions.append(match_conditions)
+	if match_conditions := build_match_conditions("GL Entry"):
+		conditions.append(f"({match_conditions})")
 
 	accounting_dimensions = get_accounting_dimensions(as_list=False)
 
@@ -385,75 +395,89 @@ def set_bill_no(gl_entries):
 		gl["bill_no"] = inv_details.get(gl.get("against_voucher"), "")
 
 
+def get_translated_labels_for_totals():
+	def wrap_in_quotes(label):
+		return f"'{label}'"
+
+	return {
+		"opening": wrap_in_quotes(_("Opening")),
+		"total": wrap_in_quotes(_("Total")),
+		"closing": wrap_in_quotes(_("Closing (Opening + Total)")),
+	}
+
+
 def get_data_with_opening_closing(filters, account_details, accounting_dimensions, gl_entries):
+	def add_total_to_data(totals, key):
+		row = totals[key]
+		row["account"] = labels[key]
+		data.append(row)
+
+	labels = get_translated_labels_for_totals()
+
 	data = []
-	totals_dict = get_totals_dict()
 
 	set_bill_no(gl_entries)
 
-	gle_map = initialize_gle_map(gl_entries, filters, totals_dict)
+	gle_map = initialize_gle_map(gl_entries, filters)
 
-	totals, entries = get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map, totals_dict)
+	totals, entries = get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map)
 
 	# Opening for filtered account
-	data.append(totals.opening)
+	add_total_to_data(totals, "opening")
 
-	if filters.get("categorize_by") != "Categorize by Voucher (Consolidated)":
-		for _acc, acc_dict in gle_map.items():
-			# acc
-			if acc_dict.entries:
-				# opening
-				data.append({"debit_in_transaction_currency": None, "credit_in_transaction_currency": None})
-				if (not filters.get("categorize_by") and not filters.get("voucher_no")) or (
-					filters.get("categorize_by") and filters.get("categorize_by") != "Categorize by Voucher"
-				):
-					data.append(acc_dict.totals.opening)
+	if not filters.get("categorize_by"):
+		all_entries = []
+		for acc_dict in gle_map.values():
+			all_entries.extend(acc_dict.entries)
+		data += all_entries
 
-				data += acc_dict.entries
+	elif filters.get("categorize_by") != "Categorize by Voucher (Consolidated)":
+		set_opening_closing = (not filters.get("categorize_by") and not filters.get("voucher_no")) or (
+			filters.get("categorize_by") and filters.get("categorize_by") != "Categorize by Voucher"
+		)
+		set_total = filters.get("categorize_by") or not filters.voucher_no
 
-				# totals
-				if filters.get("categorize_by") or not filters.voucher_no:
-					data.append(acc_dict.totals.total)
+		for acc_dict in gle_map.values():
+			if not acc_dict.entries:
+				continue
 
-				# closing
-				if (not filters.get("categorize_by") and not filters.get("voucher_no")) or (
-					filters.get("categorize_by") and filters.get("categorize_by") != "Categorize by Voucher"
-				):
-					data.append(acc_dict.totals.closing)
+			# opening
+			data.append({"debit_in_transaction_currency": None, "credit_in_transaction_currency": None})
+			if set_opening_closing:
+				add_total_to_data(acc_dict.totals, "opening")
+
+			data += acc_dict.entries
+
+			# totals
+			if set_total:
+				add_total_to_data(acc_dict.totals, "total")
+
+			# closing
+			if set_opening_closing:
+				add_total_to_data(acc_dict.totals, "closing")
 
 		data.append({"debit_in_transaction_currency": None, "credit_in_transaction_currency": None})
 	else:
 		data += entries
 
 	# totals
-	data.append(totals.total)
+	add_total_to_data(totals, "total")
 
 	# closing
-	data.append(totals.closing)
+	add_total_to_data(totals, "closing")
 
 	return data
 
 
 def get_totals_dict():
-	def _get_debit_credit_dict(label):
-		return _dict(
-			account=f"'{label}'",
-			debit=0.0,
-			credit=0.0,
-			debit_in_account_currency=0.0,
-			credit_in_account_currency=0.0,
-			debit_in_transaction_currency=None,
-			credit_in_transaction_currency=None,
-		)
-
 	return _dict(
-		opening=_get_debit_credit_dict(_("Opening")),
-		total=_get_debit_credit_dict(_("Total")),
-		closing=_get_debit_credit_dict(_("Closing (Opening + Total)")),
+		opening=_dict(DEBIT_CREDIT_DICT),
+		total=_dict(DEBIT_CREDIT_DICT),
+		closing=_dict(DEBIT_CREDIT_DICT),
 	)
 
 
-def group_by_field(group_by):
+def get_group_by_field(group_by):
 	if group_by == "Categorize by Party":
 		return "party"
 	elif group_by in ["Categorize by Voucher (Consolidated)", "Categorize by Account"]:
@@ -462,25 +486,30 @@ def group_by_field(group_by):
 		return "voucher_no"
 
 
-def initialize_gle_map(gl_entries, filters, totals_dict):
-	gle_map = OrderedDict()
-	group_by = group_by_field(filters.get("categorize_by"))
+def initialize_gle_map(gl_entries, filters):
+	gle_map = {}
+	group_by = get_group_by_field(filters.get("categorize_by"))
 
 	for gle in gl_entries:
-		gle_map.setdefault(gle.get(group_by), _dict(totals=copy.deepcopy(totals_dict), entries=[]))
+		group_by_value = gle.get(group_by)
+		if group_by_value not in gle_map:
+			gle_map[group_by_value] = _dict(
+				totals=get_totals_dict(),
+				entries=[],
+			)
 	return gle_map
 
 
-def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map, totals):
+def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map):
 	entries = []
-	consolidated_gle = OrderedDict()
-	group_by = group_by_field(filters.get("categorize_by"))
+	consolidated_gle = {}
+	group_by = get_group_by_field(filters.get("categorize_by"))
 	group_by_voucher_consolidated = filters.get("categorize_by") == "Categorize by Voucher (Consolidated)"
 
 	if filters.get("show_net_values_in_party_account"):
 		account_type_map = get_account_type_map(filters.get("company"))
 
-	immutable_ledger = frappe.db.get_single_value("Accounts Settings", "enable_immutable_ledger")
+	immutable_ledger = frappe.get_single_value("Accounts Settings", "enable_immutable_ledger")
 
 	def update_value_in_dict(data, key, gle, show_net_values=False):
 		data[key].debit += gle.debit
@@ -524,11 +553,19 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map, tot
 	from_date, to_date = getdate(filters.from_date), getdate(filters.to_date)
 	show_opening_entries = filters.get("show_opening_entries")
 
+	totals = get_totals_dict()
 	for gle in gl_entries:
 		group_by_value = gle.get(group_by)
-		gle.voucher_type = gle.voucher_type
+		gle.voucher_subtype = _(gle.voucher_subtype)
+		gle.against_voucher_type = _(gle.against_voucher_type)
+		gle.remarks = _(gle.remarks)
+		gle.party_type = _(gle.party_type)
 
-		if gle.posting_date < from_date or (cstr(gle.is_opening) == "Yes" and not show_opening_entries):
+		if gle.posting_date < from_date or (
+			cstr(gle.is_opening) == "Yes"
+			and not show_opening_entries
+			and not filters.disable_opening_balance_calculation
+		):
 			if not group_by_voucher_consolidated:
 				update_value_in_dict(gle_map[group_by_value].totals, "opening", gle, True)
 				update_value_in_dict(gle_map[group_by_value].totals, "closing", gle, True)
@@ -656,13 +693,20 @@ def get_columns(filters):
 			"options": "GL Entry",
 			"hidden": 1,
 		},
-		{"label": _("Posting Date"), "fieldname": "posting_date", "fieldtype": "Date", "width": 120},
+		{
+			"label": _("Posting Date"),
+			"fieldname": "posting_date",
+			"fieldtype": "Date",
+			"width": 120,
+			"sticky": True,
+		},
 		{
 			"label": _("Account"),
 			"fieldname": "account",
 			"fieldtype": "Link",
 			"options": "Account",
 			"width": 180,
+			"sticky": True,
 		},
 		{
 			"label": _("Debit ({0})").format(currency),
@@ -704,7 +748,7 @@ def get_columns(filters):
 				"options": "transaction_currency",
 			},
 			{
-				"label": "Transaction Currency",
+				"label": _("Transaction Currency"),
 				"fieldname": "transaction_currency",
 				"fieldtype": "Link",
 				"options": "Currency",

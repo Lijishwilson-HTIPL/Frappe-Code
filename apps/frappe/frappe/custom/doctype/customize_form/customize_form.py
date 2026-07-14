@@ -13,13 +13,14 @@ import frappe.translate
 from frappe import _
 from frappe.core.doctype.doctype.doctype import (
 	check_email_append_to,
+	get_fields_not_allowed_in_list_view,
 	validate_autoincrement_autoname,
 	validate_fields_for_doctype,
 	validate_series,
 )
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.custom.doctype.property_setter.property_setter import delete_property_setter
-from frappe.model import core_doctypes_list, no_value_fields
+from frappe.model import core_doctypes_list
 from frappe.model.docfield import supports_translation
 from frappe.model.document import Document
 from frappe.model.meta import trim_table
@@ -41,6 +42,7 @@ class CustomizeForm(Document):
 
 		actions: DF.Table[DocTypeAction]
 		allow_auto_repeat: DF.Check
+		allow_bulk_edit: DF.Check
 		allow_copy: DF.Check
 		allow_import: DF.Check
 		autoname: DF.Data | None
@@ -232,8 +234,8 @@ class CustomizeForm(Document):
 		validate_autoincrement_autoname(self)
 		self.flags.update_db = False
 		self.flags.rebuild_doctype_for_global_search = False
-		self.set_property_setters()
 		self.update_custom_fields()
+		self.set_property_setters()
 		self.set_name_translation()
 		validate_fields_for_doctype(self.doc_type)
 		check_email_append_to(self)
@@ -319,12 +321,12 @@ class CustomizeForm(Document):
 	def set_property_setters_for_docfield(self, meta, df, meta_df):
 		for prop, prop_type in docfield_properties.items():
 			if prop != "idx" and (df.get(prop) or "") != (meta_df[0].get(prop) or ""):
-				if not self.allow_property_change(prop, meta_df, df):
+				if not self.allow_property_change(prop, meta_df, df, meta):
 					continue
 
 				self.make_property_setter(prop, df.get(prop), prop_type, fieldname=df.fieldname)
 
-	def allow_property_change(self, prop, meta_df, df):
+	def allow_property_change(self, prop, meta_df, df, meta):
 		if prop == "fieldtype":
 			self.validate_fieldtype_change(df, meta_df[0].get(prop), df.get(prop))
 
@@ -360,8 +362,7 @@ class CustomizeForm(Document):
 		elif (
 			prop == "in_list_view"
 			and df.get(prop)
-			and df.fieldtype != "Attach Image"
-			and df.fieldtype in no_value_fields
+			and df.fieldtype in get_fields_not_allowed_in_list_view(meta)
 		):
 			frappe.msgprint(
 				_("'In List View' not allowed for type {0} in row {1}").format(df.fieldtype, df.idx)
@@ -400,6 +401,10 @@ class CustomizeForm(Document):
 
 		elif prop == "in_global_search" and df.in_global_search != meta_df[0].get("in_global_search"):
 			self.flags.rebuild_doctype_for_global_search = True
+
+		elif prop == "is_virtual" and meta_df[0].get("is_virtual") == 0 and df.get("is_virtual") == 1:
+			frappe.msgprint(_("You can't set standard field {0} as virtual").format(frappe.bold(df.label)))
+			return False
 
 		return True
 
@@ -448,7 +453,7 @@ class CustomizeForm(Document):
 				property_name, json.dumps([d.name for d in self.get(fieldname)]), "Small Text"
 			)
 		else:
-			frappe.db.delete("Property Setter", dict(property=property_name, doc_type=self.doc_type))
+			delete_property_setter(self.doc_type, property=property_name)
 
 	def clear_removed_items(self, doctype, items):
 		"""
@@ -727,6 +732,7 @@ doctype_properties = {
 	"sort_field": "Data",
 	"sort_order": "Data",
 	"default_print_format": "Data",
+	"hide_toolbar": "Check",
 	"allow_copy": "Check",
 	"istable": "Check",
 	"quick_entry": "Check",
@@ -739,6 +745,7 @@ doctype_properties = {
 	"track_views": "Check",
 	"allow_auto_repeat": "Check",
 	"allow_import": "Check",
+	"allow_bulk_edit": "Check",
 	"show_name_in_global_search": "Check",
 	"show_preview_popup": "Check",
 	"default_email_template": "Data",
@@ -768,6 +775,7 @@ docfield_properties = {
 	"permlevel": "Int",
 	"width": "Data",
 	"print_width": "Data",
+	"alignment": "Select",
 	"non_negative": "Check",
 	"reqd": "Check",
 	"unique": "Check",
@@ -806,6 +814,8 @@ docfield_properties = {
 	"is_virtual": "Check",
 	"link_filters": "JSON",
 	"placeholder": "Data",
+	"button_color": "Select",
+	"mask": "Check",
 }
 
 doctype_link_properties = {

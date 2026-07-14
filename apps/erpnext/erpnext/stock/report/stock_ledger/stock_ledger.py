@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import CombineDatetime, Sum
+from frappe.query_builder.functions import Sum
 from frappe.utils import cint, flt, get_datetime
 
 from erpnext.stock.doctype.inventory_dimension.inventory_dimension import get_inventory_dimensions
@@ -73,6 +73,7 @@ def execute(filters=None):
 		inv_dimension_wise_dict, filters, inv_dimension_key=inv_dimension_key, opening_row=opening_row
 	)
 
+	item_wh_wise_prev_sle = {}
 	for sle in sl_entries:
 		item_detail = item_details[sle.item_code]
 
@@ -108,12 +109,28 @@ def execute(filters=None):
 		if sle.serial_no:
 			update_available_serial_nos(available_serial_nos, sle)
 
-		if sle.actual_qty:
+		if sle.actual_qty < 0:
 			sle["in_out_rate"] = flt(sle.stock_value_difference / sle.actual_qty, precision)
+			sle["incoming_rate"] = 0
 
-		elif sle.voucher_type == "Stock Reconciliation":
+		elif sle.voucher_type == "Stock Reconciliation" and sle.actual_qty < 0:
 			sle["in_out_rate"] = sle.valuation_rate
 
+		if (
+			sle.voucher_type == "Stock Reconciliation"
+			and not sle.in_qty
+			and not sle.out_qty
+			and not sle.actual_qty
+		):
+			if prev_sle := item_wh_wise_prev_sle.get((sle.item_code, sle.warehouse)):
+				bal_qty = prev_sle.get("qty_after_transaction", 0)
+				qty = sle.qty_after_transaction - bal_qty
+				if qty > 0:
+					sle.in_qty = qty
+				elif qty < 0:
+					sle.out_qty = qty
+
+		item_wh_wise_prev_sle[(sle.item_code, sle.warehouse)] = sle
 		data.append(sle)
 
 		if include_uom:
@@ -177,7 +194,7 @@ def get_segregated_bundle_entries(sle, bundle_details, batch_balance_dict, filte
 		new_sle.update(row)
 		new_sle.update(
 			{
-				"in_out_rate": flt(new_sle.stock_value_difference / row.qty) if row.qty else 0,
+				"in_out_rate": flt(new_sle.stock_value_difference / row.qty) if row.qty < 0 else 0,
 				"in_qty": row.qty if row.qty > 0 else 0,
 				"out_qty": row.qty if row.qty < 0 else 0,
 				"qty_after_transaction": qty_before_transaction + row.qty,
@@ -359,7 +376,7 @@ def get_columns(filters):
 				"convertible": "rate",
 			},
 			{
-				"label": _("Valuation Rate"),
+				"label": _("Outgoing Rate"),
 				"fieldname": "in_out_rate",
 				"fieldtype": filters.valuation_field_type,
 				"width": 140,
@@ -391,11 +408,20 @@ def get_columns(filters):
 				"width": 100,
 			},
 			{
+				"label": _("Serial and Batch Bundle"),
+				"fieldname": "serial_and_batch_bundle",
+				"fieldtype": "Link",
+				"options": "Serial and Batch Bundle",
+				"width": 150,
+				"hidden": not filters.get("segregate_serial_batch_bundle"),
+			},
+			{
 				"label": _("Batch"),
 				"fieldname": "batch_no",
 				"fieldtype": "Link",
 				"options": "Batch",
 				"width": 100,
+				"hidden": not filters.get("segregate_serial_batch_bundle"),
 			},
 			{
 				"label": _("Serial No"),
@@ -403,13 +429,7 @@ def get_columns(filters):
 				"fieldtype": "Link",
 				"options": "Serial No",
 				"width": 100,
-			},
-			{
-				"label": _("Serial and Batch Bundle"),
-				"fieldname": "serial_and_batch_bundle",
-				"fieldtype": "Link",
-				"options": "Serial and Batch Bundle",
-				"width": 100,
+				"hidden": not filters.get("segregate_serial_batch_bundle"),
 			},
 			{
 				"label": _("Project"),
@@ -610,7 +630,10 @@ def get_opening_balance_from_batch(filters, columns, sl_entries):
 
 	opening_data = frappe.get_all(
 		"Stock Ledger Entry",
-		fields=["sum(actual_qty) as qty_after_transaction", "sum(stock_value_difference) as stock_value"],
+		fields=[
+			{"SUM": "actual_qty", "as": "qty_after_transaction"},
+			{"SUM": "stock_value_difference", "as": "stock_value"},
+		],
 		filters=query_filters,
 	)[0]
 

@@ -60,7 +60,7 @@ class SalaryWithholding(Document):
 			self.status = status
 
 	@frappe.whitelist()
-	def set_withholding_cycles_and_to_date(self):
+	def set_withholding_cycles_and_to_date(self) -> None:
 		self.to_date = self.get_to_date()
 
 		cycle_from_date = cycle_to_date = getdate(self.from_date)
@@ -96,6 +96,9 @@ class SalaryWithholding(Document):
 			"Daily": {"days": 1 * cycles},
 		}
 		return frequency_dict.get(self.payroll_frequency)
+
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 
 @frappe.whitelist()

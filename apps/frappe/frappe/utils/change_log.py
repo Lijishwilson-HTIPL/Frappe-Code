@@ -112,10 +112,22 @@ def get_versions():
 	versions = {}
 	for app in frappe.get_installed_apps(_ensure_on_bench=True):
 		app_hooks = frappe.get_hooks(app_name=app)
+		app_color = app_hooks.get("app_color")
+
+		# Prefer add_to_apps_screen logo, then app_logo_url — no frappe fallback
+		logo = None
+		apps_screen = app_hooks.get("add_to_apps_screen")
+		if apps_screen and apps_screen[0].get("logo"):
+			logo = apps_screen[0]["logo"]
+		elif app_hooks.get("app_logo_url"):
+			logo = app_hooks["app_logo_url"][0]
+
 		versions[app] = {
 			"title": app_hooks.get("app_title")[0],
 			"description": app_hooks.get("app_description")[0],
 			"branch": get_app_branch(app),
+			"color": app_color[0] if app_color else None,
+			"logo": logo,
 		}
 
 		if versions[app]["branch"] != "master":
@@ -165,7 +177,7 @@ def get_app_last_commit_ref(app):
 
 
 def check_for_update():
-	if frappe.get_system_settings("disable_system_update_notification"):
+	if frappe.get_system_settings("disable_system_update_notification") or not frappe.is_setup_complete():
 		return
 
 	updates = frappe._dict(major=[], minor=[], patch=[])
@@ -245,7 +257,6 @@ def check_release_on_github(
 	owner: str, repo: str, current_version: Version
 ) -> tuple[Version, str] | tuple[None, None]:
 	"""Check the latest release for a repo URL on GitHub."""
-	import requests
 
 	if not owner:
 		raise ValueError("Owner cannot be empty")
@@ -374,11 +385,7 @@ def show_update_popup():
 					"""
 			if release_links:
 				message = _("New {} releases for the following apps are available").format(_(update_type))
-				update_message += (
-					"<div class='new-version-log'>{}<div class='new-version-links'>{}</div></div>".format(
-						message, release_links
-					)
-				)
+				update_message += f"<div class='new-version-log'>{message}<div class='new-version-links'>{release_links}</div></div>"
 
 	primary_action = None
 	if on_frappecloud():
@@ -399,7 +406,7 @@ def show_update_popup():
 
 
 def get_pyproject(app: str) -> dict | None:
-	from tomli import load
+	from tomllib import load
 
 	pyproject_path = frappe.get_app_path(app, "..", "pyproject.toml")
 

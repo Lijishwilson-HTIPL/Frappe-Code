@@ -60,8 +60,7 @@
             class="flex flex-row-reverse gap-2 items-center min-w-11"
           >
             <Dropdown
-              side="right"
-              :offset="15"
+              placement="right-start"
               :options="viewControls.viewActions(item, close)"
             >
               <template #default>

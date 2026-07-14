@@ -56,6 +56,14 @@ frappe.ui.form.on("Material Request", {
 		});
 	},
 
+	schedule_date(frm) {
+		if (frm.doc.schedule_date) {
+			frm.doc.items.forEach((d) => {
+				frappe.model.set_value(d.doctype, d.name, "schedule_date", frm.doc.schedule_date);
+			});
+		}
+	},
+
 	onload: function (frm) {
 		// add item, if previous view was item
 		erpnext.utils.add_item(frm);
@@ -108,7 +116,13 @@ frappe.ui.form.on("Material Request", {
 	refresh: function (frm) {
 		frm.events.make_custom_buttons(frm);
 		frm.toggle_reqd("customer", frm.doc.material_request_type == "Customer Provided");
+		erpnext.buying.prevent_past_schedule_dates(frm);
 		frm.trigger("set_warehouse_label");
+	},
+
+	transaction_date(frm) {
+		erpnext.buying.prevent_past_schedule_dates(frm);
+		frm.set_value("schedule_date", "");
 	},
 
 	set_from_warehouse: function (frm) {
@@ -137,11 +151,13 @@ frappe.ui.form.on("Material Request", {
 
 			if (flt(frm.doc.per_ordered, precision) < 100) {
 				let add_create_pick_list_button = () => {
-					frm.add_custom_button(
-						__("Pick List"),
-						() => frm.events.create_pick_list(frm),
-						__("Create")
-					);
+					if (frm.doc.items.some((item) => item.stock_qty - item.picked_qty > 0)) {
+						frm.add_custom_button(
+							__("Pick List"),
+							() => frm.events.create_pick_list(frm),
+							__("Create")
+						);
+					}
 				};
 
 				if (frm.doc.material_request_type === "Material Transfer") {
@@ -266,7 +282,7 @@ frappe.ui.form.on("Material Request", {
 		frappe.call({
 			method: "erpnext.stock.get_item_details.get_item_details",
 			args: {
-				args: {
+				ctx: {
 					item_code: item.item_code,
 					from_warehouse: item.from_warehouse,
 					warehouse: item.warehouse,
@@ -394,33 +410,11 @@ frappe.ui.form.on("Material Request", {
 	},
 
 	make_purchase_order: function (frm) {
-		frappe.prompt(
-			{
-				label: __("For Default Supplier (Optional)"),
-				fieldname: "default_supplier",
-				fieldtype: "Link",
-				options: "Supplier",
-				description: __(
-					"Select a Supplier from the Default Suppliers of the items below. On selection, a Purchase Order will be made against items belonging to the selected Supplier only."
-				),
-				get_query: () => {
-					return {
-						query: "erpnext.stock.doctype.material_request.material_request.get_default_supplier_query",
-						filters: { doc: frm.doc.name },
-					};
-				},
-			},
-			(values) => {
-				frappe.model.open_mapped_doc({
-					method: "erpnext.stock.doctype.material_request.material_request.make_purchase_order",
-					frm: frm,
-					args: { default_supplier: values.default_supplier },
-					run_link_triggers: true,
-				});
-			},
-			__("Enter Supplier"),
-			__("Create")
-		);
+		frappe.model.open_mapped_doc({
+			method: "erpnext.stock.doctype.material_request.material_request.make_purchase_order",
+			frm: frm,
+			run_link_triggers: true,
+		});
 	},
 
 	make_request_for_quotation: function (frm) {
@@ -497,6 +491,7 @@ frappe.ui.form.on("Material Request", {
 			method: "erpnext.stock.doctype.material_request.material_request.raise_work_orders",
 			args: {
 				material_request: frm.doc.name,
+				company: frm.doc.company,
 			},
 			freeze: true,
 			callback: function (r) {

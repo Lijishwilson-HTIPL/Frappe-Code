@@ -107,8 +107,9 @@
                         "account_number": "1132.000"
                     }, 
                     "account_number": "1130.000"
-                }, 
+                },
                 "account_number": "1100.000"
+                
             }, 
             "Aktiva Tetap": {
                 "Aktiva": {
@@ -568,6 +569,10 @@
                     "Hutang Pajak": {
                         "account_number": "2141.000", 
                         "account_type": "Payable"
+                    },
+                    "PPN Keluaran": {
+                        "account_number": "2142.000", 
+                        "account_type": "Tax"
                     }, 
                     "account_number": "2140.000"
                 }, 

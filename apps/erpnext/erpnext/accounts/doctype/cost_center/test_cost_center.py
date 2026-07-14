@@ -1,18 +1,14 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-
 import unittest
 
 import frappe
 
-test_records = frappe.get_test_records("Cost Center")
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestCostCenter(unittest.TestCase):
+class TestCostCenter(ERPNextTestSuite):
 	def test_cost_center_creation_against_child_node(self):
-		if not frappe.db.get_value("Cost Center", {"name": "_Test Cost Center 2 - _TC"}):
-			frappe.get_doc(test_records[1]).insert()
-
 		cost_center = frappe.get_doc(
 			{
 				"doctype": "Cost Center",

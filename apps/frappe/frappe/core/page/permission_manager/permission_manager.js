@@ -132,17 +132,18 @@ frappe.PermissionEngine = class PermissionEngine {
 			.append(`<hr><h5>${__("Standard Permissions")}:</h5><br>`);
 		let $wrapper = $("<p></p>").appendTo($d);
 		data.message.forEach((d) => {
-			let rights = this.rights
+			let custom_rights = this.options.doctype_ptype_map[doctype] || [];
+			d.rights = this.rights
+				.concat(custom_rights)
 				.filter((r) => d[r])
 				.map((r) => {
 					return __(toTitle(frappe.unscrub(r)));
-				});
-
-			d.rights = rights.join(", ");
+				})
+				.join(", ");
 
 			$wrapper.append(`<div class="row">\
 				<div class="col-xs-5"><b>${__(d.role)}</b>, ${__("Level")} ${d.permlevel || 0}</div>\
-				<div class="col-xs-7">${d.rights}</div>\
+				<div class="col-xs-7 text-break">${d.rights}</div>\
 			</div><br>`);
 		});
 	}
@@ -265,6 +266,10 @@ frappe.PermissionEngine = class PermissionEngine {
 				}
 			});
 
+			this.options.doctype_ptype_map[d.parent]?.forEach((r) => {
+				this.add_check(perm_container, d, r);
+			});
+
 			// buttons
 			this.add_delete_button(row, d);
 		});
@@ -280,7 +285,7 @@ frappe.PermissionEngine = class PermissionEngine {
 
 	add_check(cell, d, fieldname, label, description = "") {
 		if (!label) label = toTitle(fieldname.replace(/_/g, " "));
-		if (d.permlevel > 0 && ["read", "write"].indexOf(fieldname) == -1) {
+		if (d.permlevel > 0 && ["read", "write", "mask"].indexOf(fieldname) == -1) {
 			return;
 		}
 
@@ -305,6 +310,7 @@ frappe.PermissionEngine = class PermissionEngine {
 			.attr("data-doctype", d.parent);
 
 		checkbox.find("label").css("text-transform", "capitalize");
+		checkbox.find("label").css("align-items", "center");
 
 		return checkbox;
 	}
@@ -331,6 +337,7 @@ frappe.PermissionEngine = class PermissionEngine {
 			"import",
 			"export",
 			"share",
+			"mask",
 		];
 	}
 
@@ -410,7 +417,7 @@ frappe.PermissionEngine = class PermissionEngine {
 	add_delete_button(row, d) {
 		$(
 			`<button class='btn btn-danger btn-remove-perm btn-xs'>${frappe.utils.icon(
-				"delete"
+				"x"
 			)}</button>`
 		)
 			.appendTo($(`<td class="pt-4">`).appendTo(row))

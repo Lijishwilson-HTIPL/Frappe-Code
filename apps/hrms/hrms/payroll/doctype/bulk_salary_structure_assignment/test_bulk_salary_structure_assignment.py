@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -12,9 +11,10 @@ from hrms.payroll.doctype.bulk_salary_structure_assignment.bulk_salary_structure
 )
 from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
 from hrms.tests.test_utils import create_company, create_department, create_employee_grade
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestBulkSalaryStructureAssignment(FrappeTestCase):
+class TestBulkSalaryStructureAssignment(HRMSTestSuite):
 	def setUp(self):
 		create_company()
 		self.department = create_department("Accounts")
@@ -30,9 +30,6 @@ class TestBulkSalaryStructureAssignment(FrappeTestCase):
 		self.emp4 = make_employee("employee4@bssa.com", company="_Test Company")
 		# different domain in employee_name
 		self.emp5 = make_employee("employee5@test.com", company="_Test Company", department=self.department)
-
-	def tearDown(self):
-		frappe.db.rollback()
 
 	def test_get_employees(self):
 		today = getdate()
@@ -69,7 +66,7 @@ class TestBulkSalaryStructureAssignment(FrappeTestCase):
 
 		args = {
 			"doctype": "Bulk Salary Structure Assignment",
-			"salary_structure": salary_structure,
+			"salary_structure": salary_structure.name,
 			"from_date": today,
 			"company": "_Test Company",
 		}

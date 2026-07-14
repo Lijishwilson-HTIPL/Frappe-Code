@@ -48,6 +48,25 @@ SALES_TRANSACTION_TYPES = {
 }
 TRANSACTION_TYPES = PURCHASE_TRANSACTION_TYPES | SALES_TRANSACTION_TYPES
 
+# Party-derived fields that must NOT be auto-copied by `get_mapped_doc` when the
+# source and target documents belong to different parties (e.g. Sales Order →
+# Purchase Order or inter-company Sales Invoice → Purchase Invoice).
+CROSS_PARTY_FIELD_NO_MAP = [
+	"tax_category",
+	"tax_id",
+	"tax_withholding_category",
+	"taxes_and_charges",
+	"address_display",
+	"contact_display",
+	"contact_mobile",
+	"contact_email",
+	"contact_person",
+	"shipping_address",
+	"dispatch_address",
+	"payment_terms_template",
+	"language",
+]
+
 
 class DuplicatePartyAccountError(frappe.ValidationError):
 	pass
@@ -74,8 +93,6 @@ def get_party_details(
 ):
 	if not party:
 		return frappe._dict()
-	if not frappe.db.exists(party_type, party):
-		frappe.throw(_("{0}: {1} does not exists").format(party_type, party))
 	return _get_party_details(
 		party,
 		account,
@@ -86,7 +103,7 @@ def get_party_details(
 		price_list,
 		currency,
 		doctype,
-		ignore_permissions,
+		False,
 		fetch_payment_terms_template,
 		party_address,
 		company_address,
@@ -173,10 +190,6 @@ def _get_party_details(
 			}
 			for d in party.get("sales_team")
 		]
-
-	# supplier tax withholding category
-	if party_type == "Supplier" and party:
-		party_details["supplier_tds"] = frappe.get_value(party_type, party.name, "tax_withholding_category")
 
 	if not party_details.get("tax_category") and pos_profile:
 		party_details["tax_category"] = frappe.get_value("POS Profile", pos_profile, "tax_category")
@@ -340,10 +353,13 @@ def set_contact_details(party_details, party, party_type):
 
 def set_other_values(party_details, party, party_type):
 	# copy
+	to_copy = ["tax_withholding_category", "tax_withholding_group", "language"]
+
 	if party_type == "Customer":
-		to_copy = ["customer_name", "customer_group", "territory", "language"]
+		to_copy.extend(["customer_name", "customer_group", "territory"])
 	else:
-		to_copy = ["supplier_name", "supplier_group", "language"]
+		to_copy.extend(["supplier_name", "supplier_group"])
+
 	for f in to_copy:
 		party_details[f] = party.get(f)
 
@@ -491,11 +507,6 @@ def get_party_advance_account(party_type, party, company):
 	return account
 
 
-@frappe.whitelist()
-def get_party_bank_account(party_type, party):
-	return frappe.db.get_value("Bank Account", {"party_type": party_type, "party": party, "is_default": 1})
-
-
 def get_party_account_currency(party_type, party, company):
 	def generator():
 		party_account = get_party_account(party_type, party, company)
@@ -530,11 +541,19 @@ def get_party_gle_currency(party_type, party, company):
 
 def get_party_gle_account(party_type, party, company):
 	def generator():
-		existing_gle_account = frappe.db.sql(
-			"""select account from `tabGL Entry`
-			where docstatus=1 and company=%(company)s and party_type=%(party_type)s and party=%(party)s
-			limit 1""",
-			{"company": company, "party_type": party_type, "party": party},
+		gl = qb.DocType("GL Entry")
+		existing_gle_account = (
+			qb.from_(gl)
+			.select(gl.account)
+			.where(
+				(gl.docstatus == 1)
+				& (gl.company == company)
+				& (gl.party_type == party_type)
+				& (gl.party == party)
+				& (gl.is_cancelled == 0)
+			)
+			.limit(1)
+			.run()
 		)
 
 		return existing_gle_account[0][0] if existing_gle_account else None
@@ -602,9 +621,11 @@ def validate_party_accounts(doc):
 
 		# validate if account is mapped for same company
 		if account.account:
-			validate_account_head(account.idx, account.account, account.company)
+			validate_account_head(account.idx, account.account, account.company, _("Debtor/Creditor"))
 		if account.advance_account:
-			validate_account_head(account.idx, account.advance_account, account.company)
+			validate_account_head(
+				account.idx, account.advance_account, account.company, _("Debtor/Creditor Advance")
+			)
 
 
 @frappe.whitelist()
@@ -655,7 +676,14 @@ def get_due_date_from_template(template_name, posting_date, bill_date):
 
 def validate_due_date(posting_date, due_date, bill_date=None, template_name=None, doctype=None):
 	if getdate(due_date) < getdate(posting_date):
-		frappe.throw(_("Due Date cannot be before Posting / Supplier Invoice Date"))
+		doctype_date = "Date"
+		if doctype == "Purchase Invoice":
+			doctype_date = "Supplier Invoice Date"
+
+		if doctype == "Sales Invoice":
+			doctype_date = "Posting Date"
+
+		frappe.throw(_("Due Date cannot be before {0}").format(doctype_date))
 	else:
 		validate_due_date_with_template(posting_date, due_date, bill_date, template_name, doctype)
 
@@ -669,8 +697,8 @@ def validate_due_date_with_template(posting_date, due_date, bill_date, template_
 	if not default_due_date:
 		return
 
-	if default_due_date != posting_date and getdate(due_date) > getdate(default_due_date):
-		if frappe.db.get_single_value("Accounts Settings", "credit_controller") in frappe.get_roles():
+	if getdate(default_due_date) != getdate(posting_date) and getdate(due_date) > getdate(default_due_date):
+		if frappe.get_single_value("Accounts Settings", "credit_controller") in frappe.get_roles():
 			party_type = "supplier" if doctype == "Purchase Invoice" else "customer"
 
 			msgprint(
@@ -678,14 +706,13 @@ def validate_due_date_with_template(posting_date, due_date, bill_date, template_
 					party_type, date_diff(due_date, default_due_date)
 				)
 			)
-
 		else:
-			frappe.throw(_("Due / Reference Date cannot be after {0}").format(formatdate(default_due_date)))
+			frappe.throw(_("Due Date cannot be after {0}").format(formatdate(default_due_date)))
 
 
 @frappe.whitelist()
 def get_address_tax_category(tax_category=None, billing_address=None, shipping_address=None):
-	addr_tax_category_from = frappe.db.get_single_value(
+	addr_tax_category_from = frappe.get_single_value(
 		"Accounts Settings", "determine_address_tax_category_from"
 	)
 	if addr_tax_category_from == "Shipping Address":
@@ -743,7 +770,7 @@ def set_taxes(
 		args.update({"tax_type": "Purchase"})
 
 	if use_for_shopping_cart:
-		args.update({"use_for_shopping_cart": use_for_shopping_cart})
+		args.update({"use_for_shopping_cart": cint(use_for_shopping_cart)})
 
 	return get_tax_template(posting_date, args)
 
@@ -775,7 +802,7 @@ def get_payment_terms_template(party_name, party_type, company=None):
 	return template
 
 
-def validate_party_frozen_disabled(party_type, party_name):
+def validate_party_frozen_disabled(company, party_type, party_name):
 	if frappe.flags.ignore_party_validation:
 		return
 
@@ -785,10 +812,10 @@ def validate_party_frozen_disabled(party_type, party_name):
 			if party.disabled:
 				frappe.throw(_("{0} {1} is disabled").format(party_type, party_name), PartyDisabled)
 			elif party.get("is_frozen"):
-				frozen_accounts_modifier = frappe.db.get_single_value(
-					"Accounts Settings", "frozen_accounts_modifier"
+				role_allowed_for_frozen_entries = frappe.get_cached_value(
+					"Company", company, "role_allowed_for_frozen_entries"
 				)
-				if frozen_accounts_modifier not in frappe.get_roles():
+				if role_allowed_for_frozen_entries not in frappe.get_roles():
 					frappe.throw(_("{0} {1} is frozen").format(party_type, party_name), PartyFrozen)
 
 		elif party_type == "Employee":
@@ -834,8 +861,8 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 		group_by="company",
 		fields=[
 			"company",
-			"sum(grand_total) as grand_total",
-			"sum(base_grand_total) as base_grand_total",
+			{"SUM": "grand_total", "as": "grand_total"},
+			{"SUM": "base_grand_total", "as": "base_grand_total"},
 		],
 	)
 
@@ -850,7 +877,7 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 					"expiry_date": (">=", getdate()),
 				},
 				group_by="company",
-				fields=["company", "sum(loyalty_points) as loyalty_points"],
+				fields=["company", {"SUM": "loyalty_points", "as": "loyalty_points"}],
 				as_list=1,
 			)
 		)

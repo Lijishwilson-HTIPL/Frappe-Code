@@ -101,8 +101,8 @@ class RepostAccountingLedger(Document):
 			if doc.doctype in ["Payment Entry", "Journal Entry"]:
 				gle_map = doc.build_gl_map()
 			elif doc.doctype == "Purchase Receipt":
-				warehouse_account_map = get_warehouse_account_map(doc.company)
-				gle_map = doc.get_gl_entries(warehouse_account_map)
+				inventory_account_map = doc.get_inventory_account_map()
+				gle_map = doc.get_gl_entries(inventory_account_map)
 			else:
 				gle_map = doc.get_gl_entries()
 
@@ -154,12 +154,13 @@ class RepostAccountingLedger(Document):
 
 
 @frappe.whitelist()
-def start_repost(account_repost_doc=str) -> None:
+def start_repost(account_repost_doc: str | None = None) -> None:
 	from erpnext.accounts.general_ledger import make_reverse_gl_entries
 
 	frappe.flags.through_repost_accounting_ledger = True
 	if account_repost_doc:
 		repost_doc = frappe.get_doc("Repost Accounting Ledger", account_repost_doc)
+		repost_doc.check_permission("write")
 
 		if repost_doc.docstatus == 1:
 			# Prevent repost on invoices with deferred accounting
@@ -215,22 +216,18 @@ def start_repost(account_repost_doc=str) -> None:
 
 
 def get_allowed_types_from_settings(child_doc: bool = False):
-	# Avoid DISTINCT(...) here: Frappe applies a default ORDER BY which breaks on Postgres
-	# when used with SELECT DISTINCT.
-	repost_docs = frappe.db.get_all(
-		"Repost Allowed Types",
-		filters={"allowed": True},
-		pluck="document_type",
-	)
-
-	# De-dupe while preserving order (first occurrence wins)
-	repost_docs = list(dict.fromkeys(repost_docs))
+	repost_docs = [
+		x.document_type
+		for x in frappe.db.get_all(
+			"Repost Allowed Types",
+			fields=["document_type"],
+			distinct=True,
+		)
+	]
 	result = repost_docs
 
 	if repost_docs and child_doc:
 		result.extend(get_child_docs(repost_docs))
-		# Keep uniqueness after extending
-		result = list(dict.fromkeys(result))
 
 	return result
 
@@ -277,14 +274,13 @@ def validate_docs_for_voucher_types(doc_voucher_types):
 	if disallowed_types := voucher_types.difference(allowed_types):
 		message = "are" if len(disallowed_types) > 1 else "is"
 		frappe.throw(
-			_("{0} {1} not allowed to be reposted. Modify {2} to enable reposting.").format(
+			_(
+				"{0} {1} not allowed to be reposted. You can enable it by adding it '{2}' table in {3}."
+			).format(
 				frappe.bold(comma_and(list(disallowed_types))),
 				message,
-				frappe.bold(
-					frappe.utils.get_link_to_form(
-						"Repost Accounting Ledger Settings", "Repost Accounting Ledger Settings"
-					)
-				),
+				frappe.bold("Allowed Doctype"),
+				frappe.utils.get_link_to_form("Accounts Settings"),
 			)
 		)
 
@@ -292,16 +288,15 @@ def validate_docs_for_voucher_types(doc_voucher_types):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_repost_allowed_types(doctype, txt, searchfield, start, page_len, filters):
-	filters = {"allowed": True}
-
 	if txt:
 		filters.update({"document_type": ("like", f"%{txt}%")})
 
-	allowed_types = frappe.db.get_all(
+	if allowed_types := frappe.db.get_all(
 		"Repost Allowed Types",
 		filters=filters,
-		pluck="document_type",
-	)
-
-	allowed_types = list(dict.fromkeys(allowed_types))
-	return [[dt] for dt in allowed_types]
+		fields=["document_type"],
+		as_list=1,
+		distinct=True,
+	):
+		return allowed_types
+	return []

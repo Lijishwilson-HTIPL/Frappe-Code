@@ -5,14 +5,14 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import (
 	create_custom_field,
 	create_custom_fields,
+	delete_custom_fields,
 	rename_fieldname,
 )
-from frappe.tests.utils import FrappeTestCase
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+from frappe.tests import IntegrationTestCase
 
-test_records = frappe.get_test_records("Custom Field")
 
-
-class TestCustomField(FrappeTestCase):
+class TestCustomField(IntegrationTestCase):
 	def test_create_custom_fields(self):
 		create_custom_fields(
 			{
@@ -86,6 +86,86 @@ class TestCustomField(FrappeTestCase):
 			# nosemgrep
 			frappe.db.commit()
 
+	def test_custom_section_and_column_breaks_ordering(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "DocType",
+				"name": "Test Custom Breaks Ordering",
+				"custom": 1,
+				"module": "Core",
+				"fields": [
+					{"fieldname": "section1", "fieldtype": "Section Break", "label": "Section 1"},
+					{"fieldname": "field1", "fieldtype": "Data", "label": "Field 1"},
+					{"fieldname": "field2", "fieldtype": "Data", "label": "Field 2"},
+					{"fieldname": "section2", "fieldtype": "Section Break", "label": "Section 2"},
+					{"fieldname": "column21", "fieldtype": "Column Break", "label": "Column 2.1"},
+					{"fieldname": "field3", "fieldtype": "Data", "label": "Field 3"},
+					{"fieldname": "column22", "fieldtype": "Column Break", "label": "Column 2.2"},
+					{"fieldname": "field4", "fieldtype": "Data", "label": "Field 4"},
+				],
+			}
+		)
+		doc.insert()
+
+		# Add a custom Section Break after the first section
+		custom_section = frappe.get_doc(
+			{
+				"doctype": "Custom Field",
+				"dt": "Test Custom Breaks Ordering",
+				"fieldname": "custom_section",
+				"fieldtype": "Section Break",
+				"insert_after": "section1",
+				"label": "Custom Section",
+			}
+		)
+		custom_section.insert()
+
+		# Append a custom Column Break to the second section
+		custom_column = frappe.get_doc(
+			{
+				"doctype": "Custom Field",
+				"dt": "Test Custom Breaks Ordering",
+				"fieldname": "custom_column_insert",
+				"fieldtype": "Column Break",
+				"insert_after": "column21",
+				"label": "Custom Column Insert",
+			}
+		)
+		custom_column.insert()
+
+		# Add a custom Column Break within the second section
+		custom_column = frappe.get_doc(
+			{
+				"doctype": "Custom Field",
+				"dt": "Test Custom Breaks Ordering",
+				"fieldname": "custom_column_end",
+				"fieldtype": "Column Break",
+				"insert_after": "section2",
+				"label": "Custom Column End",
+			}
+		)
+		custom_column.insert()
+
+		# Get the updated DocType metadata to get the updated field order
+		updated_meta = frappe.get_meta("Test Custom Breaks Ordering", cached=False)
+		field_names = [field.fieldname for field in updated_meta.fields]
+
+		# Assert the correct ordering of fields
+		expected_order = [
+			"section1",
+			"field1",
+			"field2",
+			"custom_section",
+			"section2",
+			"column21",
+			"field3",
+			"custom_column_insert",
+			"column22",
+			"field4",
+			"custom_column_end",
+		]
+		self.assertEqual(field_names, expected_order)
+
 	def test_custom_field_renaming(self):
 		def gen_fieldname():
 			return "test_" + frappe.generate_hash()
@@ -105,3 +185,50 @@ class TestCustomField(FrappeTestCase):
 		self.assertFalse(doc.get(old))
 
 		field.delete()
+
+	def test_delete_custom_fields(self):
+		doctype = "ToDo"
+		fields = [
+			{
+				"fieldname": f"test_delete_{frappe.generate_hash(length=5)}",
+				"fieldtype": "Data",
+				"insert_after": "status",
+			}
+			for _ in range(4)
+		]
+		fieldnames = [f["fieldname"] for f in fields]
+
+		create_custom_fields({doctype: fields})
+
+		# create property setters for fields deleted via safe path (hooks should clean these up)
+		for fieldname in fieldnames[:2]:
+			make_property_setter(doctype, fieldname, "hidden", "1", "Check")
+
+		def field_exists(fieldname):
+			return frappe.db.exists("Custom Field", {"fieldname": fieldname, "dt": doctype})
+
+		def property_setter_exists(fieldname):
+			return frappe.db.exists("Property Setter", {"doc_type": doctype, "field_name": fieldname})
+
+		for fieldname in fieldnames:
+			self.assertTrue(field_exists(fieldname))
+		for fieldname in fieldnames[:2]:
+			self.assertTrue(property_setter_exists(fieldname))
+
+		# 1
+		delete_custom_fields({doctype: [fieldnames[0], fieldnames[0]]})
+		self.assertFalse(field_exists(fieldnames[0]))
+		self.assertFalse(property_setter_exists(fieldnames[0]))
+
+		# 2
+		delete_custom_fields({doctype: [{"fieldname": fieldnames[1]}]})
+		self.assertFalse(field_exists(fieldnames[1]))
+		self.assertFalse(property_setter_exists(fieldnames[1]))
+
+		# 3
+		delete_custom_fields({doctype: [fieldnames[2], fieldnames[2]]}, bypass_hooks=True)
+		self.assertFalse(field_exists(fieldnames[2]))
+
+		# 4
+		delete_custom_fields({doctype: [{"fieldname": fieldnames[3]}]}, bypass_hooks=True)
+		self.assertFalse(field_exists(fieldnames[3]))

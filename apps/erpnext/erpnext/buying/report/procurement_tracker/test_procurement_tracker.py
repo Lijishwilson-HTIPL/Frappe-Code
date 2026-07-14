@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-from frappe.tests.utils import FrappeTestCase
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestProcurementTracker(FrappeTestCase):
+class TestProcurementTracker(ERPNextTestSuite):
 	pass

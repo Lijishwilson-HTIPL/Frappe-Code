@@ -1,9 +1,6 @@
-// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
+﻿// Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-// For license information, please see license.txt
-
-// for communication
 cur_frm.email_field = "email_id";
 
 frappe.ui.form.on("Job Applicant", {
@@ -110,7 +107,6 @@ frappe.ui.form.on("Job Applicant", {
 		$section.css("position", "relative");
 		$section.prepend($btn);
 
-		// Also add a top-toolbar button as a reliable backup
 		if (!frm.custom_buttons[__("Email Applicant")]) {
 			frm.add_custom_button(__("Email Applicant"), () =>
 				frm.events.choose_email_template(frm),

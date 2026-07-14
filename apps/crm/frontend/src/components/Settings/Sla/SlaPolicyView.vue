@@ -77,7 +77,7 @@
                   value: 'CRM Lead',
                 },
                 {
-                  label: 'Opportunity',
+                  label: 'Deal',
                   value: 'CRM Deal',
                 },
               ]"

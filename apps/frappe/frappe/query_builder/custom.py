@@ -1,6 +1,6 @@
 from typing import Any
 
-from pypika.functions import DistinctOptionFunction
+from pypika.functions import DistinctOptionFunction, Function
 from pypika.terms import Term
 from pypika.utils import builder, format_alias_sql, format_quotes
 
@@ -15,6 +15,28 @@ class GROUP_CONCAT(DistinctOptionFunction):
 		        alias (Optional[str], optional): [ is this an alias? ]. Defaults to None.
 		"""
 		super().__init__("GROUP_CONCAT", column, alias=alias)
+		self._separator = ","
+
+	@builder
+	def separator(self, separator: str = ""):
+		"""Adds a separator to the GROUP_CONCAT function.
+		Args:
+				separator (str, optional): [separator to be used]. Defaults to ",".
+		"""
+		self._separator = separator
+
+	def get_sql(self, **kwargs):
+		query_alias = self.alias
+		self.alias = None
+		sql = super().get_sql(**kwargs)
+		if self._separator:
+			sql = f"{sql[:-1]} SEPARATOR {frappe.db.escape(self._separator)})"
+
+		self.alias = query_alias
+		if self.alias:
+			quote = kwargs.get("quote_char", "`")
+			sql += f" {quote}{self.alias}{quote}"
+		return sql
 
 
 class STRING_AGG(DistinctOptionFunction):
@@ -88,11 +110,7 @@ class ConstantColumn(Term):
 	alias = None
 
 	def __init__(self, value: str) -> None:
-		"""[ Returns a pseudo column with a constant value in all the rows]
-
-		Args:
-		        value (str): [ Value of the column ]
-		"""
+		"""Return a pseudo column with the given constant `value` in all the rows."""
 		self.value = value
 
 	def get_sql(self, quote_char: str | None = None, **kwargs: Any) -> str:
@@ -102,3 +120,18 @@ class ConstantColumn(Term):
 			quote_char=quote_char,
 			**kwargs,
 		)
+
+
+class MonthName(Function):
+	def __init__(self, field, alias=None):
+		super().__init__("MONTHNAME", field, alias=alias)
+
+
+class Quarter(Function):
+	def __init__(self, field, alias=None):
+		super().__init__("QUARTER", field, alias=alias)
+
+
+class Month(Function):
+	def __init__(self, field, alias=None):
+		super().__init__("MONTH", field, alias=alias)

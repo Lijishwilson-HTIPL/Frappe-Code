@@ -6,7 +6,6 @@ import json
 import frappe
 from frappe import utils
 from frappe.model.docstatus import DocStatus
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
 	get_linked_payments,
@@ -19,21 +18,11 @@ from erpnext.accounts.doctype.payment_entry.test_payment_entry import get_paymen
 from erpnext.accounts.doctype.pos_profile.test_pos_profile import make_pos_profile
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
-from erpnext.tests.utils import if_lending_app_installed
-
-test_dependencies = ["Item", "Cost Center"]
+from erpnext.tests.utils import ERPNextTestSuite, if_lending_app_installed
 
 
-class TestBankTransaction(FrappeTestCase):
+class TestBankTransaction(ERPNextTestSuite):
 	def setUp(self):
-		for dt in [
-			"Bank Transaction",
-			"Payment Entry",
-			"Payment Entry Reference",
-			"POS Profile",
-		]:
-			frappe.db.delete(dt)
-		clear_loan_transactions()
 		make_pos_profile()
 
 		# generate and use a uniq hash identifier for 'Bank Account' and it's linked GL 'Account' to avoid validation error
@@ -223,11 +212,6 @@ class TestBankTransaction(FrappeTestCase):
 
 		linked_payments = get_linked_payments(bank_transaction.name, ["loan_repayment", "exact_match"])
 		self.assertEqual(linked_payments[0]["name"], repayment_entry.name)
-
-
-@if_lending_app_installed
-def clear_loan_transactions():
-	frappe.db.delete("Loan Repayment")
 
 
 def create_bank_account(

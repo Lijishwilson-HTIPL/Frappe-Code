@@ -96,6 +96,37 @@ ss -tlnp | grep -E '13000|11000'
 # 3. Apply DocType schema changes
 bench --site mysite.local migrate
 
+# 3b. Regenerate nginx config (REQUIRED on first deploy; skip for new tenants — wildcard handles them)
+#     bench setup nginx only adds sites it knows about at run time; use wildcard to cover all tenants.
+~/.local/bin/bench setup nginx --yes
+# Fix log format (bench generates "main" log format which may not be defined on this server):
+sudo sed -i 's/access_log.*main;/access_log  \/var\/log\/nginx\/access.log;/' /etc/nginx/conf.d/frappe-bench.conf
+# Replace tenant-specific server_name entries with a wildcard so every future tenant works immediately:
+sudo python3 -c "
+conf='/etc/nginx/conf.d/frappe-bench.conf'
+c=open(conf).read()
+import re
+c=re.sub(r'(server_name\s*\n)(\t+\S+\.nip\.io\s*\n)+', r'\1\t\t*.34.172.62.72.nip.io\n', c)
+open(conf,'w').write(c)
+print('wildcard set')
+"
+# Add default_server block for bare IP access (routes 34.172.62.72 → mysite.local):
+sudo tee -a /etc/nginx/conf.d/frappe-bench.conf > /dev/null << 'NGINXEOF'
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header X-Frappe-Site-Name mysite.local;
+        proxy_set_header Host mysite.local;
+        proxy_read_timeout 120;
+        proxy_pass http://frappe-bench-frappe;
+    }
+}
+NGINXEOF
+sudo nginx -t && sudo nginx -s reload
+
 # 4. Rebuild frontend assets (frappe MUST be rebuilt separately first)
 bench build --app frappe
 bench build --app erpnext --app hrms --app crm --app helpdesk
@@ -225,6 +256,7 @@ Generate keys: Frappe Desk → Avatar → My Profile → API Access → Generate
 
 | Gap | Detail |
 |-----|--------|
+| **NEVER set `default_site` in GCP common_site_config.json** | `bench serve` reads `default_site` and sets `frappe.app._site` globally — this forces ALL requests (including tenant hostnames) to that one site, breaking dns_multitenant routing entirely. The fix is: remove `default_site` entirely and use a custom nginx `default_server` block for bare IP fallback. See step 3b in deploy steps. |
 | Redis down after deploy | `config/redis_cache.conf` and `config/redis_queue.conf` hardcode the home path of whoever last ran `bench setup redis`. On a new server or after a user change, Redis refuses to start (port 13000/11000 not listening) and the site throws `ConnectionRefusedError`. Fix: run `~/.local/bin/bench setup redis` then start both: `redis-server config/redis_cache.conf --daemonize yes && redis-server config/redis_queue.conf --daemonize yes`. See step 2a in deploy steps above. |
 | No CI/CD pipeline | Pushes to `stagging-deployment` do not trigger an automated server deploy — all deploys are manual `docker compose build --no-cache && up -d` |
 | Docker site creation | Not automated — must be run manually after first container boot |
@@ -247,3 +279,5 @@ Generate keys: Frappe Desk → Avatar → My Profile → API Access → Generate
 | Backup database | `bench --site mysite.local backup` |
 | View error logs | `tail -f logs/worker.error.log` |
 | Restart (prod) | `sudo supervisorctl restart all` |
+| Nginx wildcard (covers all tenants) | server_name `*.34.172.62.72.nip.io` — no regen needed per tenant |
+| Per-tenant cache clear | `bench --site <tenant.nip.io> clear-cache` |

@@ -4,8 +4,6 @@ import hashlib
 import re
 from urllib.parse import urljoin, urlparse
 
-import jwt
-import pytz
 from oauthlib.common import Request
 from oauthlib.openid import RequestValidator
 
@@ -150,7 +148,7 @@ class OAuthWebRequestValidator(RequestValidator):
 
 			if code_challenge and not request.code_verifier:
 				if frappe.db.exists("OAuth Authorization Code", code):
-					frappe.delete_doc("OAuth Authorization Code", code, ignore_permissions=True)
+					frappe.delete_doc("OAuth Authorization Code", code, ignore_permissions=True, force=True)
 					frappe.db.commit()
 				return False
 
@@ -233,10 +231,7 @@ class OAuthWebRequestValidator(RequestValidator):
 		client_scopes = frappe.db.get_value("OAuth Client", otoken.client, "scopes").split(
 			get_url_delimiter()
 		)
-		are_scopes_valid = True
-		for scp in scopes:
-			are_scopes_valid = are_scopes_valid and True if scp in client_scopes else False
-
+		are_scopes_valid = all(scope in client_scopes for scope in scopes)
 		return is_token_valid and are_scopes_valid
 
 	# Token refresh request
@@ -299,6 +294,8 @@ class OAuthWebRequestValidator(RequestValidator):
 	# OpenID Connect
 
 	def finalize_id_token(self, id_token, token, token_handler, request):
+		import jwt
+
 		# Check whether frappe server URL is set
 		id_token_header = {"typ": "jwt", "alg": "HS256"}
 
@@ -434,6 +431,8 @@ class OAuthWebRequestValidator(RequestValidator):
 		- OpenIDConnectImplicit
 		- OpenIDConnectHybrid
 		"""
+		import jwt
+
 		if id_token_hint:
 			try:
 				user = None

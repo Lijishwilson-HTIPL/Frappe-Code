@@ -1,14 +1,20 @@
 {
- "charts": [],
- "content": "[{\"id\":\"nKKr6fjgjb\",\"type\":\"card\",\"data\":{\"card_name\":\"Ledgers\",\"col\":4}},{\"id\":\"p7NY6MHe2Y\",\"type\":\"card\",\"data\":{\"card_name\":\"Financial Statements\",\"col\":4}},{\"id\":\"3AK1Zf0oew\",\"type\":\"card\",\"data\":{\"card_name\":\"Profitability\",\"col\":4}},{\"id\":\"Q_hBCnSeJY\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Reports\",\"col\":4}}]",
+ "app": "erpnext",
+ "charts": [
+  {
+   "chart_name": "Profit and Loss",
+   "label": "Profit and Loss"
+  }
+ ],
+ "content": "[{\"id\":\"tS7ZWzC24I\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Profit and Loss\",\"col\":12}},{\"id\":\"8Ej2KxPxOt\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"p7NY6MHe2Y\",\"type\":\"card\",\"data\":{\"card_name\":\"Financial Statements\",\"col\":4}},{\"id\":\"nKKr6fjgjb\",\"type\":\"card\",\"data\":{\"card_name\":\"Ledgers\",\"col\":4}},{\"id\":\"3AK1Zf0oew\",\"type\":\"card\",\"data\":{\"card_name\":\"Profitability\",\"col\":4}},{\"id\":\"Q_hBCnSeJY\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Reports\",\"col\":4}}]",
  "creation": "2024-01-05 16:09:16.766939",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "file",
- "idx": 0,
+ "icon": "table",
+ "idx": 1,
  "indicator_color": "",
  "is_hidden": 0,
  "label": "Financial Reports",
@@ -260,18 +266,19 @@
    "type": "Link"
   }
  ],
- "modified": "2026-05-04 11:57:29.937855",
+ "modified": "2026-05-18 09:49:45.138296",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Financial Reports",
  "number_cards": [],
  "owner": "Administrator",
- "parent_page": "Accounting",
+ "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
  "roles": [],
- "sequence_id": 6.0,
+ "sequence_id": 5.0,
  "shortcuts": [],
- "title": "Financial Reports"
+ "title": "Financial Reports",
+ "type": "Workspace"
 }

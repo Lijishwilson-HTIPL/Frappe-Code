@@ -188,7 +188,7 @@ def find_variant(template, args, variant_item_code=None):
 
 			for attribute, value in args.items():
 				for row in variant.attributes:
-					if row.attribute == attribute and row.attribute_value == cstr(value):
+					if row.attribute == _(attribute) and row.attribute_value == cstr(value):
 						# this row matches
 						match_count += 1
 						break
@@ -209,7 +209,9 @@ def create_variant(item, args, use_template_image=False):
 	variant_attributes = []
 
 	for d in template.attributes:
-		variant_attributes.append({"attribute": d.attribute, "attribute_value": args.get(d.attribute)})
+		attribute_value = args.get(_(d.attribute)) or args.get(d.attribute)
+		if attribute_value:
+			variant_attributes.append({"attribute": d.attribute, "attribute_value": attribute_value})
 
 	variant.set("attributes", variant_attributes)
 	copy_attributes_to_variant(template, variant)
@@ -228,6 +230,12 @@ def enqueue_multiple_variant_creation(item, args, use_template_image=False):
 	# There can be innumerable attribute combinations, enqueue
 	if isinstance(args, str):
 		variants = json.loads(args)
+	else:
+		variants = args
+	variants = {key: values for key, values in variants.items() if values}
+	if not variants:
+		frappe.throw(_("Please select at least one attribute value"))
+
 	total_variants = 1
 	for key in variants:
 		total_variants *= len(variants[key])
@@ -242,7 +250,7 @@ def enqueue_multiple_variant_creation(item, args, use_template_image=False):
 			item=item,
 			args=args,
 			use_template_image=use_template_image,
-			now=frappe.flags.in_test,
+			now=frappe.in_test,
 		)
 		return "queued"
 
@@ -251,6 +259,7 @@ def create_multiple_variants(item, args, use_template_image=False):
 	count = 0
 	if isinstance(args, str):
 		args = json.loads(args)
+	args = {key: values for key, values in args.items() if values}
 
 	template_item = frappe.get_doc("Item", item)
 	args_set = generate_keyed_value_combinations(args)
@@ -285,6 +294,9 @@ def generate_keyed_value_combinations(args):
 
 	"""
 	# Return empty list if empty
+	if not args:
+		return []
+	args = {key: values for key, values in args.items() if values}
 	if not args:
 		return []
 

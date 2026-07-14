@@ -69,23 +69,22 @@ const chartTypes = [
   { label: __('Number Chart'), value: 'number_chart' },
   { label: __('Axis Chart'), value: 'axis_chart' },
   { label: __('Donut Chart'), value: 'donut_chart' },
-  { label: __('Leads Journey'), value: 'leads_journey' },
 ]
 
 const numberChart = ref('')
 const numberCharts = [
   { label: __('Total Leads'), value: 'total_leads' },
-  { label: __('Ongoing Opportunities'), value: 'ongoing_deals' },
-  { label: __('Avg Ongoing Opportunity Value'), value: 'average_ongoing_deal_value' },
-  { label: __('Won Opportunities'), value: 'won_deals' },
-  { label: __('Avg Won Opportunity Value'), value: 'average_won_deal_value' },
-  { label: __('Avg Opportunity Value'), value: 'average_deal_value' },
+  { label: __('Ongoing Deals'), value: 'ongoing_deals' },
+  { label: __('Avg Ongoing Deal Value'), value: 'average_ongoing_deal_value' },
+  { label: __('Won Deals'), value: 'won_deals' },
+  { label: __('Avg Won Deal Value'), value: 'average_won_deal_value' },
+  { label: __('Avg Deal Value'), value: 'average_deal_value' },
   {
     label: __('Avg Time to Close a Lead'),
     value: 'average_time_to_close_a_lead',
   },
   {
-    label: __('Avg Time to Close an Opportunity'),
+    label: __('Avg Time to Close a Deal'),
     value: 'average_time_to_close_a_deal',
   },
 ]
@@ -95,17 +94,17 @@ const axisCharts = [
   { label: __('Sales Trend'), value: 'sales_trend' },
   { label: __('Forecasted Revenue'), value: 'forecasted_revenue' },
   { label: __('Funnel Conversion'), value: 'funnel_conversion' },
-  { label: __('Opportunities by Ongoing Deals by Ongoing & Won Stage Won Stage'), value: 'deals_by_stage_axis' },
-  { label: __('Lost Opportunity Reasons'), value: 'lost_deal_reasons' },
-  { label: __('Opportunities by Territory'), value: 'deals_by_territory' },
-  { label: __('Opportunities by Salesperson'), value: 'deals_by_salesperson' },
+  { label: __('Deals by Ongoing & Won Stage'), value: 'deals_by_stage_axis' },
+  { label: __('Lost Deal Reasons'), value: 'lost_deal_reasons' },
+  { label: __('Deals by Territory'), value: 'deals_by_territory' },
+  { label: __('Deals by Salesperson'), value: 'deals_by_salesperson' },
 ]
 
 const donutChart = ref('deals_by_stage_donut')
 const donutCharts = [
-  { label: __('Opportunities by Stage'), value: 'deals_by_stage_donut' },
+  { label: __('Deals by Stage'), value: 'deals_by_stage_donut' },
   { label: __('Leads by Source'), value: 'leads_by_source' },
-  { label: __('Opportunities by Source'), value: 'deals_by_source' },
+  { label: __('Deals by Source'), value: 'deals_by_source' },
 ]
 
 async function addChart() {

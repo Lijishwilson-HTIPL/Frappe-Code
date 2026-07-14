@@ -1,3 +1,4 @@
+import { InfoCard } from "../info_card";
 frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control {
 	static horizontal = true;
 	make() {
@@ -7,6 +8,10 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 
 		// set description
 		this.set_max_width();
+		// set initial value if set
+		if (this.df.initial_value) {
+			this.set_value(this.df.initial_value);
+		}
 	}
 	make_wrapper() {
 		if (this.only_input) {
@@ -16,21 +21,25 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 				`<div class="frappe-control">
 				<div class="form-group">
 					<div class="clearfix">
-						<label class="control-label" style="padding-right: 0px;"></label>
+						<label class="control-label" style="padding-right: 5px;"></label>
 						<span class="help"></span>
 					</div>
 					<div class="control-input-wrapper">
 						<div class="control-input"></div>
-						<div class="control-value like-disabled-input" style="display: none;"></div>
-						<p class="help-box small text-muted"></p>
+						<div class="control-value like-disabled-input hide"></div>
+						<div class="help-box small text-extra-muted hide"></div>
 					</div>
 				</div>
 			</div>`
 			).appendTo(this.parent);
+
+			if (this.constructor.horizontal) {
+				this.$wrapper.find(".form-group").addClass("horizontal");
+			}
 		}
 	}
 	toggle_label(show) {
-		this.$wrapper.find(".control-label").toggleClass("hide", !show);
+		this.$wrapper.find(".control-label").parent().toggleClass("hide", !show);
 	}
 	toggle_description(show) {
 		this.$wrapper.find(".help-box").toggleClass("hide", !show);
@@ -46,6 +55,18 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 			// like links, currencies, HTMLs etc.
 			this.disp_area = this.$wrapper.find(".control-value").get(0);
 		}
+		this.setup_shortcut();
+	}
+	setup_shortcut() {
+		$(this.input_area).on("keydown", function (event) {
+			if (event.originalEvent.ctrlKey || event.originalEvent.metaKey) {
+				if (event.originalEvent.key === "k" || event.originalEvent.key === "K") {
+					$("#navbar-modal-search").click();
+					event.preventDefault();
+					return false;
+				}
+			}
+		});
 	}
 	set_max_width() {
 		if (this.constructor.horizontal) {
@@ -94,8 +115,8 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 			let is_fetch_from_read_only = me.read_only_because_of_fetch_from();
 
 			if (me.can_write() && !is_fetch_from_read_only) {
-				me.disp_area && $(me.disp_area).toggle(false);
-				$(me.input_area).toggle(true);
+				me.disp_area && $(me.disp_area).addClass("hide");
+				$(me.input_area).removeClass("hide");
 				me.$input && me.$input.prop("disabled", false);
 				make_input();
 				update_input();
@@ -104,10 +125,10 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 					make_input();
 					update_input();
 				} else {
-					$(me.input_area).toggle(false);
+					$(me.input_area).addClass("hide");
 					if (me.disp_area) {
 						me.set_disp_area(me.value);
-						$(me.disp_area).toggle(true);
+						$(me.disp_area).removeClass("hide");
 					}
 				}
 				me.$input && me.$input.prop("disabled", true);
@@ -146,14 +167,29 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 		} else {
 			value = this.value || value;
 		}
-		if (this.df.fieldtype === "Data") {
+		if (
+			["Data", "Long Text", "Small Text", "Text", "Password", "MultiSelect"].includes(
+				this.df.fieldtype
+			)
+		) {
 			value = frappe.utils.escape_html(value);
 		}
 		let doc = this.doc || (this.frm && this.frm.doc);
 		let display_value = frappe.format(value, this.df, { no_icon: true, inline: true }, doc);
-		this.disp_area && $(this.disp_area).html(display_value);
+		// This is used to display formatted output AND showing values in read only fields
+		if (this.disp_area) {
+			$(this.disp_area).html(display_value);
+			// Apply alignment only for supported fields
+			if (
+				this.df.alignment &&
+				["Data", "Int", "Float", "Currency", "Percent"].includes(this.df.fieldtype)
+			) {
+				$(this.disp_area).css("text-align", this.df.alignment.toLowerCase());
+			}
+		}
 	}
 	set_label(label) {
+		const me = this;
 		if (label) this.df.label = label;
 
 		if (this.only_input || this.df.label == this._label) return;
@@ -162,14 +198,24 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 		this.label_span.innerHTML =
 			(icon ? '<i class="' + icon + '"></i> ' : "") +
 				__(this.df.label, null, this.df.parent) || "&nbsp;";
+		this.show_description_on_click();
 		this._label = this.df.label;
 	}
-
+	show_description_on_click() {
+		const me = this;
+		if (this.df.show_description_on_click && !this._doc_url_info_card) {
+			new InfoCard({
+				label_area: this.label_area,
+				label_span: this.label_span,
+				df: this.df,
+			});
+		}
+	}
 	set_doc_url() {
+		if (this.df.show_description_on_click) return;
 		let unsupported_fieldtypes = frappe.model.no_value_type.filter(
 			(x) => frappe.model.table_fields.indexOf(x) === -1
 		);
-
 		if (
 			!this.df.label ||
 			!this.df?.documentation_url ||
@@ -177,14 +223,17 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 		)
 			return;
 
-		let $help = this.$wrapper.find("span.help");
-		$help.empty();
-		$(`<a href="${this.df.documentation_url}" target="_blank" title="${__("Documentation")}">
-			${frappe.utils.icon("help", "sm")}
-		</a>`).appendTo($help);
+		if (!this._doc_url_info_card) {
+			this._doc_url_info_card = new InfoCard({
+				label_area: this.label_area,
+				label_span: this.label_span,
+				df: this.df,
+			});
+		}
 	}
 
 	set_description(description) {
+		if (this.df.show_description_on_click) return;
 		if (description !== undefined) {
 			this.df.description = description;
 		}
@@ -192,7 +241,18 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 			return;
 		}
 		if (this.df.description) {
-			this.$wrapper.find(".help-box").html(__(this.df.description, null, this.df.parent));
+			const description = __(this.df.description, null, this.df.parent);
+			const help_box = this.$wrapper.find(".help-box");
+			help_box.html(description);
+			if (description.includes("<code")) {
+				frappe.require("syntax_highlighting.bundle.js").then(() => {
+					help_box.find("code").each(function () {
+						hljs.highlightElement(this);
+						this.style.display = "inline"; // override hljs's "block" display
+					});
+				});
+			}
+			this.toggle_description(true);
 		} else {
 			this.set_empty_description();
 		}
@@ -200,9 +260,11 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 	}
 	set_new_description(description) {
 		this.$wrapper.find(".help-box").html(description);
+		this.toggle_description(true);
 	}
 	set_empty_description() {
 		this.$wrapper.find(".help-box").html("");
+		this.toggle_description(false);
 	}
 	set_mandatory(value) {
 		// do not set has-error class on form load

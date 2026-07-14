@@ -12,17 +12,58 @@ from erpnext.accounts.utils import get_fiscal_year
 
 
 def execute(filters=None):
-	return Analytics(filters).run()
+	filters = frappe._dict(filters or {})
+	# Special report showing all doctype totals on a single chart; overrides some filters
+	if filters.doc_type == "All":
+		filters.tree_type = "Customer"
+		filters.value_quantity = "Value"
+		filters.curves = "total"
+		output = None
+		for dt in [
+			"Quotation",
+			"Sales Order",
+			"Delivery Note",
+			"Sales Invoice",
+			"Sales Invoice (due)",
+			"Payment Entry",
+		]:
+			filters.doc_type = dt
+			output = append_report(dt, output, Analytics(filters).run())
+		return output
+	else:
+		return Analytics(filters).run()
+
+
+def append_report(dt, org, new):
+	# idx 1 is data, 3 is chart
+	new[1].insert(0, {"entity": dt})  # heading
+	new[1].append({})  # empty row
+	# datasets can be an empty list if no dates are supplied by the Dashboard Chart
+	if not new[3]["data"]["datasets"]:
+		new[3]["data"]["datasets"].append({"name": None, "values": []})
+	new[3]["data"]["datasets"][0]["name"] = dt  # override curve name
+	if org:
+		org[1].extend(new[1])
+		org[3]["data"]["datasets"].extend(new[3]["data"]["datasets"])
+		return org
+	else:
+		return new
 
 
 class Analytics:
 	def __init__(self, filters=None):
 		self.filters = frappe._dict(filters or {})
+		if self.filters.doc_type == "Payment Entry" and self.filters.value_quantity == "Quantity":
+			frappe.throw(_("Only Value available for Payment Entry"))
 		self.date_field = (
 			"transaction_date"
-			if self.filters.doc_type in ["Sales Order", "Purchase Order"]
+			if self.filters.doc_type in ["Quotation", "Sales Order", "Purchase Order"]
+			else "due_date"
+			if self.filters.doc_type == "Sales Invoice (due)"
 			else "posting_date"
 		)
+		if self.filters.doc_type.startswith("Sales Invoice"):
+			self.filters.doc_type = "Sales Invoice"
 		self.months = [
 			"Jan",
 			"Feb",
@@ -116,33 +157,63 @@ class Analytics:
 			self.get_rows()
 
 		elif self.filters.tree_type == "Item":
+			if self.filters.doc_type == "Payment Entry":
+				self.data = []
+				return
 			self.get_sales_transactions_based_on_items()
 			self.get_rows()
 
 		elif self.filters.tree_type in ["Customer Group", "Supplier Group", "Territory"]:
+			if self.filters.doc_type == "Payment Entry":
+				self.data = []
+				return
 			self.get_sales_transactions_based_on_customer_or_territory_group()
 			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Item Group":
+			if self.filters.doc_type == "Payment Entry":
+				self.data = []
+				return
 			self.get_sales_transactions_based_on_item_group()
 			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Order Type":
-			if self.filters.doc_type != "Sales Order":
+			if self.filters.doc_type not in ["Quotation", "Sales Order"]:
 				self.data = []
 				return
 			self.get_sales_transactions_based_on_order_type()
 			self.get_rows_by_group()
 
 		elif self.filters.tree_type == "Project":
+			if self.filters.doc_type == "Quotation":
+				self.data = []
+				return
 			self.get_sales_transactions_based_on_project()
 			self.get_rows()
+
+	def _get_permitted_parent_names(self):
+		return frappe.qb.get_query(
+			table=self.filters.doc_type,
+			fields=["name"],
+			filters={
+				"docstatus": 1,
+				"company": ["in", self.filters.company],
+				self.date_field: ("between", [self.filters.from_date, self.filters.to_date]),
+			},
+			ignore_permissions=False,
+		).run(pluck="name")
 
 	def get_sales_transactions_based_on_order_type(self):
 		if self.filters["value_quantity"] == "Value":
 			value_field = "base_net_total"
 		else:
 			value_field = "total_qty"
+
+		permitted_names = self._get_permitted_parent_names()
+		if not permitted_names:
+			self.entries = []
+			self.get_teams()
+			return
 
 		doctype = DocType(self.filters.doc_type)
 
@@ -153,12 +224,7 @@ class Analytics:
 				doctype[self.date_field],
 				doctype[value_field].as_("value_field"),
 			)
-			.where(
-				(doctype.docstatus == 1)
-				& (doctype.company.isin(self.filters.company))
-				& (doctype[self.date_field].between(self.filters.from_date, self.filters.to_date))
-				& (IfNull(doctype.order_type, "") != "")
-			)
+			.where((doctype.name.isin(permitted_names)) & (IfNull(doctype.order_type, "") != ""))
 			.orderby(doctype.order_type)
 		).run(as_dict=True)
 
@@ -171,11 +237,22 @@ class Analytics:
 			value_field = "total_qty as value_field"
 
 		if self.filters.tree_type == "Customer":
-			entity = "customer as entity"
 			entity_name = "customer_name as entity_name"
+			if self.filters.doc_type == "Quotation":
+				entity = "party_name as entity"
+			elif self.filters.doc_type == "Payment Entry":
+				entity = "party as entity"
+				entity_name = "party_name as entity_name"
+				value_field = "base_received_amount as value_field"
+			else:
+				entity = "customer as entity"
 		else:
 			entity = "supplier as entity"
 			entity_name = "supplier_name as entity_name"
+			if self.filters.doc_type == "Payment Entry":
+				entity = "party as entity"
+				entity_name = "party_name as entity_name"
+				value_field = "base_paid_amount as value_field"
 
 		filters = {
 			"docstatus": 1,
@@ -186,9 +263,12 @@ class Analytics:
 		if self.filters.doc_type in ["Sales Invoice", "Purchase Invoice", "Payment Entry"]:
 			filters.update({"is_opening": "No"})
 
-		self.entries = frappe.get_all(
-			self.filters.doc_type, fields=[entity, entity_name, value_field, self.date_field], filters=filters
-		)
+		self.entries = frappe.qb.get_query(
+			table=self.filters.doc_type,
+			fields=[entity, entity_name, value_field, self.date_field],
+			filters=filters,
+			ignore_permissions=False,
+		).run(as_dict=True)
 
 		self.entity_names = {}
 		for d in self.entries:
@@ -199,6 +279,12 @@ class Analytics:
 			value_field = "base_net_amount"
 		else:
 			value_field = "stock_qty"
+
+		permitted_names = self._get_permitted_parent_names()
+		if not permitted_names:
+			self.entries = []
+			self.entity_names = {}
+			return
 
 		doctype = DocType(self.filters.doc_type)
 		doctype_item = DocType(f"{self.filters.doc_type} Item")
@@ -214,11 +300,7 @@ class Analytics:
 				doctype_item[value_field].as_("value_field"),
 				doctype[self.date_field],
 			)
-			.where(
-				(doctype_item.docstatus == 1)
-				& (doctype.company.isin(self.filters.company))
-				& (doctype[self.date_field].between(self.filters.from_date, self.filters.to_date))
-			)
+			.where((doctype_item.docstatus == 1) & (doctype.name.isin(permitted_names)))
 		).run(as_dict=True)
 
 		self.entity_names = {}
@@ -248,11 +330,12 @@ class Analytics:
 		if self.filters.doc_type in ["Sales Invoice", "Purchase Invoice", "Payment Entry"]:
 			filters.update({"is_opening": "No"})
 
-		self.entries = frappe.get_all(
-			self.filters.doc_type,
+		self.entries = frappe.qb.get_query(
+			table=self.filters.doc_type,
 			fields=[entity_field, value_field, self.date_field],
 			filters=filters,
-		)
+			ignore_permissions=False,
+		).run(as_dict=True)
 		self.get_groups()
 
 	def get_sales_transactions_based_on_item_group(self):
@@ -260,6 +343,12 @@ class Analytics:
 			value_field = "base_net_amount"
 		else:
 			value_field = "qty"
+
+		permitted_names = self._get_permitted_parent_names()
+		if not permitted_names:
+			self.entries = []
+			self.get_groups()
+			return
 
 		doctype = DocType(self.filters.doc_type)
 		doctype_item = DocType(f"{self.filters.doc_type} Item")
@@ -273,11 +362,7 @@ class Analytics:
 				doctype_item[value_field].as_("value_field"),
 				doctype[self.date_field],
 			)
-			.where(
-				(doctype_item.docstatus == 1)
-				& (doctype.company.isin(self.filters.company))
-				& (doctype[self.date_field].between(self.filters.from_date, self.filters.to_date))
-			)
+			.where((doctype_item.docstatus == 1) & (doctype.name.isin(permitted_names)))
 		).run(as_dict=True)
 
 		self.get_groups()
@@ -287,6 +372,9 @@ class Analytics:
 			value_field = "base_net_total as value_field"
 		else:
 			value_field = "total_qty as value_field"
+
+		if self.filters.doc_type == "Payment Entry":
+			value_field = "base_received_amount as value_field"
 
 		entity = "project as entity"
 
@@ -300,9 +388,12 @@ class Analytics:
 		if self.filters.doc_type in ["Sales Invoice", "Purchase Invoice", "Payment Entry"]:
 			filters.update({"is_opening": "No"})
 
-		self.entries = frappe.get_all(
-			self.filters.doc_type, fields=[entity, value_field, self.date_field], filters=filters
-		)
+		self.entries = frappe.qb.get_query(
+			table=self.filters.doc_type,
+			fields=[entity, value_field, self.date_field],
+			filters=filters,
+			ignore_permissions=False,
+		).run(as_dict=True)
 
 	def get_rows(self):
 		self.data = []
@@ -406,14 +497,16 @@ class Analytics:
 				break
 
 	def get_groups(self):
-		if self.filters.tree_type == "Territory":
-			parent = "parent_territory"
-		if self.filters.tree_type == "Customer Group":
-			parent = "parent_customer_group"
-		if self.filters.tree_type == "Item Group":
-			parent = "parent_item_group"
-		if self.filters.tree_type == "Supplier Group":
-			parent = "parent_supplier_group"
+		parent_field_map = {
+			"Territory": "parent_territory",
+			"Customer Group": "parent_customer_group",
+			"Item Group": "parent_item_group",
+			"Supplier Group": "parent_supplier_group",
+		}
+		if self.filters.tree_type not in parent_field_map:
+			frappe.throw(_("Invalid Tree Type {0}").format(self.filters.tree_type))
+
+		parent = parent_field_map[self.filters.tree_type]
 
 		self.depth_map = frappe._dict()
 
@@ -431,6 +524,9 @@ class Analytics:
 
 	def get_teams(self):
 		self.depth_map = frappe._dict()
+
+		if not frappe.db.exists("DocType", self.filters.doc_type):
+			frappe.throw(_("Invalid Document Type {0}").format(self.filters.doc_type))
 
 		self.group_entries = frappe.db.sql(
 			f""" select * from (select "Order Types" as name, 0 as lft,
@@ -462,27 +558,29 @@ class Analytics:
 			labels = [d.get("label") for d in self.columns[1 : length - 1]]
 
 		datasets = []
-		for curve in self.data:
-			data = {
-				"name": curve.get("entity_name", curve["entity"]),
-				"values": [curve.get(scrub(label), 0) for label in labels],
-			}
-			if self.filters.curves == "non-zeros" and not sum(data["values"]):
-				continue
-			elif self.filters.curves == "total" and "indent" in curve:
-				if curve["indent"] == 0:
-					datasets.append(data)
-			elif self.filters.curves == "total":
-				if datasets:
-					a = [
-						data["values"][idx] + datasets[0]["values"][idx] for idx in range(len(data["values"]))
-					]
-					datasets[0]["values"] = a
+		if self.filters.curves != "select":
+			for curve in self.data:
+				data = {
+					"name": curve.get("entity_name", curve["entity"]),
+					"values": [curve[scrub(label)] for label in labels],
+				}
+				if self.filters.curves == "non-zeros" and not sum(data["values"]):
+					continue
+				elif self.filters.curves == "total" and "indent" in curve:
+					if curve["indent"] == 0:
+						datasets.append(data)
+				elif self.filters.curves == "total":
+					if datasets:
+						a = [
+							data["values"][idx] + datasets[0]["values"][idx]
+							for idx in range(len(data["values"]))
+						]
+						datasets[0]["values"] = a
+					else:
+						datasets.append(data)
+						datasets[0]["name"] = _("Total")
 				else:
 					datasets.append(data)
-					datasets[0]["name"] = _("Total")
-			else:
-				datasets.append(data)
 
 		self.chart = {"data": {"labels": labels, "datasets": datasets}, "type": "line"}
 

@@ -9,6 +9,7 @@ import re
 from email import policy
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 from typing import TYPE_CHECKING
 
 import frappe
@@ -25,6 +26,7 @@ from frappe.utils import (
 	split_emails,
 	strip,
 	to_markdown,
+	validate_email_address,
 )
 from frappe.utils.pdf import get_pdf
 
@@ -138,7 +140,7 @@ class EMail:
 			recipients = split_emails(recipients)
 
 		# remove null
-		recipients = filter(None, (strip(r) for r in recipients))
+		recipients = [r for r in (strip(r) for r in recipients) if r]
 
 		self.sender = sender
 		self.reply_to = reply_to or sender
@@ -252,7 +254,8 @@ class EMail:
 		part = MIMEText(message, _subtype=subtype, policy=policy.SMTP)
 
 		if as_attachment:
-			part.add_header("Content-Disposition", "attachment", filename=filename)
+			clean_filename = re.sub("[\r\n]", "", str(filename))
+			part.add_header("Content-Disposition", "attachment", filename=clean_filename)
 
 		self.msg_root.attach(part)
 
@@ -278,15 +281,16 @@ class EMail:
 
 	def validate(self):
 		"""validate the Email Addresses"""
-		from frappe.utils import validate_email_address
 
 		if not self.sender:
 			self.sender = self.email_account.default_sender
 
 		validate_email_address(strip(self.sender), True)
-		self.reply_to = validate_email_address(strip(self.reply_to) or self.sender, True)
+		self.validate_reply_to()
 
-		self.set_header("X-Original-From", self.sender)
+		if self.email_account.add_x_original_from:
+			self.set_header("X-Original-From", self.sender)
+
 		self.replace_sender()
 		self.replace_sender_name()
 
@@ -296,6 +300,23 @@ class EMail:
 
 		for e in self.recipients + (self.cc or []) + (self.bcc or []):
 			validate_email_address(e, True)
+
+	def validate_reply_to(self) -> None:
+		if not self.email_account.add_reply_to_header:
+			self.reply_to = None
+			return
+
+		if self.email_account.reply_to_addresses:
+			valid_addresses = [
+				formataddr((reply_to._name, reply_to.email))
+				for reply_to in self.email_account.reply_to_addresses
+				if reply_to.email and validate_email_address(reply_to.email, True)
+			]
+			self.reply_to = ", ".join(valid_addresses) if valid_addresses else None
+			return
+
+		fallback = strip(self.reply_to) or self.sender
+		self.reply_to = validate_email_address(fallback, True)
 
 	def replace_sender(self):
 		if cint(self.email_account.always_use_account_email_id_as_sender):
@@ -392,29 +413,38 @@ def get_formatted_html(
 	unsubscribe_link: frappe._dict | None = None,
 	sender=None,
 	with_container=False,
+	raw_html=False,
+	add_css=True,
 ):
 	email_account = email_account or EmailAccount.find_outgoing(match_by_email=sender)
 
-	rendered_email = frappe.get_template("templates/emails/standard.html").render(
-		{
-			"brand_logo": get_brand_logo(email_account) if with_container or header else None,
-			"with_container": with_container,
-			"site_url": get_url(),
-			"header": get_header(header),
-			"content": message,
-			"footer": get_footer(email_account, footer),
-			"title": subject,
-			"print_html": print_html,
-			"subject": subject,
-		}
-	)
+	params = {
+		"site_url": get_url(),
+		"title": subject,
+		"print_html": print_html,
+		"subject": subject,
+	}
+
+	if raw_html:
+		rendered_email = frappe.render_template(message, params)
+	else:
+		params.update(
+			{
+				"brand_logo": get_brand_logo(email_account) if with_container or header else None,
+				"with_container": with_container,
+				"header": get_header(header),
+				"content": message,
+				"footer": get_footer(email_account, footer),
+			}
+		)
+		rendered_email = frappe.get_template("templates/emails/standard.html").render(params)
 
 	html = scrub_urls(rendered_email)
 
 	if unsubscribe_link:
 		html = html.replace("<!--unsubscribe link here-->", unsubscribe_link.html)
 
-	return inline_style_in_html(html)
+	return inline_style_in_html(html, add_css=add_css)
 
 
 @frappe.whitelist()
@@ -429,17 +459,20 @@ def get_email_html(template, args, subject, header=None, with_container=False):
 	return get_formatted_html(subject, email[0], header=header, with_container=with_container)
 
 
-def inline_style_in_html(html):
-	"""Convert email.css and html to inline-styled html"""
+def inline_style_in_html(html, add_css=True):
+	"""Convert email.css and html to inline-styled html."""
 	from premailer import Premailer
 
 	from frappe.utils.jinja_globals import bundled_asset
 
-	# get email css files from hooks
-	css_files = frappe.get_hooks("email_css")
-	css_files = [bundled_asset(path) for path in css_files]
-	css_files = [path.lstrip("/") for path in css_files]
-	css_files = [css_file for css_file in css_files if os.path.exists(os.path.abspath(css_file))]
+	if add_css:
+		# get email css files from hooks
+		css_files = frappe.get_hooks("email_css")
+		css_files = [bundled_asset(path) for path in css_files]
+		css_files = [path.lstrip("/") for path in css_files]
+		css_files = [css_file for css_file in css_files if os.path.exists(os.path.abspath(css_file))]
+	else:
+		css_files = None
 
 	p = Premailer(
 		html=html, external_styles=css_files, strip_important=False, allow_loading_external_files=True
@@ -502,6 +535,7 @@ def add_attachment(fname, fcontent, content_type=None, parent=None, content_id=N
 		attachment_type = "inline" if inline else "attachment"
 		clean_filename = re.sub(r"[\r\n]", "", str(fname))
 		part.add_header("Content-Disposition", attachment_type, filename=clean_filename)
+
 	if content_id:
 		part.add_header("Content-ID", f"<{content_id}>")
 
@@ -509,7 +543,7 @@ def add_attachment(fname, fcontent, content_type=None, parent=None, content_id=N
 
 
 def get_message_id():
-	"""Returns Message ID created from doctype and name"""
+	"""Return Message ID created from doctype and name."""
 	return email.utils.make_msgid(domain=frappe.local.site)
 
 

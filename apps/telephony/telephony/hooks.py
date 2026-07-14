@@ -10,6 +10,9 @@ fixtures = [
     {"dt": "Role", "filters": [["role_name", "like", "TP%"]]},
 ]
 
+# Dependency of Helpdesk — no standalone entry in apps drawer or sidebar
+add_to_apps_screen = []
+
 # Apps
 # ------------------
 

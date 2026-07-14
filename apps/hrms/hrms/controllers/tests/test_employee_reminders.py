@@ -4,25 +4,26 @@
 from datetime import timedelta
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_months, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.controllers.employee_reminders import send_holidays_reminder_in_advance
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
+	create_holiday_list_assignment,
+)
 from hrms.hr.doctype.hr_settings.hr_settings import set_proceed_with_frequency_change
 from hrms.hr.utils import get_holidays_for_employee
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestEmployeeReminders(FrappeTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
+class TestEmployeeReminders(HRMSTestSuite):
+	def setUp(self):
 		from erpnext.setup.doctype.holiday_list.test_holiday_list import make_holiday_list
 
 		# Create a test holiday list
-		test_holiday_dates = cls.get_test_holiday_dates()
-		test_holiday_list = make_holiday_list(
+		test_holiday_dates = self.get_test_holiday_dates()
+		test_holiday_list1 = make_holiday_list(
 			"TestHolidayRemindersList",
 			holiday_dates=[
 				{"holiday_date": test_holiday_dates[0], "description": "test holiday1"},
@@ -39,18 +40,17 @@ class TestEmployeeReminders(FrappeTestCase):
 		test_employee = frappe.get_doc("Employee", make_employee("test@gopher.io", company="_Test Company"))
 
 		# Attach the holiday list to employee
-		test_employee.holiday_list = test_holiday_list.name
-		test_employee.save()
+		create_holiday_list_assignment("Employee", test_employee.name, test_holiday_list1.name)
 
 		# Attach to class
-		cls.test_employee = test_employee
-		cls.test_holiday_dates = test_holiday_dates
+		self.test_employee = test_employee
+		self.test_holiday_dates = test_holiday_dates
 
 		# Employee without holidays in this month/week
 		test_employee_2 = make_employee("test@empwithoutholiday.io", company="_Test Company")
-		test_employee_2 = frappe.get_doc("Employee", test_employee_2)
+		test_employee_2 = frappe.get_doc("Employee", test_employee_2, company="_Test Company")
 
-		test_holiday_list = make_holiday_list(
+		test_holiday_list2 = make_holiday_list(
 			"TestHolidayRemindersList2",
 			holiday_dates=[
 				{"holiday_date": add_months(getdate(), 1), "description": "test holiday1"},
@@ -58,11 +58,13 @@ class TestEmployeeReminders(FrappeTestCase):
 			from_date=add_months(getdate(), -2),
 			to_date=add_months(getdate(), 2),
 		)
-		test_employee_2.holiday_list = test_holiday_list.name
-		test_employee_2.save()
+		create_holiday_list_assignment("Employee", test_employee_2.name, test_holiday_list2.name)
+		self.test_employee_2 = test_employee_2
+		self.holiday_list_2 = test_holiday_list2
 
-		cls.test_employee_2 = test_employee_2
-		cls.holiday_list_2 = test_holiday_list
+		# Clear Email Queue
+		frappe.db.sql("delete from `tabEmail Queue`")
+		frappe.db.sql("delete from `tabEmail Queue Recipient`")
 
 	@classmethod
 	def get_test_holiday_dates(cls):
@@ -75,11 +77,6 @@ class TestEmployeeReminders(FrappeTestCase):
 			today_date + timedelta(days=3),
 			today_date + timedelta(weeks=3),
 		]
-
-	def setUp(self):
-		# Clear Email Queue
-		frappe.db.sql("delete from `tabEmail Queue`")
-		frappe.db.sql("delete from `tabEmail Queue Recipient`")
 
 	def test_is_holiday(self):
 		from erpnext.setup.doctype.employee.employee import is_holiday

@@ -13,7 +13,6 @@ import frappe
 from frappe import _, safe_decode
 from frappe.utils import cint, cstr, encode, get_files_path, random_string, strip
 from frappe.utils.file_manager import safe_b64decode
-from frappe.utils.image import optimize_image
 
 if TYPE_CHECKING:
 	from PIL.ImageFile import ImageFile
@@ -55,7 +54,7 @@ def get_extension(
 	filename,
 	extn: str | None = None,
 	content: bytes | None = None,
-	response: Optional["Response"] = None,
+	response: "Response" | None = None,
 ) -> str:
 	mimetype = None
 
@@ -217,9 +216,11 @@ def get_file_name(fname: str, optional_suffix: str | None = None) -> str:
 	return f"{partial}{suffix}{extn}"
 
 
-def extract_images_from_doc(doc: "Document", fieldname: str):
+def extract_images_from_doc(doc: "Document", fieldname: str, is_private=True):
 	content = doc.get(fieldname)
-	content = extract_images_from_html(doc, content, is_private=(not doc.meta.make_attachments_public))
+	if doc.meta.make_attachments_public:
+		is_private = False
+	content = extract_images_from_html(doc, content, is_private=is_private)
 	if frappe.flags.has_dataurl:
 		doc.set(fieldname, content)
 
@@ -246,8 +247,6 @@ def extract_images_from_html(doc: "Document", content: str, is_private: bool = F
 		except BinasciiError:
 			frappe.flags.has_dataurl = True
 			return f'<img src="#broken-image" alt="{get_corrupted_image_msg()}"'
-
-		content = optimize_image(content, mtype)
 
 		if "filename=" in headers:
 			filename = headers.split("filename=")[-1]
@@ -415,6 +414,29 @@ def relink_mismatched_files(doc: "Document") -> None:
 	for df in attach_fields:
 		if doc.get(df.fieldname):
 			relink_files(doc, df.fieldname, doc.__temporary_name)
+
+	# Relink files in child table Attach fields
+	table_fields = doc.meta.get("fields", {"fieldtype": "Table"})
+	for table_df in table_fields:
+		child_rows = doc.get(table_df.fieldname) or []
+		if not child_rows:
+			continue
+
+		child_meta = frappe.get_meta(table_df.options)
+		child_attach_fields = child_meta.get("fields", {"fieldtype": ["in", ["Attach", "Attach Image"]]})
+
+		if not child_attach_fields:
+			continue
+
+		for child_row in child_rows:
+			for child_df in child_attach_fields:
+				file_url = child_row.get(child_df.fieldname)
+				if file_url:
+					frappe.db.set_value(
+						"File",
+						{"file_url": file_url, "attached_to_name": doc.__temporary_name},
+						{"attached_to_name": doc.name},
+					)
 	# delete temporary name after relinking is done
 	doc.delete_key("__temporary_name")
 
@@ -427,7 +449,7 @@ def decode_file_content(content: bytes) -> bytes:
 	return safe_b64decode(content)
 
 
-def find_file_by_url(path: str, name: str | None = None) -> Optional["File"]:
+def find_file_by_url(path: str, name: str | None = None) -> "File" | None:
 	filters = {"file_url": str(path)}
 	if name:
 		filters["name"] = str(name)
@@ -441,3 +463,20 @@ def find_file_by_url(path: str, name: str | None = None) -> Optional["File"]:
 		file: File = frappe.get_doc(doctype="File", **file_data)
 		if file.is_downloadable():
 			return file
+
+
+def get_safe_file_name(file_name: str) -> str:
+	return re.sub(r"[/\\%?#]", "_", file_name)
+
+
+def check_path_safety(base_path: str, requested_path: str) -> bool:
+	"""Util to check path safety by ensuring sandboxing and logging unsuccessful attempts"""
+	base_path = os.path.realpath(base_path)
+	requested_path = os.path.realpath(requested_path)
+	if os.path.commonpath([base_path, requested_path]) != base_path:
+		frappe.log_error(
+			title="Attempted Unauthorized File Access",
+			message=f"Blocked access to: {requested_path}",
+		)
+		return False
+	return True

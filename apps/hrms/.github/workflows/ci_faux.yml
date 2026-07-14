@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: [1, 2]
+        container: [1, 2, 3]
 
     name: Python Unit Tests
 

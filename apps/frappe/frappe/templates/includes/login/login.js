@@ -13,12 +13,11 @@ login.bind_events = function () {
 		login.route();
 	});
 
-
 	$(".form-login").on("submit", function (event) {
 		event.preventDefault();
 		var args = {};
 		args.cmd = "login";
-		args.usr = frappe.utils.xss_sanitise(($("#login_email").val() || "").trim());
+		args.usr = ($("#login_email").val() || "").trim();
 		args.pwd = $("#login_password").val();
 		if (!args.usr || !args.pwd) {
 			{# striptags is used to remove newlines, e is used for escaping #}
@@ -250,17 +249,9 @@ login.login_handlers = (function () {
 					window.location.href = data.home_page;
 				}
 			} else if (window.location.hash === '#forgot') {
-				if (data.message === 'not found') {
-					login.set_status({{ _("Not a valid user") | tojson }}, 'red');
-				} else if (data.message == 'not allowed') {
-					login.set_status({{ _("Not Allowed") | tojson }}, 'red');
-				} else if (data.message == 'disabled') {
-					login.set_status({{ _("Not Allowed: Disabled User") | tojson }}, 'red');
-				} else {
-					login.set_status({{ _("Instructions Emailed") | tojson }}, 'green');
-				}
-
-
+				// Always show the same message regardless of whether the account
+				// exists or not, to prevent username enumeration (CWE-204).
+				login.set_status({{ _("Instructions Emailed") | tojson }}, 'green');
 			} else if (window.location.hash === '#signup') {
 				if (cint(data.message[0]) == 0) {
 					login.set_status(data.message[1], 'red');
@@ -288,7 +279,6 @@ login.login_handlers = (function () {
 		},
 		401: get_error_handler({{ _("Invalid Login. Try again.") | tojson }}),
 		417: get_error_handler({{ _("Oops! Something went wrong.") | tojson }}),
-		404: get_error_handler({{ _("User does not exist.") | tojson }}),
 		429: get_error_handler({{ _("Too many requests. Please try again later.") | tojson }}),
 		500: get_error_handler({{ _("Something went wrong.") | tojson }}),
 	};
@@ -299,13 +289,6 @@ login.login_handlers = (function () {
 frappe.ready(function () {
 
 	login.bind_events();
-
-	if (!window.location.hash) {
-		window.location.hash = "#login";
-	} else {
-		$(window).trigger("hashchange");
-	}
-
 	if (window.show_footer_on_login) {
 		$("body .web-footer").show();
 	}

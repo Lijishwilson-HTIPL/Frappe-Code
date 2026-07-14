@@ -17,6 +17,9 @@ config/pids/*.pid.old
 !.claude/agents/
 !.claude/agents/*.md
 CLAUDE.md
+LEARNING_LOG.md
+.superpowers/
+runcommand.txt
 
 # Work progress log and internal docs (not for version control)
 workprogress.txt
@@ -94,6 +97,3 @@ start-bench.sh
 # Windows Zone.Identifier ADS metadata files (created when files downloaded on Windows)
 *Zone.Identifier
 *:Zone.Identifier
-
-# Unapproved MFT license API (OTP version — not in use)
-apps/erpnext/erpnext/mft_license_api.py

@@ -70,6 +70,7 @@ coverage.xml
 
 # Translations
 *.mo
+*.pot
 
 # Django stuff:
 *.log
@@ -193,3 +194,7 @@ cypress/videos
 
 # JetBrains IDEs
 .idea/
+# Helix Editor
+.helix/
+# Aider AI Chat
+.aider*

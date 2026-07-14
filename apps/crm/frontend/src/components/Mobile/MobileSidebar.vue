@@ -35,7 +35,7 @@
               </SidebarLink>
             </div>
             <div v-for="view in allViews" :key="view.label">
-              <CollapsibleSection
+              <Section
                 :label="view.name"
                 :hideLabel="view.hideLabel"
                 :opened="view.opened"
@@ -64,7 +64,7 @@
                     class="mx-2 my-0.5"
                   />
                 </nav>
-              </CollapsibleSection>
+              </Section>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@ import {
   Dialog,
   DialogOverlay,
 } from '@headlessui/vue'
-import CollapsibleSection from '@/components/CollapsibleSection.vue'
+import Section from '@/components/Section.vue'
 import PinIcon from '@/components/Icons/PinIcon.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
@@ -116,7 +116,7 @@ const links = [
     to: 'Leads',
   },
   {
-    label: 'Opportunities',
+    label: 'Deals',
     icon: DealsIcon,
     to: 'Deals',
   },
@@ -126,7 +126,7 @@ const links = [
     to: 'Contacts',
   },
   {
-    label: 'Accounts',
+    label: 'Organizations',
     icon: OrganizationsIcon,
     to: 'Organizations',
   },

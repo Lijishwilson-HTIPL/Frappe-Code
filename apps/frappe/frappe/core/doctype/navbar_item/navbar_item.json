@@ -10,6 +10,7 @@
   "action",
   "hidden",
   "is_standard",
+  "icon",
   "column_break_dtwu",
   "condition"
  ],
@@ -20,9 +21,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Item Label",
-   "mandatory_depends_on": "eval:doc.item_type == 'Route' || doc.item_type == 'Action'",
-   "show_days": 1,
-   "show_seconds": 1
+   "mandatory_depends_on": "eval:doc.item_type == 'Route' || doc.item_type == 'Action'"
   },
   {
    "columns": 2,
@@ -31,27 +30,21 @@
    "in_list_view": 1,
    "label": "Item Type",
    "options": "Route\nAction\nSeparator",
-   "read_only_depends_on": "eval:doc.is_standard",
-   "show_days": 1,
-   "show_seconds": 1
+   "read_only_depends_on": "eval:doc.is_standard"
   },
   {
    "default": "0",
    "fieldname": "hidden",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Hidden",
-   "show_days": 1,
-   "show_seconds": 1
+   "label": "Hidden"
   },
   {
    "default": "0",
    "fieldname": "is_standard",
    "fieldtype": "Check",
    "label": "Is Standard",
-   "read_only": 1,
-   "show_days": 1,
-   "show_seconds": 1
+   "read_only": 1
   },
   {
    "columns": 4,
@@ -61,9 +54,7 @@
    "in_list_view": 1,
    "label": "Route",
    "mandatory_depends_on": "eval:doc.item_type == 'Route'",
-   "read_only_depends_on": "eval:doc.is_standard",
-   "show_days": 1,
-   "show_seconds": 1
+   "read_only_depends_on": "eval:doc.is_standard"
   },
   {
    "depends_on": "eval:doc.item_type == 'Action'",
@@ -71,9 +62,7 @@
    "fieldtype": "Data",
    "label": "Action",
    "mandatory_depends_on": "eval:doc.item_type == 'Action'",
-   "read_only_depends_on": "eval:doc.is_standard",
-   "show_days": 1,
-   "show_seconds": 1
+   "read_only_depends_on": "eval:doc.is_standard"
   },
   {
    "fieldname": "condition",
@@ -84,18 +73,25 @@
   {
    "fieldname": "column_break_dtwu",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "icon",
+   "fieldtype": "Icon",
+   "label": "Icon"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2024-11-15 14:12:19.803995",
+ "modified": "2026-03-11 12:23:02.473404",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "Navbar Item",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

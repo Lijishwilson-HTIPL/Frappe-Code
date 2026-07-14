@@ -1,8 +1,5 @@
-# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
+﻿# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-
-# For license information, please see license.txt
-
 
 import frappe
 from frappe import _
@@ -25,18 +22,14 @@ class JobApplicant(Document):
 
 	def autoname(self):
 		self.name = self.email_id
-
-		# applicant can apply more than once for a different job title or reapply
 		if frappe.db.exists("Job Applicant", self.name):
 			self.name = append_number_if_name_exists("Job Applicant", self.name)
 
 	def validate(self):
 		if self.email_id:
 			validate_email_address(self.email_id, True)
-
 		if self.employee_referral:
 			self.set_status_for_employee_referral()
-
 		if not self.applicant_name and self.email_id:
 			guess = self.email_id.split("@")[0]
 			self.applicant_name = " ".join([p.capitalize() for p in guess.split(".")])
@@ -51,8 +44,6 @@ class JobApplicant(Document):
 
 	def after_insert(self):
 		self.send_acknowledgement_email()
-		# Seed the timeline with the initial status so the progression is visible
-		# from the moment the applicant is created.
 		try:
 			initial_status = self.status or "Open"
 			self.add_comment("Workflow", _("Application received — status: {0}").format(initial_status))
@@ -60,19 +51,16 @@ class JobApplicant(Document):
 			frappe.log_error(frappe.get_traceback(), "Job Applicant: initial status comment failed")
 
 	def on_update(self):
-		# Log status transitions to the timeline as Workflow comments so the
-		# applicant's progress (Open → Shortlisted → Interview → …) is easy to read.
 		try:
 			old_status = self.get_doc_before_save().status if self.get_doc_before_save() else None
 		except Exception:
 			old_status = None
-
 		new_status = self.status
 		if old_status and new_status and old_status != new_status:
 			try:
 				self.add_comment(
 					"Workflow",
-					_("Status changed: {0} → {1}").format(old_status, new_status),
+					_("Status changed: {0} -> {1}").format(old_status, new_status),
 				)
 			except Exception:
 				frappe.log_error(frappe.get_traceback(), "Job Applicant: status change comment failed")
@@ -92,11 +80,10 @@ class JobApplicant(Document):
 
 		subject = _("We've received your application")
 		intro = _("Dear {0},").format(applicant_name)
-		body_line = _("Thank you for your interest in the{0}. We have successfully received your application, and our technical team is currently reviewing your qualifications and background.We will reach out to you soon to discuss the next stages of the hiring process.").format(
+		body_line = _("Thank you for your interest in the{0}. We have successfully received your application, and our technical team is currently reviewing your qualifications and background. We will reach out to you soon to discuss the next stages of the hiring process.").format(
 			_(" for {0}").format(job_title) if job_title else ""
 		)
 		signoff = _("Best regards,<br>The Recruitment Team")
-
 		message = f"<p>{intro}</p><p>{body_line}</p><p>{signoff}</p>"
 
 		frappe.sendmail(
@@ -109,7 +96,6 @@ class JobApplicant(Document):
 			with_container=False,
 		)
 
-		# Separate internal notification to the team: who applied, for which role
 		team_email = frappe.db.get_value(
 			"Email Account", {"default_outgoing": 1}, "email_id"
 		) or frappe.db.get_value(
@@ -117,36 +103,33 @@ class JobApplicant(Document):
 		)
 		if team_email and team_email != self.email_id:
 			try:
-				role_label = job_title or self.designation or self.job_title or "—"
-				job_ref = self.job_title or "—"
+				role_label = job_title or self.designation or self.job_title or "not specified"
+				job_ref = self.job_title or "not specified"
 
 				def _row(label, value):
 					return (
 						'<tr><td style="padding:6px 12px 6px 0;font-weight:bold;'
 						'vertical-align:top;white-space:nowrap;">{0}</td>'
 						'<td style="padding:6px 0;">{1}</td></tr>'
-					).format(label, value if value else "—")
+					).format(label, value if value else "not specified")
 
-				phone = self.phone_number or "—"
-				years_exp = getattr(self, "years_of_experience", None) or "—"
+				phone = self.phone_number or "not specified"
+				years_exp = getattr(self, "years_of_experience", None) or "not specified"
 				linkedin = getattr(self, "linkedin_profile_url", None) or ""
 				portfolio = getattr(self, "portfolio_site", None) or ""
-				hear = self.how_did_you_hear or "—"
+				hear = self.how_did_you_hear or "not specified"
 				other_src = getattr(self, "other_source", None)
 				if hear == "Other" and other_src:
 					hear = "Other: {0}".format(other_src)
 				cover = self.cover_letter or ""
 
-				email_html = (
-					'<a href="mailto:{0}">{0}</a>'.format(self.email_id) if self.email_id else "—"
-				)
-				linkedin_html = '<a href="{0}">{0}</a>'.format(linkedin) if linkedin else "—"
-				portfolio_html = '<a href="{0}">{0}</a>'.format(portfolio) if portfolio else "—"
+				email_html = '<a href="mailto:{0}">{0}</a>'.format(self.email_id) if self.email_id else "not specified"
+				linkedin_html = '<a href="{0}">{0}</a>'.format(linkedin) if linkedin else "not specified"
+				portfolio_html = '<a href="{0}">{0}</a>'.format(portfolio) if portfolio else "not specified"
 
 				team_subject = _("New Job Application: {0} applied for {1} ({2})").format(
 					applicant_name, role_label, job_ref
 				)
-
 				intro_html = "<p>{0}</p><p>{1}</p>".format(
 					_("Hi Team,"),
 					_("{0} has applied for the role {1} (Job Opening: {2}).").format(
@@ -154,8 +137,7 @@ class JobApplicant(Document):
 					),
 				)
 				details_heading = (
-					'<h3 style="color:#0a66c2;border-bottom:1px solid #ddd;'
-					'padding-bottom:4px;">{0}</h3>'
+					'<h3 style="color:#0a66c2;border-bottom:1px solid #ddd;padding-bottom:4px;">{0}</h3>'
 				).format(_("Application Details"))
 				table_html = (
 					'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
@@ -174,10 +156,8 @@ class JobApplicant(Document):
 				cover_html = ""
 				if cover:
 					cover_html = (
-						'<h3 style="color:#0a66c2;border-bottom:1px solid #ddd;'
-						'padding-bottom:4px;margin-top:18px;">{0}</h3>'
-						'<div style="background:#f5f7fa;padding:10px;border-radius:4px;'
-						'white-space:pre-wrap;">{1}</div>'
+						'<h3 style="color:#0a66c2;border-bottom:1px solid #ddd;padding-bottom:4px;margin-top:18px;">{0}</h3>'
+						'<div style="background:#f5f7fa;padding:10px;border-radius:4px;white-space:pre-wrap;">{1}</div>'
 					).format(_("Cover Letter / About"), cover)
 				team_message = intro_html + details_heading + table_html + cover_html
 
@@ -245,7 +225,6 @@ def get_interview_details(job_applicant):
 
 	for detail in interview_details:
 		detail.average_rating = detail.average_rating * number_of_stars if detail.average_rating else 0
-
 		interview_detail_map[detail.name] = detail
 
 	return {"interviews": interview_detail_map, "stars": number_of_stars}

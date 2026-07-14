@@ -11,6 +11,12 @@ class SiteNotSpecifiedError(Exception):
 		super(Exception, self).__init__(self.message)
 
 
+class DatabaseModificationError(Exception):
+	"""Error raised when attempting to modify the database in a read-only document context."""
+
+	pass
+
+
 class UrlSchemeNotSupported(Exception):
 	pass
 
@@ -78,6 +84,10 @@ class CSRFTokenError(Exception):
 
 class TooManyRequestsError(Exception):
 	http_status_code = 429
+
+
+class ServiceUnavailableError(Exception):
+	http_status_code = 503
 
 
 class ImproperDBConfigurationError(Exception):

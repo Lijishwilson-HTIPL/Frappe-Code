@@ -20,10 +20,30 @@ frappe.ui.form.on("Journal Entry", {
 			"Unreconcile Payment Entries",
 			"Bank Transaction",
 		];
+
 		frm.trigger("set_queries");
 	},
 
 	set_queries(frm) {
+		frm.set_query("periodic_entry_difference_account", function () {
+			return {
+				filters: {
+					is_group: 0,
+					company: frm.doc.company,
+				},
+			};
+		});
+
+		frm.set_query("stock_asset_account", function () {
+			return {
+				filters: {
+					is_group: 0,
+					account_type: "Stock",
+					company: frm.doc.company,
+				},
+			};
+		});
+
 		frm.set_query("project", "accounts", function (doc, cdt, cdn) {
 			let row = frappe.get_doc(cdt, cdn);
 			let filters = {
@@ -39,7 +59,21 @@ frappe.ui.form.on("Journal Entry", {
 		});
 	},
 
+	get_balance_for_periodic_accounting(frm) {
+		frm.call({
+			method: "get_balance_for_periodic_accounting",
+			doc: frm.doc,
+			callback: function (r) {
+				refresh_field("accounts");
+			},
+		});
+	},
+
 	refresh: function (frm) {
+		if (frm.doc.reversal_of && (frm.is_new() || frm.doc.docstatus == 0)) {
+			frm.set_read_only();
+		}
+
 		erpnext.toggle_naming_series();
 
 		if (frm.doc.docstatus > 0) {
@@ -95,6 +129,12 @@ frappe.ui.form.on("Journal Entry", {
 		}
 
 		erpnext.accounts.unreconcile_payment.add_unreconcile_btn(frm);
+
+		if (frm.doc.voucher_type !== "Exchange Gain Or Loss") {
+			$.each(frm.doc.accounts || [], function (i, row) {
+				erpnext.journal_entry.set_exchange_rate(frm, row.doctype, row.name);
+			});
+		}
 	},
 	before_save: function (frm) {
 		if (frm.doc.docstatus == 0 && !frm.doc.is_system_generated) {
@@ -181,6 +221,7 @@ frappe.ui.form.on("Journal Entry", {
 
 		erpnext.accounts.dimensions.update_dimension(frm, frm.doctype);
 		erpnext.utils.set_letter_head(frm);
+		frm.clear_table("tax_withholding_entries");
 	},
 
 	voucher_type: function (frm) {
@@ -231,12 +272,30 @@ frappe.ui.form.on("Journal Entry", {
 			});
 		}
 	},
+
+	apply_tds: function (frm) {
+		frm.clear_table("tax_withholding_entries");
+	},
 });
 
 var update_jv_details = function (doc, r) {
 	$.each(r, function (i, d) {
 		var row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
-		frappe.model.set_value(row.doctype, row.name, "account", d.account);
+		const {
+			idx,
+			name,
+			owner,
+			parent,
+			parenttype,
+			parentfield,
+			creation,
+			modified,
+			modified_by,
+			doctype,
+			docstatus,
+			...fields
+		} = d;
+		frappe.model.set_value(row.doctype, row.name, fields);
 	});
 	refresh_field("accounts");
 };
@@ -246,10 +305,6 @@ erpnext.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Contro
 		this.load_defaults();
 		this.setup_queries();
 		erpnext.accounts.dimensions.setup_dimension_filters(this.frm, this.frm.doctype);
-	}
-
-	onload_post_render() {
-		cur_frm.get_field("accounts").grid.set_multiple_add("account");
 	}
 
 	load_defaults() {
@@ -378,15 +433,17 @@ erpnext.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Contro
 
 	accounts_add(doc, cdt, cdn) {
 		var row = frappe.get_doc(cdt, cdn);
-		row.exchange_rate = 1;
-		$.each(doc.accounts, function (i, d) {
-			if (d.account && d.party && d.party_type) {
-				row.account = d.account;
-				row.party = d.party;
-				row.party_type = d.party_type;
-				row.exchange_rate = d.exchange_rate;
-			}
-		});
+		if (!row.exchange_rate) row.exchange_rate = 1;
+		if (!row.account) {
+			$.each(doc.accounts, function (i, d) {
+				if (d.account && d.party && d.party_type) {
+					row.account = d.account;
+					row.party = d.party;
+					row.party_type = d.party_type;
+					row.exchange_rate = d.exchange_rate;
+				}
+			});
+		}
 
 		// set difference
 		if (doc.difference) {
@@ -398,7 +455,7 @@ erpnext.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Contro
 				row.debit = -doc.difference;
 			}
 		}
-		cur_frm.cscript.update_totals(doc);
+		this.frm.cscript.update_totals(doc);
 
 		erpnext.accounts.dimensions.copy_dimension_from_first_row(this.frm, cdt, cdn, "accounts");
 	}
@@ -462,11 +519,11 @@ frappe.ui.form.on("Journal Entry Account", {
 	},
 
 	debit: function (frm, dt, dn) {
-		cur_frm.cscript.update_totals(frm.doc);
+		frm.cscript.update_totals(frm.doc);
 	},
 
 	credit: function (frm, dt, dn) {
-		cur_frm.cscript.update_totals(frm.doc);
+		frm.cscript.update_totals(frm.doc);
 	},
 
 	exchange_rate: function (frm, cdt, cdn) {
@@ -482,7 +539,7 @@ frappe.ui.form.on("Journal Entry Account", {
 });
 
 frappe.ui.form.on("Journal Entry Account", "accounts_remove", function (frm) {
-	cur_frm.cscript.update_totals(frm.doc);
+	frm.cscript.update_totals(frm.doc);
 });
 
 $.extend(erpnext.journal_entry, {
@@ -524,7 +581,7 @@ $.extend(erpnext.journal_entry, {
 			flt(flt(row.credit_in_account_currency) * row.exchange_rate, precision("credit", row))
 		);
 
-		cur_frm.cscript.update_totals(frm.doc);
+		frm.cscript.update_totals(frm.doc);
 	},
 
 	set_exchange_rate: function (frm, cdt, cdn) {
@@ -597,7 +654,7 @@ $.extend(erpnext.journal_entry, {
 					reqd: 1,
 					default: frm.doc.posting_date,
 				},
-				{ fieldtype: "Small Text", fieldname: "user_remark", label: __("User Remark") },
+				{ fieldtype: "Small Text", fieldname: "remark", label: __("Remark") },
 				{
 					fieldtype: "Select",
 					fieldname: "naming_series",
@@ -614,8 +671,14 @@ $.extend(erpnext.journal_entry, {
 			var values = dialog.get_values();
 
 			frm.set_value("posting_date", values.posting_date);
-			frm.set_value("user_remark", values.user_remark);
 			frm.set_value("naming_series", values.naming_series);
+			if (values.remark) {
+				frm.set_value("custom_remark", 1);
+				frm.set_value("remark", values.remark);
+			} else {
+				frm.set_value("custom_remark", 0);
+				frm.set_value("remark", "");
+			}
 
 			// clear table is used because there might've been an error while adding child
 			// and cleanup didn't happen
@@ -666,10 +729,10 @@ $.extend(erpnext.journal_entry, {
 		return { filters: filters };
 	},
 
-	reverse_journal_entry: function () {
+	reverse_journal_entry: function (frm) {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry",
-			frm: cur_frm,
+			frm: frm,
 		});
 	},
 });
@@ -700,6 +763,8 @@ $.extend(erpnext.journal_entry, {
 					}
 				},
 			});
+		} else {
+			erpnext.journal_entry.clear_fields(frm, dt, dn);
 		}
 	},
 	set_amount_on_last_row: function (frm, dt, dn) {
@@ -723,5 +788,14 @@ $.extend(erpnext.journal_entry, {
 			}
 		}
 		refresh_field("accounts");
+	},
+	clear_fields: function (frm, dt, dn) {
+		let row = locals[dt][dn];
+
+		row.party_type = null;
+		row.party = null;
+		row.bank_account = null;
+
+		frm.refresh_field("accounts");
 	},
 });

@@ -1271,7 +1271,7 @@ erpnext.selling.SalesOrderController = class SalesOrderController extends erpnex
 				dialog.hide();
 
 				var method = args.against_default_supplier
-					? "make_purchase_order_for_default_supplier"
+					? "make_purchase_order"
 					: "make_purchase_order";
 				return frappe.call({
 					method: "erpnext.selling.doctype.sales_order.sales_order." + method,

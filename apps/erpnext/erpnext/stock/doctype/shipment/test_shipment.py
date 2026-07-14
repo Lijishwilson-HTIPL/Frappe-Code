@@ -4,12 +4,12 @@
 from datetime import date, timedelta
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.stock.doctype.delivery_note.delivery_note import make_shipment
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestShipment(FrappeTestCase):
+class TestShipment(ERPNextTestSuite):
 	def test_shipment_from_delivery_note(self):
 		delivery_note = create_test_delivery_note()
 		delivery_note.submit()

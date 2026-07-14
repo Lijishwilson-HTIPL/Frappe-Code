@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "autoincrement",
+ "autoname": ".####",
  "creation": "2023-10-17 14:27:11.078679",
  "doctype": "DocType",
  "document_type": "Setup",
@@ -16,11 +16,7 @@
   "status_category",
   "cb00",
   "ticket_type",
-  "custom_product",
-  "custom_submitter_name",
-  "custom_phone",
   "agent_group",
-  "erp_issue",
   "summary",
   "sb_details",
   "description",
@@ -30,6 +26,7 @@
   "service_level_section",
   "sla",
   "response_by",
+  "raised_outside_working_hours",
   "cb",
   "agreement_status",
   "resolution_by",
@@ -42,6 +39,8 @@
   "first_responded_on",
   "column_break_26",
   "avg_response_time",
+  "last_agent_response",
+  "last_customer_response",
   "resolution_tab",
   "section_break_19",
   "resolution_details",
@@ -68,22 +67,7 @@
   "customer_feedback_section",
   "feedback_rating",
   "feedback",
-  "feedback_extra",
-  "meta_tab",
-  "rca_tab",
-  "rca_section",
-  "rca_required",
-  "rca_status",
-  "rca_root_cause",
-  "rca_fix_workaround",
-  "rca_prevention",
-  "rca_col_break",
-  "rca_kb_article",
-  "rca_problem_ticket",
-  "rca_completed_by",
-  "rca_completed_on",
-  "rca_escalation_reason",
-  "rca_trigger_reason"
+  "feedback_extra"
  ],
  "fields": [
   {
@@ -102,7 +86,6 @@
   },
   {
    "bold": 1,
-   "depends_on": "eval:doc.__islocal",
    "fieldname": "raised_by",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -128,6 +111,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Priority",
+   "link_filters": "[[\"HD Ticket Priority\",\"disabled\",\"=\",0]]",
    "options": "HD Ticket Priority"
   },
   {
@@ -138,41 +122,15 @@
    "fieldname": "ticket_type",
    "fieldtype": "Link",
    "label": "Ticket Type",
+   "link_filters": "[[\"HD Ticket Type\",\"disabled\",\"=\",0]]",
    "options": "HD Ticket Type"
-  },
-  {
-   "fieldname": "custom_product",
-   "fieldtype": "Select",
-   "label": "Product",
-   "options": "\nHT MFT\nHTI Chat Engine",
-   "in_list_view": 1,
-   "in_standard_filter": 1
-  },
-  {
-   "fieldname": "custom_submitter_name",
-   "fieldtype": "Data",
-   "label": "Submitter Name"
-  },
-  {
-   "fieldname": "custom_phone",
-   "fieldtype": "Data",
-   "label": "Phone",
-   "options": "Phone"
   },
   {
    "fieldname": "agent_group",
    "fieldtype": "Link",
    "label": "Team",
+   "link_filters": "[[\"HD Team\",\"disabled\",\"=\",0]]",
    "options": "HD Team"
-  },
-  {
-   "fieldname": "erp_issue",
-   "fieldtype": "Link",
-   "label": "ERPNext Issue (L2)",
-   "options": "Issue",
-   "read_only": 1,
-   "in_list_view": 0,
-   "description": "Auto-created when ticket is escalated to L2 (team assigned)"
   },
   {
    "fieldname": "ticket_split_from",
@@ -277,7 +235,8 @@
   {
    "fieldname": "first_responded_on",
    "fieldtype": "Datetime",
-   "label": "First Responded On"
+   "label": "First Responded On",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_26",
@@ -407,18 +366,21 @@
   {
    "fieldname": "feedback_extra",
    "fieldtype": "Long Text",
-   "label": "Feedback (Extra)"
+   "label": "Feedback (Extra)",
+   "read_only": 1
   },
   {
    "fieldname": "feedback",
    "fieldtype": "Link",
    "label": "Feedback (Option)",
-   "options": "HD Ticket Feedback Option"
+   "options": "HD Ticket Feedback Option",
+   "read_only": 1
   },
   {
    "fieldname": "feedback_rating",
    "fieldtype": "Rating",
-   "label": "Rating"
+   "label": "Rating",
+   "read_only": 1
   },
   {
    "fieldname": "sla_tab",
@@ -446,11 +408,6 @@
    "label": "Feedback"
   },
   {
-   "fieldname": "meta_tab",
-   "fieldtype": "Tab Break",
-   "label": "Meta"
-  },
-  {
    "fieldname": "summary",
    "fieldtype": "Text Editor",
    "label": "Summary"
@@ -464,7 +421,8 @@
    "default": "0",
    "fieldname": "is_merged",
    "fieldtype": "Check",
-   "label": "Ticket Merged"
+   "label": "Ticket Merged",
+   "read_only": 1
   },
   {
    "depends_on": "eval:doc.is_merged",
@@ -489,79 +447,37 @@
    "read_only": 1
   },
   {
-   "fieldname": "rca_tab",
-   "fieldtype": "Tab Break",
-   "label": "Root Cause Analysis"
-  },
-  {
-   "fieldname": "rca_section",
-   "fieldtype": "Section Break",
-   "label": "RCA Details"
-  },
-  {
-   "default": "0",
-   "fieldname": "rca_required",
-   "fieldtype": "Check",
-   "label": "RCA Required"
-  },
-  {
-   "fieldname": "rca_status",
-   "fieldtype": "Select",
-   "label": "RCA Status",
-   "options": "\nPending\nIn Progress\nCompleted\nWaived"
-  },
-  {
-   "fieldname": "rca_root_cause",
-   "fieldtype": "Text Editor",
-   "label": "Root Cause"
-  },
-  {
-   "fieldname": "rca_fix_workaround",
-   "fieldtype": "Text Editor",
-   "label": "Fix / Workaround"
-  },
-  {
-   "fieldname": "rca_prevention",
-   "fieldtype": "Text Editor",
-   "label": "Preventive Measures"
-  },
-  {
-   "fieldname": "rca_col_break",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "rca_kb_article",
-   "fieldtype": "Link",
-   "label": "KB Article",
-   "options": "HD Article"
-  },
-  {
-   "fieldname": "rca_problem_ticket",
-   "fieldtype": "Link",
-   "label": "Problem Ticket",
-   "options": "HD Ticket"
-  },
-  {
-   "fieldname": "rca_completed_by",
-   "fieldtype": "Link",
-   "label": "Completed By",
-   "options": "HD Agent"
-  },
-  {
-   "fieldname": "rca_completed_on",
+   "fieldname": "last_agent_response",
    "fieldtype": "Datetime",
-   "label": "Completed On",
+   "label": "Last Agent Response",
    "read_only": 1
   },
   {
-   "fieldname": "rca_escalation_reason",
-   "fieldtype": "Small Text",
-   "label": "Escalation Reason"
+   "fieldname": "last_customer_response",
+   "fieldtype": "Datetime",
+   "label": "Last Customer Response",
+   "read_only": 1
+    },
+  {
+   "default": "False",
+   "fieldname": "raised_outside_working_hours",
+   "fieldtype": "Check",
+   "label": "Ticket raised outside working hours",
+   "read_only": 1,
+   "set_only_once": 1
   },
   {
-   "fieldname": "rca_trigger_reason",
-   "fieldtype": "Small Text",
-   "label": "RCA Triggered Because",
+   "depends_on": "eval:doc.first_response_failed_by",
+   "fieldname": "first_response_failed_by",
+   "fieldtype": "Duration",
+   "label": "First Response Failed By",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.status_category == \"Resolved\"",
+   "fieldname": "resolution_failed_by",
+   "fieldtype": "Duration",
+   "label": "Resolution Failed By",
    "read_only": 1
   }
  ],
@@ -569,11 +485,11 @@
  "icon": "fa fa-issue",
  "idx": 61,
  "links": [],
- "modified": "2025-09-04 19:44:36.006061",
+ "modified": "2026-05-11 18:25:54.352721",
  "modified_by": "Administrator",
  "module": "Helpdesk",
  "name": "HD Ticket",
- "naming_rule": "Autoincrement",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -629,6 +545,7 @@
  "row_format": "Dynamic",
  "search_fields": "status,subject,raised_by",
  "sender_field": "raised_by",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

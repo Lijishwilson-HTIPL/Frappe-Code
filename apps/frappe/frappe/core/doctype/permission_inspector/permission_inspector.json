@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "beta": 1,
  "creation": "2024-01-03 17:43:27.257317",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -72,7 +71,7 @@
  "is_virtual": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-01-10 14:17:49.722593",
+ "modified": "2026-05-30 23:16:00.919759",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "Permission Inspector",
@@ -84,7 +83,8 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

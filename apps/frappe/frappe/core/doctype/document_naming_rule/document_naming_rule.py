@@ -27,8 +27,8 @@ class DocumentNamingRule(Document):
 		prefix: DF.Data
 		prefix_digits: DF.Int
 		priority: DF.Int
-
 	# end: auto-generated types
+
 	def validate(self):
 		self.validate_fields_in_conditions()
 

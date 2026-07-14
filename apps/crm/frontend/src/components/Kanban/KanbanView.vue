@@ -56,7 +56,7 @@
               <Dropdown :options="actions(column)">
                 <template #default>
                   <Button
-                    class="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity"
+                    class="hidden group-hover:flex"
                     icon="more-horizontal"
                     variant="ghost"
                   />

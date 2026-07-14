@@ -1,6 +1,5 @@
 import frappe
 from frappe import qb
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, flt, getdate, today
 
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
@@ -8,18 +7,16 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sal
 from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
+class TestAccountsReceivable(ERPNextTestSuite, AccountsTestMixin):
 	def setUp(self):
 		self.create_company()
 		self.create_customer()
 		self.create_item()
 		self.create_usd_receivable_account()
 		self.clear_old_entries()
-
-	def tearDown(self):
-		frappe.db.rollback()
 
 	def create_sales_invoice(self, no_payment_schedule=False, do_not_submit=False, **args):
 		frappe.set_user("Administrator")
@@ -123,12 +120,12 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 		report = execute(filters)
 
-		expected_data = [[100, 30, "No Remarks"], [100, 50, "No Remarks"], [100, 20, "No Remarks"]]
+		expected_data = [[100, 30], [100, 50], [100, 20]]
 
 		for i in range(3):
 			row = report[1][i - 1]
-			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced, row.remarks])
-
+			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced])
+			self.assertFalse(row.get("remarks"))
 		# check invoice grand total, invoiced, paid and outstanding column's value after payment
 		self.create_payment_entry(si.name)
 		report = execute(filters)
@@ -181,11 +178,11 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 		report = execute(filters)
 
-		expected_data = [[100, 30, "No Remarks"], [100, 50, "No Remarks"], [100, 20, "No Remarks"]]
+		expected_data = [[100, 30], [100, 50], [100, 20]]
 
 		for i in range(3):
 			row = report[1][i - 1]
-			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced, row.remarks])
+			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced])
 
 		# check invoice grand total, invoiced, paid and outstanding column's value after credit note
 		cr_note = self.create_credit_note(si.name, do_not_submit=True)
@@ -199,7 +196,7 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 		row = report[1]
 		self.assertTrue(len(row) == 0)
 
-	@change_settings(
+	@ERPNextTestSuite.change_settings(
 		"Accounts Settings",
 		{"allow_multi_currency_invoices_against_single_party_account": 1},
 	)
@@ -228,9 +225,10 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 		report = execute(filters)
 		row = report[1][0]
 
-		expected_data = [8000, 8000, "No Remarks"]  # Data in company currency
+		expected_data = [8000, 8000]  # Data in company currency
 
-		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced, row.remarks])
+		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced])
+		self.assertFalse(row.get("remarks"))
 
 		# CASE 2: Transaction currency and party account currency are the same
 		self.create_customer(
@@ -261,18 +259,20 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 		report = execute(filters)
 		row = report[1][0]
 
-		expected_data = [100, 100, "No Remarks"]  # Data in Part Account Currency
+		expected_data = [100, 100]  # Data in Part Account Currency
 
-		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced, row.remarks])
+		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced])
+		self.assertFalse(row.get("remarks"))
 
 		# View in Company currency
 		filters.pop("in_party_currency")
 		report = execute(filters)
 		row = report[1][0]
 
-		expected_data = [8000, 8000, "No Remarks"]  # Data in Company Currency
+		expected_data = [8000, 8000]  # Data in Company Currency
 
-		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced, row.remarks])
+		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced])
+		self.assertFalse(row.get("remarks"))
 
 	def test_accounts_receivable_with_partial_payment(self):
 		filters = {
@@ -288,11 +288,12 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 		report = execute(filters)
 
-		expected_data = [[200, 60, "No Remarks"], [200, 100, "No Remarks"], [200, 40, "No Remarks"]]
+		expected_data = [[200, 60], [200, 100], [200, 40]]
 
 		for i in range(3):
 			row = report[1][i - 1]
-			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced, row.remarks])
+			self.assertEqual(expected_data[i - 1], [row.invoice_grand_total, row.invoiced])
+			self.assertFalse(row.get("remarks"))
 
 		# check invoice grand total, invoiced, paid and outstanding column's value after payment
 		self.create_payment_entry(si.name)
@@ -351,11 +352,12 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 		report = execute(filters)
 
-		expected_data = [100, 100, "No Remarks"]
+		expected_data = [100, 100]
 
 		self.assertEqual(len(report[1]), 1)
 		row = report[1][0]
-		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced, row.remarks])
+		self.assertEqual(expected_data, [row.invoice_grand_total, row.invoiced])
+		self.assertFalse(row.get("remarks"))
 
 		# check invoice grand total, invoiced, paid and outstanding column's value after payment
 		self.create_payment_entry(si.name)
@@ -448,7 +450,7 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 			],
 		)
 
-	@change_settings(
+	@ERPNextTestSuite.change_settings(
 		"Accounts Settings",
 		{"allow_multi_currency_invoices_against_single_party_account": 1, "allow_stale": 0},
 	)
@@ -772,23 +774,18 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 	def test_party_account_filter(self):
 		si1 = self.create_sales_invoice()
-		self.customer2 = (
-			frappe.get_doc(
-				{
-					"doctype": "Customer",
-					"customer_name": "Jane Doe",
-					"type": "Individual",
-					"default_currency": "USD",
-					"customer_group": "Individual",
-				}
-			)
-			.insert()
-			.submit()
-		)
+		jane = frappe.get_doc(
+			{
+				"doctype": "Customer",
+				"customer_name": "Jane Doe",
+				"type": "Individual",
+				"default_currency": "USD",
+			}
+		).insert()
 
+		self.customer = jane.name
 		si2 = self.create_sales_invoice(do_not_submit=True)
 		si2.posting_date = add_days(today(), -1)
-		si2.customer = self.customer2
 		si2.currency = "USD"
 		si2.conversion_rate = 80
 		si2.debit_to = self.debtors_usd
@@ -996,23 +993,18 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(expected_data, report_output)
 
 	def test_future_payments_on_foreign_currency(self):
-		self.customer2 = (
-			frappe.get_doc(
-				{
-					"doctype": "Customer",
-					"customer_name": "Jane Doe",
-					"type": "Individual",
-					"default_currency": "USD",
-					"customer_group": "Individual",
-				}
-			)
-			.insert()
-			.submit()
-		)
+		jane = frappe.get_doc(
+			{
+				"doctype": "Customer",
+				"customer_name": "Jane Doe",
+				"type": "Individual",
+				"default_currency": "USD",
+			}
+		).insert()
+		self.customer = jane.name
 
 		si = self.create_sales_invoice(do_not_submit=True)
 		si.posting_date = add_days(today(), -1)
-		si.customer = self.customer2
 		si.currency = "USD"
 		si.conversion_rate = 80
 		si.debit_to = self.debtors_usd
@@ -1204,3 +1196,93 @@ class TestAccountsReceivable(AccountsTestMixin, FrappeTestCase):
 
 		self.assertEqual(len(report[1]), 2)
 		self.assertEqual([si.name, payment_term1.payment_term_name], [row.voucher_no, row.payment_term])
+
+	def test_project_filter(self):
+		project = frappe.get_doc(
+			{"doctype": "Project", "project_name": "_Test AR Project", "company": self.company}
+		).insert()
+
+		si = self.create_sales_invoice(no_payment_schedule=True, do_not_submit=True)
+		si.project = project.name
+		si.save().submit()
+
+		filters = {
+			"company": self.company,
+			"report_date": today(),
+			"range": "30, 60, 90, 120",
+			"project": [project.name],
+		}
+
+		report = execute(filters)[1]
+		self.assertEqual(len(report), 1)
+		row = report[0]
+		self.assertEqual(row.project, project.name)
+		self.assertEqual(row.invoiced, 100.0)
+
+	def test_project_on_report_output(self):
+		"""
+		Report row must carry the invoice's project even when the payment entry
+		has no project set.
+		"""
+		filters = {
+			"company": self.company,
+			"report_date": today(),
+			"range": "30, 60, 90, 120",
+		}
+
+		project = frappe.get_doc(
+			{"doctype": "Project", "project_name": "_Test AR Project Output", "company": self.company}
+		).insert()
+
+		si = self.create_sales_invoice(no_payment_schedule=True, do_not_submit=True)
+		si.project = project.name
+		si.save().submit()
+
+		# payment has no project — report row must still show the invoice's project
+		self.create_payment_entry(si.name)
+		report = execute(filters)
+
+		self.assertEqual(len(report[1]), 1)
+		row = report[1][0]
+		self.assertEqual([si.name, project.name, 60], [row.voucher_no, row.project, row.outstanding])
+
+	def test_accounts_receivable_respects_user_permissions(self):
+		# Party is a dynamic link on Payment Ledger Entry, so user permissions on Customer
+		# must be applied explicitly. The report should only show permitted customers.
+		original_customer = self.customer
+		second_customer = "_Test AR Perm Customer"
+
+		# create_customer overrides self.customer, so build the restricted invoice first
+		self.create_customer(customer_name=second_customer)
+		self.create_sales_invoice(no_payment_schedule=True)
+
+		self.customer = original_customer
+		allowed_invoice = self.create_sales_invoice(no_payment_schedule=True)
+
+		test_user = "test_ar_user_permission@example.com"
+		if not frappe.db.exists("User", test_user):
+			user = frappe.new_doc("User")
+			user.email = test_user
+			user.first_name = "AR Perm"
+			user.append("roles", {"role": "Accounts User"})
+			user.save()
+
+		frappe.permissions.add_user_permission("Customer", original_customer, test_user)
+
+		filters = {
+			"company": self.company,
+			"party_type": "Customer",
+			"report_date": today(),
+			"range": "30, 60, 90, 120",
+		}
+
+		frappe.set_user(test_user)
+		try:
+			report = execute(filters)
+		finally:
+			frappe.set_user("Administrator")
+
+		parties = {row.party for row in report[1]}
+		self.assertIn(original_customer, parties)
+		self.assertNotIn(second_customer, parties)
+		self.assertEqual(allowed_invoice.customer, original_customer)

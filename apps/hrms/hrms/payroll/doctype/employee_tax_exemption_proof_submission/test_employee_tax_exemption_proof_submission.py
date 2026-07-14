@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
@@ -14,9 +13,10 @@ from hrms.payroll.doctype.employee_tax_exemption_declaration.test_employee_tax_e
 	create_payroll_period,
 	setup_hra_exemption_prerequisites,
 )
+from hrms.tests.utils import HRMSTestSuite
 
 
-class TestEmployeeTaxExemptionProofSubmission(FrappeTestCase):
+class TestEmployeeTaxExemptionProofSubmission(HRMSTestSuite):
 	def setUp(self):
 		frappe.db.delete("Employee Tax Exemption Proof Submission")
 		frappe.db.delete("Salary Structure Assignment")

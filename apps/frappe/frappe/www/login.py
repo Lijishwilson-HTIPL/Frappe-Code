@@ -34,7 +34,7 @@ def get_context(context):
 			if frappe.session.data.user_type == "Website User":
 				redirect_to = get_default_path() or get_home_page()
 			else:
-				redirect_to = get_default_path() or "/app"
+				redirect_to = get_default_path() or "/desk"
 
 		if redirect_to != "login":
 			frappe.local.flags.redirect_location = redirect_to
@@ -140,28 +140,37 @@ def get_login_with_email_link_ratelimit() -> int:
 	return frappe.get_system_settings("rate_limit_email_link_login") or 5
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=get_login_with_email_link_ratelimit, seconds=60 * 60)
 def send_login_link(email: str):
 	if not frappe.get_system_settings("login_with_email_link"):
 		return
 
-	expiry = frappe.get_system_settings("login_with_email_link_expiry") or 10
-	link = _generate_temporary_login_link(email, expiry)
+	try:
+		expiry = frappe.get_system_settings("login_with_email_link_expiry") or 10
+		link = _generate_temporary_login_link(email, expiry)
 
-	app_name = (
-		frappe.get_website_settings("app_name") or frappe.get_system_settings("app_name") or _("Frappe")
-	)
+		app_name = (
+			frappe.get_website_settings("app_name") or frappe.get_system_settings("app_name") or _("Frappe")
+		)
 
-	subject = _("Login To {0}").format(app_name)
+		subject = _("Login To {0}").format(app_name)
 
-	frappe.sendmail(
-		subject=subject,
-		recipients=email,
-		template="login_with_email_link",
-		args={"link": link, "minutes": expiry, "app_name": app_name},
-		now=True,
-	)
+		frappe.sendmail(
+			subject=subject,
+			recipients=email,
+			template="login_with_email_link",
+			args={"link": link, "minutes": expiry, "app_name": app_name},
+			now=True,
+		)
+	except frappe.DoesNotExistError:
+		frappe.clear_messages()
+	except frappe.OutgoingEmailError:
+		frappe.clear_messages()
+		frappe.log_error(title="Login link email could not be sent", message=frappe.get_traceback())
+	except Exception:
+		frappe.clear_messages()
+		frappe.log_error(title="Login link generation failed unexpectedly", message=frappe.get_traceback())
 
 
 def _generate_temporary_login_link(email: str, expiry: int):
@@ -172,7 +181,7 @@ def _generate_temporary_login_link(email: str, expiry: int):
 	key = frappe.generate_hash()
 	frappe.cache.set_value(f"one_time_login_key:{key}", email, expires_in_sec=expiry * 60)
 
-	return get_url(f"/api/method/frappe.www.login.login_via_key?key={key}")
+	return get_url(f"/api/method/frappe.www.login.login_via_key?key={key}", allow_header_override=False)
 
 
 @frappe.whitelist(allow_guest=True, methods=["GET"])
@@ -215,7 +224,7 @@ def sanitize_redirect(redirect: str | None) -> str | None:
 	)
 	if parsed_redirect.netloc:
 		if parsed_request_host.netloc != parsed_redirect.netloc:
-			output_parsed_url = output_parsed_url._replace(path="/app")
+			output_parsed_url = output_parsed_url._replace(path="/desk")
 		else:
 			output_parsed_url = output_parsed_url._replace(path=parsed_redirect.path)
 

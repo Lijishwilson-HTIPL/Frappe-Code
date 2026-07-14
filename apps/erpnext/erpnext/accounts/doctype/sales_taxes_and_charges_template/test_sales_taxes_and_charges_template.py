@@ -1,12 +1,9 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and Contributors
 # See license.txt
-
 import unittest
 
-import frappe
-
-test_records = frappe.get_test_records("Sales Taxes and Charges Template")
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestSalesTaxesandChargesTemplate(unittest.TestCase):
+class TestSalesTaxesandChargesTemplate(ERPNextTestSuite):
 	pass

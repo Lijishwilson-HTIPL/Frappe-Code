@@ -19,11 +19,6 @@
         :iconLeft="CommentIcon"
         @click="toggleCommentBox()"
       />
-      <DraftQueue
-        :drafts="draftQueue"
-        @load="loadDraft"
-        @delete="deleteDraftById"
-      />
     </div>
   </div>
   <div
@@ -40,10 +35,6 @@
         variant: 'solid',
         onClick: submitEmail,
         disabled: emailEmpty,
-      }"
-      :draftButtonProps="{
-        variant: 'subtle',
-        onClick: saveDraft,
       }"
       :discardButtonProps="{
         onClick: async () => {
@@ -94,14 +85,13 @@
 <script setup>
 import EmailEditor from '@/components/EmailEditor.vue'
 import CommentBox from '@/components/CommentBox.vue'
-import DraftQueue from '@/components/DraftQueue.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import { usersStore } from '@/stores/users'
 import { useStorage } from '@vueuse/core'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
 import { call, createResource, toast } from 'frappe-ui'
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   doctype: { type: String, default: 'CRM Lead' },
@@ -131,18 +121,6 @@ const newCommentEditor = ref(null)
 
 const attachments = useStorage(
   `attachments-${getUser().email}-${props.doctype}-${doc.value.name}`,
-  [],
-  localStorage,
-  {
-    serializer: {
-      read: (v) => (v ? JSON.parse(v) : []),
-      write: (v) => JSON.stringify(v),
-    },
-  },
-)
-
-const draftQueue = useStorage(
-  `draftQueue-${getUser().email}-${props.doctype}-${doc.value.name}`,
   [],
   localStorage,
   {
@@ -288,81 +266,6 @@ async function submitEmail() {
   capture('email_sent', { doctype: props.doctype })
   updateOnboardingStep('send_first_email')
 }
-
-function saveDraft() {
-  const draft = {
-    id: Date.now().toString(),
-    subject: newEmailEditor.value?.subject || subject.value,
-    toEmails: newEmailEditor.value?.toEmails || [],
-    ccEmails: newEmailEditor.value?.ccEmails || [],
-    bccEmails: newEmailEditor.value?.bccEmails || [],
-    content: newEmail.value,
-    savedAt: new Date().toISOString(),
-  }
-  draftQueue.value = [draft, ...draftQueue.value]
-  newEmail.value = ''
-  showEmailBox.value = false
-  toast.success(__('Draft saved'))
-}
-
-function loadDraft(draft) {
-  showEmailBox.value = true
-  newEmail.value = draft.content
-  setTimeout(() => {
-    if (newEmailEditor.value) {
-      newEmailEditor.value.subject = draft.subject
-      newEmailEditor.value.toEmails = draft.toEmails
-      newEmailEditor.value.ccEmails = draft.ccEmails
-      newEmailEditor.value.bccEmails = draft.bccEmails
-    }
-    deleteDraftById(draft.id)
-  }, 100)
-}
-
-function deleteDraftById(id) {
-  if (id.startsWith('backend-')) {
-    const commName = id.replace('backend-', '')
-    call('frappe.client.delete', { doctype: 'Communication', name: commName }).catch(() => {})
-  }
-  draftQueue.value = draftQueue.value.filter((d) => d.id !== id)
-}
-
-async function fetchBackendDrafts() {
-  try {
-    const existing = new Set(draftQueue.value.map((d) => d.id))
-    const comms = await call('frappe.client.get_list', {
-      doctype: 'Communication',
-      filters: [
-        ['reference_doctype', '=', props.doctype],
-        ['reference_name', '=', doc.value.name],
-        ['send_email', '=', 0],
-        ['sent_or_received', '=', 'Sent'],
-        ['communication_medium', '=', 'Email'],
-      ],
-      fields: ['name', 'subject', 'content', 'recipients', 'creation'],
-      limit: 20,
-    })
-    if (!comms?.length) return
-    const incoming = comms
-      .map((c) => ({
-        id: `backend-${c.name}`,
-        subject: c.subject || '',
-        toEmails: c.recipients ? c.recipients.split(',').map((e) => e.trim()) : [],
-        ccEmails: [],
-        bccEmails: [],
-        content: c.content || '',
-        savedAt: c.creation,
-      }))
-      .filter((d) => !existing.has(d.id))
-    if (incoming.length) {
-      draftQueue.value = [...incoming, ...draftQueue.value]
-    }
-  } catch (e) {
-    console.warn('Failed to load backend drafts:', e)
-  }
-}
-
-onMounted(fetchBackendDrafts)
 
 async function submitComment() {
   if (commentEmpty.value) return

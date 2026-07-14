@@ -41,6 +41,7 @@ frappe.ui.form.on("Payment Entry", {
 
 		if (frm.is_new()) {
 			set_default_party_type(frm);
+			frm.clear_table("tax_withholding_entries");
 		}
 	},
 
@@ -181,7 +182,7 @@ frappe.ui.form.on("Payment Entry", {
 				"Dunning",
 			];
 
-			if (in_list(party_type_doctypes, child.reference_doctype)) {
+			if (party_type_doctypes.includes(child.reference_doctype)) {
 				filters[doc.party_type.toLowerCase()] = doc.party;
 			}
 
@@ -379,7 +380,6 @@ frappe.ui.form.on("Payment Entry", {
 		frm.set_df_property("total_allocated_amount", "options", currency_field);
 		frm.set_df_property("unallocated_amount", "options", currency_field);
 		frm.set_df_property("total_taxes_and_charges", "options", currency_field);
-		frm.set_df_property("party_balance", "options", currency_field);
 
 		frm.set_currency_labels(
 			["total_amount", "outstanding_amount", "allocated_amount"],
@@ -387,13 +387,13 @@ frappe.ui.form.on("Payment Entry", {
 			"references"
 		);
 
-		cur_frm.set_df_property(
+		frm.set_df_property(
 			"source_exchange_rate",
 			"description",
 			"1 " + frm.doc.paid_from_account_currency + " = [?] " + company_currency
 		);
 
-		cur_frm.set_df_property(
+		frm.set_df_property(
 			"target_exchange_rate",
 			"description",
 			"1 " + frm.doc.paid_to_account_currency + " = [?] " + company_currency
@@ -440,7 +440,6 @@ frappe.ui.form.on("Payment Entry", {
 				[
 					"party",
 					"party_type",
-					"party_balance",
 					"paid_from",
 					"paid_to",
 					"references",
@@ -494,13 +493,10 @@ frappe.ui.form.on("Payment Entry", {
 			$.each(
 				[
 					"party",
-					"party_balance",
 					"paid_from",
 					"paid_to",
 					"paid_from_account_currency",
-					"paid_from_account_balance",
 					"paid_to_account_currency",
-					"paid_to_account_balance",
 					"references",
 					"total_allocated_amount",
 				],
@@ -549,19 +545,17 @@ frappe.ui.form.on("Payment Entry", {
 										"paid_from_account_currency",
 										r.message.party_account_currency
 									);
-									frm.set_value("paid_from_account_balance", r.message.account_balance);
 								} else if (frm.doc.payment_type == "Pay") {
 									frm.set_value("paid_to", r.message.party_account);
 									frm.set_value(
 										"paid_to_account_currency",
 										r.message.party_account_currency
 									);
-									frm.set_value("paid_to_account_balance", r.message.account_balance);
 								}
 							},
-							() => frm.set_value("party_balance", r.message.party_balance),
 							() => frm.set_value("party_name", r.message.party_name),
 							() => frm.clear_table("references"),
+							() => frm.clear_table("tax_withholding_entries"),
 							() => frm.events.hide_unhide_fields(frm),
 							() => frm.events.set_dynamic_labels(frm),
 							() => {
@@ -594,14 +588,15 @@ frappe.ui.form.on("Payment Entry", {
 		}
 	},
 
-	apply_tax_withholding_amount: function (frm) {
-		if (!frm.doc.apply_tax_withholding_amount) {
+	apply_tds: function (frm) {
+		if (!frm.doc.apply_tds) {
 			frm.set_value("tax_withholding_category", "");
-		} else {
-			frappe.db.get_value("Supplier", frm.doc.party, "tax_withholding_category", (values) => {
+		} else if (["Customer", "Supplier"].includes(frm.doc.party_type)) {
+			frappe.db.get_value(frm.doc.party_type, frm.doc.party, "tax_withholding_category", (values) => {
 				frm.set_value("tax_withholding_category", values.tax_withholding_category);
 			});
 		}
+		frm.clear_table("tax_withholding_entries");
 	},
 
 	paid_from: function (frm) {
@@ -613,7 +608,6 @@ frappe.ui.form.on("Payment Entry", {
 			frm,
 			frm.doc.paid_from,
 			"paid_from_account_currency",
-			"paid_from_account_balance",
 			function (frm) {
 				if (frm.doc.payment_type == "Pay") {
 					frm.events.paid_amount(frm);
@@ -632,7 +626,6 @@ frappe.ui.form.on("Payment Entry", {
 			frm,
 			frm.doc.paid_to,
 			"paid_to_account_currency",
-			"paid_to_account_balance",
 			function (frm) {
 				if (frm.doc.payment_type == "Receive") {
 					if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency) {
@@ -649,13 +642,7 @@ frappe.ui.form.on("Payment Entry", {
 		);
 	},
 
-	set_account_currency_and_balance: function (
-		frm,
-		account,
-		currency_field,
-		balance_field,
-		callback_function
-	) {
+	set_account_currency_and_balance: function (frm, account, currency_field, callback_function) {
 		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 		if (frm.doc.posting_date && account) {
 			frappe.call({
@@ -670,8 +657,6 @@ frappe.ui.form.on("Payment Entry", {
 						frappe.run_serially([
 							() => frm.set_value(currency_field, r.message["account_currency"]),
 							() => {
-								frm.set_value(balance_field, r.message["account_balance"]);
-
 								if (
 									frm.doc.payment_type == "Receive" &&
 									currency_field == "paid_to_account_currency"
@@ -725,31 +710,12 @@ frappe.ui.form.on("Payment Entry", {
 		if (!frm.doc.paid_from_account_currency || !frm.doc.company) return;
 		let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 
-		if (frm.doc.paid_from_account_currency == company_currency) {
-			frm.set_value("source_exchange_rate", 1);
-		} else if (frm.doc.paid_from) {
-			if (["Internal Transfer", "Pay"].includes(frm.doc.payment_type)) {
-				let company_currency = frappe.get_doc(":Company", frm.doc.company)?.default_currency;
-				frappe.call({
-					method: "erpnext.setup.utils.get_exchange_rate",
-					args: {
-						from_currency: frm.doc.paid_from_account_currency,
-						to_currency: company_currency,
-						transaction_date: frm.doc.posting_date,
-					},
-					callback: function (r, rt) {
-						frm.set_value("source_exchange_rate", r.message);
-					},
-				});
-			} else {
-				frm.events.set_current_exchange_rate(
-					frm,
-					"source_exchange_rate",
-					frm.doc.paid_from_account_currency,
-					company_currency
-				);
-			}
-		}
+		frm.events.set_current_exchange_rate(
+			frm,
+			"source_exchange_rate",
+			frm.doc.paid_from_account_currency,
+			company_currency
+		);
 	},
 
 	paid_to_account_currency: function (frm) {
@@ -781,49 +747,24 @@ frappe.ui.form.on("Payment Entry", {
 
 	posting_date: function (frm) {
 		frm.events.paid_from_account_currency(frm);
+		frm.events.paid_to_account_currency(frm);
 	},
 
 	source_exchange_rate: function (frm) {
-		let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
-		if (frm.doc.paid_amount) {
-			frm.set_value("base_paid_amount", flt(frm.doc.paid_amount) * flt(frm.doc.source_exchange_rate));
-			// target exchange rate should always be same as source if both account currencies is same
-			if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency) {
-				frm.set_value("target_exchange_rate", frm.doc.source_exchange_rate);
-				frm.set_value("base_received_amount", frm.doc.base_paid_amount);
-			} else if (company_currency == frm.doc.paid_to_account_currency) {
-				frm.set_value("received_amount", frm.doc.base_paid_amount);
-				frm.set_value("base_received_amount", frm.doc.base_paid_amount);
-			}
-
-			// set_unallocated_amount is called by below method,
-			// no need trigger separately
-			frm.events.set_total_allocated_amount(frm);
-		}
-
-		// Make read only if Accounts Settings doesn't allow stale rates
-		frm.set_df_property("source_exchange_rate", "read_only", erpnext.stale_rate_allowed() ? 0 : 1);
-	},
-
-	target_exchange_rate: function (frm) {
 		frm.set_paid_amount_based_on_received_amount = true;
 		let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 
-		if (frm.doc.received_amount) {
-			frm.set_value(
-				"base_received_amount",
-				flt(frm.doc.received_amount) * flt(frm.doc.target_exchange_rate)
-			);
+		if (frm.doc.base_received_amount && frm.doc.source_exchange_rate) {
+			frm.set_value("base_paid_amount", frm.doc.base_received_amount);
 
-			if (
-				!frm.doc.source_exchange_rate &&
-				frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency
-			) {
-				frm.set_value("source_exchange_rate", frm.doc.target_exchange_rate);
-				frm.set_value("base_paid_amount", frm.doc.base_received_amount);
-			} else if (company_currency == frm.doc.paid_from_account_currency) {
-				frm.set_value("paid_amount", frm.doc.base_received_amount);
-				frm.set_value("base_paid_amount", frm.doc.base_received_amount);
+			// target exchange rate should always be same as source if both account currencies is same
+			if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency) {
+				frm.set_value("target_exchange_rate", frm.doc.source_exchange_rate);
+			} else {
+				frm.set_value(
+					"paid_amount",
+					flt(frm.doc.base_paid_amount) / flt(frm.doc.source_exchange_rate)
+				);
 			}
 
 			// set_unallocated_amount is called by below method,
@@ -833,6 +774,32 @@ frappe.ui.form.on("Payment Entry", {
 		frm.set_paid_amount_based_on_received_amount = false;
 
 		// Make read only if Accounts Settings doesn't allow stale rates
+		frm.set_df_property("source_exchange_rate", "read_only", erpnext.stale_rate_allowed() ? 0 : 1);
+	},
+
+	target_exchange_rate: function (frm) {
+		let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
+
+		if (frm.doc.base_paid_amount && frm.doc.target_exchange_rate) {
+			frm.set_value("base_received_amount", frm.doc.base_paid_amount);
+			if (
+				!frm.doc.source_exchange_rate &&
+				frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency
+			) {
+				frm.set_value("source_exchange_rate", frm.doc.target_exchange_rate);
+			} else {
+				frm.set_value(
+					"received_amount",
+					flt(frm.doc.base_received_amount) / flt(frm.doc.target_exchange_rate)
+				);
+			}
+
+			// set_unallocated_amount is called by below method,
+			// no need trigger separately
+			frm.events.set_total_allocated_amount(frm);
+		}
+
+		// Make read only if Accounts Settings doesn't allow stale rates
 		frm.set_df_property("target_exchange_rate", "read_only", erpnext.stale_rate_allowed() ? 0 : 1);
 	},
 
@@ -840,11 +807,14 @@ frappe.ui.form.on("Payment Entry", {
 		frm.set_value("base_paid_amount", flt(frm.doc.paid_amount) * flt(frm.doc.source_exchange_rate));
 		let company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 		if (!frm.doc.received_amount) {
-			if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency) {
-				frm.set_value("received_amount", frm.doc.paid_amount);
-			} else if (company_currency == frm.doc.paid_to_account_currency) {
+			frm.set_value("base_received_amount", frm.doc.base_paid_amount);
+			if (company_currency == frm.doc.paid_to_account_currency) {
 				frm.set_value("received_amount", frm.doc.base_paid_amount);
-				frm.set_value("base_received_amount", frm.doc.base_paid_amount);
+			} else if (frm.doc.target_exchange_rate) {
+				frm.set_value(
+					"received_amount",
+					flt(frm.doc.base_paid_amount) / flt(frm.doc.target_exchange_rate)
+				);
 			}
 		}
 		frm.trigger("reset_received_amount");
@@ -861,15 +831,14 @@ frappe.ui.form.on("Payment Entry", {
 		);
 
 		if (!frm.doc.paid_amount) {
-			if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency) {
-				frm.set_value("paid_amount", frm.doc.received_amount);
-				if (frm.doc.target_exchange_rate) {
-					frm.set_value("source_exchange_rate", frm.doc.target_exchange_rate);
-				}
-				frm.set_value("base_paid_amount", frm.doc.base_received_amount);
-			} else if (company_currency == frm.doc.paid_from_account_currency) {
+			frm.set_value("base_paid_amount", frm.doc.base_received_amount);
+			if (company_currency == frm.doc.paid_from_account_currency) {
 				frm.set_value("paid_amount", frm.doc.base_received_amount);
-				frm.set_value("base_paid_amount", frm.doc.base_received_amount);
+			} else if (frm.doc.source_exchange_rate) {
+				frm.set_value(
+					"paid_amount",
+					flt(frm.doc.base_received_amount) / flt(frm.doc.source_exchange_rate)
+				);
 			}
 		}
 
@@ -1070,7 +1039,7 @@ frappe.ui.form.on("Payment Entry", {
 						c.allocated_amount = d.allocated_amount;
 						c.account = d.account;
 
-						if (!in_list(frm.events.get_order_doctypes(frm), d.voucher_type)) {
+						if (!frm.events.get_order_doctypes(frm).includes(d.voucher_type)) {
 							if (flt(d.outstanding_amount) > 0)
 								total_positive_outstanding += flt(d.outstanding_amount);
 							else total_negative_outstanding += Math.abs(flt(d.outstanding_amount));
@@ -1086,7 +1055,7 @@ frappe.ui.form.on("Payment Entry", {
 						} else {
 							c.exchange_rate = 1;
 						}
-						if (in_list(frm.events.get_invoice_doctypes(frm), d.reference_doctype)) {
+						if (frm.events.get_invoice_doctypes(frm).includes(d.reference_doctype)) {
 							c.due_date = d.due_date;
 						}
 					});
@@ -1493,7 +1462,6 @@ frappe.ui.form.on("Payment Entry", {
 		$.each(frm.doc["taxes"] || [], function (i, tax) {
 			frm.events.validate_taxes_and_charges(tax);
 			frm.events.validate_inclusive_tax(tax);
-			tax.item_wise_tax_detail = {};
 			let tax_fields = [
 				"total",
 				"tax_fraction_for_current_item",
@@ -1734,37 +1702,6 @@ frappe.ui.form.on("Payment Entry", {
 		return current_tax_amount;
 	},
 
-	cost_center: function (frm) {
-		if (frm.doc.posting_date && (frm.doc.paid_from || frm.doc.paid_to)) {
-			return frappe.call({
-				method: "erpnext.accounts.doctype.payment_entry.payment_entry.get_party_and_account_balance",
-				args: {
-					company: frm.doc.company,
-					date: frm.doc.posting_date,
-					paid_from: frm.doc.paid_from,
-					paid_to: frm.doc.paid_to,
-					ptype: frm.doc.party_type,
-					pty: frm.doc.party,
-					cost_center: frm.doc.cost_center,
-				},
-				callback: function (r, rt) {
-					if (r.message) {
-						frappe.run_serially([
-							() => {
-								frm.set_value(
-									"paid_from_account_balance",
-									r.message.paid_from_account_balance
-								);
-								frm.set_value("paid_to_account_balance", r.message.paid_to_account_balance);
-								frm.set_value("party_balance", r.message.party_balance);
-							},
-						]);
-					}
-				},
-			});
-		}
-	},
-
 	after_save: function (frm) {
 		const { matched_payment_requests } = frappe.last_response;
 		if (!matched_payment_requests) return;
@@ -1787,6 +1724,35 @@ frappe.ui.form.on("Payment Entry", {
 					});
 				},
 			},
+		});
+	},
+
+	before_cancel: function (frm) {
+		return new Promise((resolve, reject) => {
+			frappe.call({
+				method: "erpnext.accounts.doctype.payment_entry.payment_entry.get_linked_bank_transactions",
+				args: { payment_entry: frm.doc.name },
+				callback: function (r) {
+					const linked = r.message || [];
+					if (!linked.length) {
+						resolve();
+						return;
+					}
+					const bt_links = linked
+						.map((name) => frappe.utils.get_form_link("Bank Transaction", name, true))
+						.join(", ");
+					frappe.confirm(
+						__(
+							"This Payment Entry is reconciled with {0}. Cancelling will automatically unreconcile it. Do you want to proceed?",
+							[bt_links]
+						),
+						() => resolve(),
+						() => reject(),
+						__("Yes"),
+						__("No")
+					);
+				},
+			});
 		});
 	},
 });

@@ -8,10 +8,12 @@
   "invoice_number",
   "party_type",
   "party",
+  "party_name",
   "temporary_opening_account",
   "column_break_3",
   "posting_date",
   "due_date",
+  "supplier_invoice_date",
   "section_break_5",
   "item_name",
   "outstanding_amount",
@@ -34,9 +36,9 @@
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
-   "label": "Party",
-   "options": "party_type",
-   "reqd": 1
+   "label": "Party ID",
+   "mandatory_depends_on": "eval: !parent.create_missing_party",
+   "options": "party_type"
   },
   {
    "fieldname": "temporary_opening_account",
@@ -111,18 +113,31 @@
    "fieldname": "invoice_number",
    "fieldtype": "Data",
    "label": "Invoice Number"
+  },
+  {
+   "depends_on": "eval: parent.invoice_type == \"Purchase\"",
+   "fieldname": "supplier_invoice_date",
+   "fieldtype": "Date",
+   "label": "Supplier Invoice Date"
+  },
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Party Name"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2022-03-21 19:31:45.382656",
+ "modified": "2026-03-20 02:11:42.023575",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Opening Invoice Creation Tool Item",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

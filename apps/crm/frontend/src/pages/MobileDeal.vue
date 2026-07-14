@@ -129,7 +129,7 @@
                       class="px-2 pb-2.5"
                       :class="[i == 0 ? 'pt-5' : 'pt-2.5']"
                     >
-                      <CollapsibleSection :opened="contact.opened">
+                      <Section :opened="contact.opened">
                         <template #header="{ opened, toggle }">
                           <div
                             class="flex cursor-pointer items-center justify-between gap-2 pr-1 text-base leading-5 text-ink-gray-7"
@@ -195,7 +195,7 @@
                             {{ contact.mobile_no }}
                           </div>
                         </div>
-                      </CollapsibleSection>
+                      </Section>
                     </div>
                     <div
                       v-if="i != section.contacts.length - 1"
@@ -287,7 +287,7 @@ import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import AssignTo from '@/components/AssignTo.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
-import CollapsibleSection from '@/components/CollapsibleSection.vue'
+import Section from '@/components/Section.vue'
 import Link from '@/components/Controls/Link.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
 import SLASection from '@/components/SLASection.vue'
@@ -299,11 +299,9 @@ import { globalStore } from '@/stores/global'
 import { statusesStore } from '@/stores/statuses'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
-import {
-  whatsappEnabled,
-  callEnabled,
-  isMobileView,
-} from '@/composables/settings'
+import { isMobileView } from '@/composables/settings'
+import { whatsappEnabled } from '@/composables/whatsapp'
+import { callEnabled } from '@/composables/telephony'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
 import {
   createResource,
@@ -322,6 +320,7 @@ const { brand } = getSettings()
 const { $dialog, $socket } = globalStore()
 const { statusOptions, getDealStatus } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Deal')
+
 const route = useRoute()
 const router = useRouter()
 
@@ -389,7 +388,7 @@ const showOrganizationModal = ref(false)
 const _organization = ref({})
 
 const breadcrumbs = computed(() => {
-  let items = [{ label: __('Opportunities'), route: { name: 'Deals' } }]
+  let items = [{ label: __('Deals'), route: { name: 'Deals' } }]
 
   if (route.query.view || route.query.viewType) {
     let view = getView(route.query.view, route.query.viewType, 'CRM Deal')

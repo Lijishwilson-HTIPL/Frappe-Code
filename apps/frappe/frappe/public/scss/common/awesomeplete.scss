@@ -1,5 +1,7 @@
 // REDESIGN-TODO: Review
 .awesomplete {
+	position: relative;
+
 	[hidden] {
 		display: none;
 	}
@@ -40,6 +42,9 @@
 
 		& > li,
 		& > [role="option"] {
+			&:has(p[title="filter_description__link_option"]) {
+				cursor: default;
+			}
 			cursor: pointer;
 			@include get_textstyle("sm", "regular");
 			padding: var(--padding-sm);

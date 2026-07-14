@@ -114,9 +114,8 @@ frappe.prompt = function (fields, callback, title, primary_label) {
 	return d;
 };
 
-frappe.msgprint = function (msg, title, is_minimizable) {
+frappe.msgprint = function (msg, title, is_minimizable, re_route) {
 	if (!msg) return;
-
 	let data;
 	if ($.isPlainObject(msg)) {
 		data = msg;
@@ -125,7 +124,7 @@ frappe.msgprint = function (msg, title, is_minimizable) {
 		if (typeof msg === "string" && msg.substr(0, 1) === "{") {
 			data = JSON.parse(msg);
 		} else {
-			data = { message: msg, title: title };
+			data = { message: msg, title: title, re_route: re_route };
 		}
 	}
 
@@ -176,12 +175,21 @@ frappe.msgprint = function (msg, title, is_minimizable) {
 		return;
 	}
 
+	if (frappe.msg_dialog && data.re_route) {
+		frappe.msg_dialog.custom_onhide = function () {
+			frappe.route_flags.replace_route = true;
+			let prev_route = frappe.get_prev_route();
+			if (prev_route.length == 0) frappe.set_route("");
+			frappe.set_route(prev_route);
+		};
+	}
 	if (!frappe.msg_dialog) {
 		frappe.msg_dialog = new frappe.ui.Dialog({
 			title: __("Message"),
 			onhide: function () {
 				if (frappe.msg_dialog.custom_onhide) {
 					frappe.msg_dialog.custom_onhide();
+					delete frappe.msg_dialog.custom_onhide;
 				}
 				frappe.msg_dialog.msg_area.empty();
 			},
@@ -207,9 +215,7 @@ frappe.msgprint = function (msg, title, is_minimizable) {
 			data.primary_action.action = () => {
 				frappe.call({
 					method: data.primary_action.server_action,
-					args: {
-						args: data.primary_action.args,
-					},
+					args: data.primary_action.args,
 					callback() {
 						if (data.primary_action.hide_on_success) {
 							frappe.hide_msgprint();
@@ -443,7 +449,7 @@ frappe.show_alert = frappe.toast = function (message, seconds = 7, actions = {})
 				<div class="alert-subtitle">${message.subtitle || ""}</div>
 			</div>
 			<div class="alert-body" style="display: none"></div>
-			<a class="close">${frappe.utils.icon("close-alt")}</a>
+			<a class="close">${frappe.utils.icon("x")}</a>
 		</div>
 	`);
 

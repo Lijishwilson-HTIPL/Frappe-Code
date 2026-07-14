@@ -31,7 +31,7 @@
       </div>
       <div v-for="view in allViews" :key="view.label">
         <div class="mx-2 my-1.5" />
-        <CollapsibleSection
+        <Section
           :label="view.name"
           :hideLabel="view.hideLabel"
           :opened="view.opened"
@@ -66,11 +66,15 @@
               class="mx-2 my-[1.5px]"
             />
           </nav>
-        </CollapsibleSection>
+        </Section>
       </div>
     </div>
     <div class="m-2 flex flex-col gap-1">
       <div class="flex flex-col gap-2 mb-1">
+        <SalesHierarchyBanner
+          v-if="showSalesHierarchyBanner"
+          :isSidebarCollapsed="isSidebarCollapsed"
+        />
         <SignupBanner
           v-if="isDemoSite"
           :isSidebarCollapsed="isSidebarCollapsed"
@@ -151,14 +155,13 @@
 <script setup>
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
-import LucideRoute from '~icons/lucide/route'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import StepsIcon from '@/components/Icons/StepsIcon.vue'
-import CollapsibleSection from '@/components/CollapsibleSection.vue'
+import Section from '@/components/Section.vue'
 import PinIcon from '@/components/Icons/PinIcon.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
 import SquareAsterisk from '@/components/Icons/SquareAsterisk.vue'
@@ -168,7 +171,6 @@ import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import OrganizationsIcon from '@/components/Icons/OrganizationsIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
-import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CollapseSidebar from '@/components/Icons/CollapseSidebar.vue'
 import NotificationsIcon from '@/components/Icons/NotificationsIcon.vue'
@@ -176,6 +178,7 @@ import HelpIcon from '@/components/Icons/HelpIcon.vue'
 import SidebarLink from '@/components/SidebarLink.vue'
 import Notifications from '@/components/Notifications.vue'
 import Settings from '@/components/Settings/Settings.vue'
+import SalesHierarchyBanner from '@/components/SalesHierarchyBanner.vue'
 import { viewsStore } from '@/stores/views'
 import {
   unreadNotificationsCount,
@@ -213,6 +216,7 @@ const isSidebarCollapsed = useStorage('isSidebarCollapsed', false)
 
 const isFCSite = ref(window.is_fc_site)
 const isDemoSite = ref(window.is_demo_site)
+const showSalesHierarchyBanner = ref(!!window.show_sales_hierarchy_banner)
 
 const links = [
   {
@@ -221,17 +225,12 @@ const links = [
     to: 'Dashboard',
   },
   {
-    label: 'Leads Journey',
-    icon: LucideRoute,
-    to: 'LeadsJourney',
-  },
-  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
   },
   {
-    label: 'Opportunities',
+    label: 'Deals',
     icon: DealsIcon,
     to: 'Deals',
   },
@@ -241,7 +240,7 @@ const links = [
     to: 'Contacts',
   },
   {
-    label: 'Accounts',
+    label: 'Organizations',
     icon: OrganizationsIcon,
     to: 'Organizations',
   },
@@ -254,11 +253,6 @@ const links = [
     label: 'Tasks',
     icon: TaskIcon,
     to: 'Tasks',
-  },
-  {
-    label: 'Calendar',
-    icon: CalendarIcon,
-    to: 'Calendar',
   },
   {
     label: 'Call Logs',
@@ -578,9 +572,9 @@ const articles = ref([
     opened: false,
     subArticles: [
       { name: 'lead', title: __('Lead') },
-      { name: 'deal', title: __('Opportunity') },
+      { name: 'deal', title: __('Deal') },
       { name: 'contact', title: __('Contact') },
-      { name: 'organization', title: __('Account') },
+      { name: 'organization', title: __('Organization') },
       { name: 'note', title: __('Note') },
       { name: 'task', title: __('Task') },
       { name: 'call-log', title: __('Call Log') },

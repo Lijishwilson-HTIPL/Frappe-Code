@@ -5,13 +5,14 @@ from frappe import _
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.desk.form.assign_to import set_status
 from frappe.model import no_value_fields
+from frappe.model.delete_doc import get_dynamic_linked_docs, get_linked_docs
 from frappe.model.document import get_controller
 from frappe.utils import make_filter_tuple
 from pypika import Criterion
 
 from crm.api.views import get_views
 from crm.fcrm.doctype.crm_form_script.crm_form_script import get_form_script
-from crm.utils import get_dynamic_linked_docs, get_linked_docs, is_frappe_version
+from crm.utils import is_frappe_version
 
 COUNT_NAME = (
 	{"COUNT": "name", "as": "total_count"}
@@ -399,23 +400,16 @@ def get_data(
 				rows.append(field)
 
 		for kc in kanban_columns:
-			# Start with base filters
-			column_filters = []
-
-			# Convert and add the main filters first
-			if filters:
-				base_filters = convert_filter_to_tuple(doctype, filters)
-				column_filters.extend(base_filters)
-
-			# Add the column-specific filter
-			if column_field and kc.get("name"):
-				column_filters.append([doctype, column_field, "=", kc.get("name")])
-
+			column_filters = {column_field: kc.get("name")}
 			order = kc.get("order")
-			if kc.get("delete"):
+			if (column_field in filters and filters.get(column_field) != kc.get("name")) or kc.get("delete"):
 				column_data = []
 			else:
-				page_length = kc.get("page_length", 20)
+				column_filters.update(filters.copy())
+				page_length = 20
+
+				if kc.get("page_length"):
+					page_length = kc.get("page_length")
 
 				if order:
 					column_data = get_records_based_on_order(
@@ -425,19 +419,25 @@ def get_data(
 					column_data = frappe.get_list(
 						doctype,
 						fields=rows,
-						filters=column_filters,
+						filters=convert_filter_to_tuple(doctype, column_filters),
 						order_by=order_by,
 						page_length=page_length,
 					)
 
+				new_filters = filters.copy()
+				new_filters.update({column_field: kc.get("name")})
+
 				all_count = frappe.get_list(
 					doctype,
-					filters=column_filters,
+					filters=convert_filter_to_tuple(doctype, new_filters),
 					fields=[COUNT_NAME],
 				)[0].total_count
 
 				kc["all_count"] = all_count
 				kc["count"] = len(column_data)
+
+				for d in column_data:
+					getCounts(d, doctype)
 
 			if order:
 				column_data = sorted(
@@ -605,7 +605,7 @@ def remove_assignments(doctype: str, name: str, assignees: str | list, ignore_pe
 
 
 @frappe.whitelist()
-def get_assigned_users(doctype: str, name: str, default_assigned_to: str | None = None):
+def get_assigned_users(doctype: str, name: str | int, default_assigned_to: str | None = None):
 	assigned_users = frappe.get_all(
 		"ToDo",
 		fields=["allocated_to"],
@@ -733,7 +733,6 @@ def remove_doc_link(doctype, docname):
 				"reference_doctype": "",
 				"reference_name": "",
 			}
-
 			if linked_doc_data.get("notification_type_doctype") == linked_doc_data.get("reference_doctype"):
 				delete_references.update(delete_notification_type)
 
@@ -784,7 +783,6 @@ def remove_linked_doc_reference(items: str | list, remove_contact: bool = False,
 				remove_contact_link(item["doctype"], item["docname"])
 			else:
 				remove_doc_link(item["doctype"], item["docname"])
-
 			if delete:
 				frappe.delete_doc(item["doctype"], item["docname"])
 		except (frappe.DoesNotExistError, frappe.ValidationError):

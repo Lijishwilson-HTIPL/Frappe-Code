@@ -2,10 +2,11 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestBankTransactionFees(FrappeTestCase):
+class TestBankTransactionFees(ERPNextTestSuite):
 	def test_included_fee_throws(self):
 		"""A fee that's part of a withdrawal cannot be bigger than the
 		withdrawal itself."""

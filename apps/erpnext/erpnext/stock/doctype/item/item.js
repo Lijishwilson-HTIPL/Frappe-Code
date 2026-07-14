@@ -16,11 +16,11 @@ frappe.ui.form.on("Item", {
 				let msg = __(
 					"Changing the valuation method to Moving Average will affect new transactions. If backdated entries are added, earlier FIFO-based entries will be reposted, which may change closing balances."
 				);
-				msg += "<br>";
+				msg += "<br><br>";
 				msg += __(
 					"Also you can't switch back to FIFO after setting the valuation method to Moving Average for this item."
 				);
-				msg += "<br>";
+				msg += "<br><br>";
 				msg += __("Do you want to change valuation method?");
 
 				frappe.confirm(
@@ -73,6 +73,7 @@ frappe.ui.form.on("Item", {
 			},
 		};
 	},
+
 	onload: function (frm) {
 		erpnext.item.setup_queries(frm);
 		if (frm.doc.variant_of) {
@@ -84,7 +85,64 @@ frappe.ui.form.on("Item", {
 		}
 	},
 
+	toggle_has_serial_batch_fields(frm) {
+		let hide_fields = cint(frappe.user_defaults?.enable_serial_and_batch_no_for_item) === 0 ? 1 : 0;
+
+		frm.toggle_display(
+			[
+				"serial_no_series",
+				"batch_number_series",
+				"create_new_batch",
+				"has_expiry_date",
+				"retain_sample",
+			],
+			!hide_fields
+		);
+		frm.toggle_enable(["has_serial_no", "has_batch_no"], !hide_fields);
+
+		if (hide_fields) {
+			let header = frm.fields_dict["serial_nos_and_batches"].wrapper;
+			let wrapper = header.find(".section-head.collapsible");
+
+			render_serial_batch_banner(wrapper);
+
+			if (!wrapper.data("banner-handler-added")) {
+				wrapper.data("banner-handler-added", true);
+
+				wrapper.on("click", function () {
+					setTimeout(() => {
+						let isCollapsed = $(this).hasClass("collapsed");
+
+						wrapper.find(".custom-serial-batch-banner").toggleClass("hidden", isCollapsed);
+					}, 10);
+				});
+			}
+
+			// Button action
+			wrapper.find(".go-to-settings").on("click", function () {
+				frappe.set_route("Form", "Stock Settings");
+			});
+		}
+	},
+
 	refresh: function (frm) {
+		frm.trigger("toggle_has_serial_batch_fields");
+
+		if (frappe.defaults.get_default("item_naming_by") != "Naming Series" || frm.doc.variant_of) {
+			frm.toggle_display("naming_series", false);
+		} else {
+			erpnext.toggle_naming_series();
+		}
+
+		frm.toggle_display(["standard_rate"], frappe.model.can_create("Item Price"));
+
+		if (frm.is_new()) {
+			frm.toggle_display("disabled", false);
+			return;
+		}
+
+		frm.toggle_display("disabled", true);
+
 		if (frm.doc.is_stock_item) {
 			frm.add_custom_button(
 				__("Stock Balance"),
@@ -116,6 +174,11 @@ frappe.ui.form.on("Item", {
 				},
 				__("View")
 			);
+
+			frm.toggle_display(
+				["opening_stock"],
+				frappe.model.can_create("Stock Entry") && frappe.model.can_write("Stock Entry")
+			);
 		}
 
 		if (frm.doc.is_fixed_asset) {
@@ -129,7 +192,7 @@ frappe.ui.form.on("Item", {
 		if (frm.doc.has_variants) {
 			frm.set_intro(
 				__(
-					"This Item is a Template and cannot be used in transactions. Item attributes will be copied over into the variants unless 'No Copy' is set"
+					"This Item is a Template and cannot be used in transactions.<br>All fields present in the 'Copy Fields to Variant' table in Item Variant Settings will be copied to its variant items."
 				),
 				true
 			);
@@ -182,8 +245,6 @@ frappe.ui.form.on("Item", {
 					__("Create")
 				);
 			}
-
-			// frm.page.set_inner_btn_group_as_primary(__('Create'));
 		}
 		if (frm.doc.variant_of) {
 			frm.set_intro(
@@ -194,18 +255,13 @@ frappe.ui.form.on("Item", {
 			);
 		}
 
-		if (frappe.defaults.get_default("item_naming_by") != "Naming Series" || frm.doc.variant_of) {
-			frm.toggle_display("naming_series", false);
-		} else {
-			erpnext.toggle_naming_series();
-		}
-
-		erpnext.item.edit_prices_button(frm);
 		erpnext.item.toggle_attributes(frm);
 
 		if (!frm.doc.is_fixed_asset) {
 			erpnext.item.make_dashboard(frm);
 		}
+
+		erpnext.item.render_item_prices(frm);
 
 		frm.add_custom_button(__("Duplicate"), function () {
 			var new_item = frappe.model.copy_doc(frm.doc);
@@ -221,18 +277,16 @@ frappe.ui.form.on("Item", {
 
 		const stock_exists = frm.doc.__onload && frm.doc.__onload.stock_exists ? 1 : 0;
 
-		["is_stock_item", "has_serial_no", "has_batch_no", "has_variants"].forEach((fieldname) => {
+		[
+			"is_stock_item",
+			"is_customer_provided_item",
+			"has_serial_no",
+			"has_batch_no",
+			"has_variants",
+		].forEach((fieldname) => {
 			frm.set_df_property(fieldname, "read_only", stock_exists);
 		});
 		frm.set_df_property("is_fixed_asset", "read_only", frm.doc.__onload?.asset_exists ? 1 : 0);
-		frm.toggle_reqd("customer", frm.doc.is_customer_provided_item ? 1 : 0);
-		frm.set_query("item_group", () => {
-			return {
-				filters: {
-					is_group: 0,
-				},
-			};
-		});
 	},
 
 	validate: function (frm) {
@@ -241,10 +295,6 @@ frappe.ui.form.on("Item", {
 
 	image: function () {
 		refresh_field("image_view");
-	},
-
-	is_customer_provided_item: function (frm) {
-		frm.toggle_reqd("customer", frm.doc.is_customer_provided_item ? 1 : 0);
 	},
 
 	is_fixed_asset: function (frm) {
@@ -302,6 +352,14 @@ frappe.ui.form.on("Item Reorder", {
 		var type = frm.doc.default_material_request_type;
 		row.material_request_type = type == "Material Transfer" ? "Transfer" : type;
 	},
+
+	warehouse_group(frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+
+		if (!row.warehouse_group) {
+			frappe.throw(__("Please select the Warehouse first"));
+		}
+	},
 });
 
 frappe.ui.form.on("Item Customer Detail", {
@@ -333,6 +391,63 @@ var set_customer_group = function (frm, cdt, cdn) {
 	return true;
 };
 
+function render_serial_batch_banner(wrapper) {
+	let hiddenClass = "";
+	if (wrapper.hasClass("collapsed")) {
+		hiddenClass = "hidden";
+	}
+
+	wrapper.find(".custom-serial-batch-banner").remove();
+
+	let banner_html = `
+		<div class="custom-serial-batch-banner ${hiddenClass}">
+			<div class="banner-content">
+				<span class="banner-icon">${frappe.utils.icon("solid-warning", "lg", "", "padding-bottom:2px")}</span>
+				<span class="banner-text">
+					${__("To use Serial / Batch feature, enable {0} in {1}.", [
+						`<b>${__("Activate Serial / Batch No for Item")}</b>`,
+						`<a class="go-to-settings" style="text-decoration: underline;">${__(
+							"Stock Settings"
+						)}</a>`,
+					])}
+				</span>
+			</div>
+		</div>
+		<style>
+			.custom-serial-batch-banner {
+				background-color: var(--amber-50);
+				border: 1px solid var(--amber-50);
+				border-radius: 8px;
+				padding: 12px 16px;
+				margin-top: 16px;
+			}
+
+			.custom-serial-batch-banner .banner-content {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+
+			.custom-serial-batch-banner .banner-icon {
+				font-size: 18px;
+			}
+
+			.custom-serial-batch-banner .banner-text {
+				flex: 1;
+				font-size: 14px;
+				color: var(--gray-800);
+			}
+
+			.custom-serial-batch-banner .btn {
+				white-space: nowrap;
+			}
+		</style>
+	`;
+
+	// Insert banner at top of section
+	wrapper.append(banner_html);
+}
+
 $.extend(erpnext.item, {
 	setup_queries: function (frm) {
 		frm.fields_dict["item_defaults"].grid.get_field("expense_account").get_query = function (
@@ -356,6 +471,17 @@ $.extend(erpnext.item, {
 			return {
 				query: "erpnext.controllers.queries.get_income_account",
 				filters: { company: row.company },
+			};
+		};
+
+		frm.fields_dict["item_defaults"].grid.get_field("default_inventory_account").get_query = function (
+			doc,
+			cdt,
+			cdn
+		) {
+			const row = locals[cdt][cdn];
+			return {
+				filters: { company: row.company, account_type: "Stock", is_group: 0 },
 			};
 		};
 
@@ -411,12 +537,6 @@ $.extend(erpnext.item, {
 			};
 		};
 
-		frm.fields_dict["item_group"].get_query = function (doc, cdt, cdn) {
-			return {
-				filters: [["Item Group", "docstatus", "!=", 2]],
-			};
-		};
-
 		frm.fields_dict["item_defaults"].grid.get_field("deferred_revenue_account").get_query = function (
 			doc,
 			cdt,
@@ -464,8 +584,12 @@ $.extend(erpnext.item, {
 			cdt,
 			cdn
 		) {
+			let row = locals[cdt][cdn];
 			return {
-				filters: { is_group: 1 },
+				query: "erpnext.stock.doctype.warehouse.warehouse.get_warehouses_for_reorder",
+				filters: {
+					warehouse: row.warehouse,
+				},
 			};
 		};
 
@@ -495,15 +619,41 @@ $.extend(erpnext.item, {
 				},
 			};
 		});
+
+		let fields = ["purchase_expense_account", "purchase_expense_contra_account", "default_cogs_account"];
+
+		fields.forEach((field) => {
+			frm.set_query(field, "item_defaults", (doc, cdt, cdn) => {
+				let row = locals[cdt][cdn];
+				return {
+					filters: {
+						company: row.company,
+						root_type: "Expense",
+						is_group: 0,
+					},
+				};
+			});
+		});
+
+		frm.set_query("default_inventory_account", "item_defaults", (doc, cdt, cdn) => {
+			let row = locals[cdt][cdn];
+			return {
+				filters: {
+					is_group: 0,
+					company: row.company,
+					account_type: "Stock",
+				},
+			};
+		});
 	},
 
 	make_dashboard: function (frm) {
 		if (frm.doc.__islocal) return;
 
-		// Show Stock Levels only if is_stock_item
 		if (frm.doc.is_stock_item) {
 			frappe.require("item-dashboard.bundle.js", function () {
-				const section = frm.dashboard.add_section("", __("Stock Levels"));
+				const section = frm.fields_dict["stock_levels_html"].$wrapper;
+
 				erpnext.item.item_dashboard = new erpnext.stock.ItemDashboard({
 					parent: section,
 					item_code: frm.doc.name,
@@ -516,14 +666,60 @@ $.extend(erpnext.item, {
 		}
 	},
 
-	edit_prices_button: function (frm) {
-		frm.add_custom_button(
-			__("Add / Edit Prices"),
-			function () {
-				frappe.set_route("List", "Item Price", { item_code: frm.doc.name });
-			},
-			__("Actions")
+	render_item_prices: function (frm) {
+		if (frm.doc.__islocal) return;
+		const requested_item = frm.doc.name;
+		const container = frm.fields_dict["prices_html"].$wrapper;
+
+		container.html(
+			`<div class="text-muted text-center" style="padding: 20px;">${__("Loading...")}</div>`
 		);
+
+		frappe.call({
+			method: "erpnext.stock.doctype.item.item.get_item_prices",
+			args: { item_code: requested_item },
+
+			callback: function (r) {
+				if (requested_item !== frm.doc.name) return;
+
+				if (!r.message) return;
+
+				const { prices, has_more } = r.message;
+
+				const html = frappe.render_template("item_prices", {
+					prices,
+					has_more,
+					item_code: requested_item,
+					stock_uom: frm.doc.stock_uom,
+				});
+
+				container.html(html);
+
+				container.find(".add-price-btn").on("click", () => {
+					const filters = {};
+					if (frm.doc.is_sales_item && !frm.doc.is_purchase_item) {
+						filters.selling = 1;
+					} else if (frm.doc.is_purchase_item && !frm.doc.is_sales_item) {
+						filters.buying = 1;
+					}
+					frappe.new_doc(
+						"Item Price",
+						{ item_code: requested_item, uom: frm.doc.stock_uom },
+						(dialog) => {
+							if (Object.keys(filters).length) {
+								dialog.fields_dict.price_list.get_query = () => ({ filters });
+							}
+						}
+					);
+				});
+
+				container.find(".price-row").on("click", function (e) {
+					if ($(e.target).is("a")) return;
+
+					frappe.set_route("Form", "Item Price", $(this).data("name"));
+				});
+			},
+		});
 	},
 
 	weight_to_validate: function (frm) {
@@ -581,11 +777,30 @@ $.extend(erpnext.item, {
 
 		function make_fields_from_attribute_values(attr_dict) {
 			let fields = [];
-			Object.keys(attr_dict).forEach((name, i) => {
+			let att_key = frm.doc.attributes.map((idx) => idx.attribute);
+			att_key.forEach((name, i) => {
 				if (i % 3 === 0) {
 					fields.push({ fieldtype: "Section Break" });
 				}
 				fields.push({ fieldtype: "Column Break", label: name });
+				fields.push({
+					fieldtype: "Data",
+					placeholder: "Search",
+					fieldname: `search_${frappe.scrub(name)}`,
+					onchange: function (e) {
+						let value = e.target.value;
+						let result = attr_dict[name].filter((attr_value) =>
+							attr_value.toString().toLowerCase().includes(value.toLowerCase())
+						);
+						attr_dict[name].forEach((attr_value) => {
+							if (result.includes(attr_value)) {
+								me.multiple_variant_dialog.set_df_property(attr_value, "hidden", 0);
+							} else {
+								me.multiple_variant_dialog.set_df_property(attr_value, "hidden", 1);
+							}
+						});
+					},
+				});
 				attr_dict[name].forEach((value) => {
 					fields.push({
 						fieldtype: "Check",
@@ -594,11 +809,10 @@ $.extend(erpnext.item, {
 						default: 0,
 						onchange: function () {
 							let selected_attributes = get_selected_attributes();
-							let lengths = [];
-							Object.keys(selected_attributes).map((key) => {
-								lengths.push(selected_attributes[key].length);
+							let lengths = Object.keys(selected_attributes).map((key) => {
+								return selected_attributes[key].length;
 							});
-							if (lengths.includes(0)) {
+							if (!lengths.length) {
 								me.multiple_variant_dialog.get_primary_btn().html(__("Create Variants"));
 								me.multiple_variant_dialog.disable_primary_action();
 							} else {
@@ -635,7 +849,7 @@ $.extend(erpnext.item, {
 						fieldtype: "HTML",
 						fieldname: "help",
 						options: `<label class="control-label">
-							${__("Select at least one value from each of the attributes.")}
+							${__("Select at least one attribute value.")}
 						</label>`,
 					},
 				]
@@ -679,6 +893,10 @@ $.extend(erpnext.item, {
 			me.multiple_variant_dialog.disable_primary_action();
 			me.multiple_variant_dialog.clear();
 			me.multiple_variant_dialog.show();
+			me.multiple_variant_dialog.$wrapper
+				.find("div[data-fieldname^='search_']")
+				.find(".clearfix")
+				.hide();
 		}
 
 		function get_selected_attributes() {
@@ -693,6 +911,9 @@ $.extend(erpnext.item, {
 						selected_attributes[attribute_name].push($(opt).attr("data-fieldname"));
 					}
 				});
+				if (!selected_attributes[attribute_name].length) {
+					delete selected_attributes[attribute_name];
+				}
 			});
 
 			return selected_attributes;
@@ -751,14 +972,18 @@ $.extend(erpnext.item, {
 
 			if (!row.disabled) {
 				if (row.numeric_values) {
-					fieldtype = "Float";
-					desc =
-						"Min Value: " +
-						row.from_range +
-						" , Max Value: " +
-						row.to_range +
-						", in Increments of: " +
-						row.increment;
+					const all_are_int =
+						flt(row.from_range) === cint(row.from_range) &&
+						flt(row.to_range) === cint(row.to_range) &&
+						flt(row.increment) === cint(row.increment);
+					fieldtype = all_are_int ? "Int" : "Float";
+					const df = { fieldtype };
+					const options = all_are_int ? { inline: 1 } : { always_show_decimals: true, inline: 1 };
+					desc = __("Min Value: {0}, Max Value: {1}, in Increments of: {2}", [
+						frappe.format(row.from_range, df, options),
+						frappe.format(row.to_range, df, options),
+						frappe.format(row.increment, df, options),
+					]);
 				} else {
 					fieldtype = "Data";
 					desc = "";
@@ -1003,9 +1228,9 @@ function open_form(frm, doctype, child_doctype, parentfield) {
 		let new_child_doc = frappe.model.add_child(new_doc, child_doctype, parentfield);
 		new_child_doc.item_code = frm.doc.name;
 		new_child_doc.item_name = frm.doc.item_name;
-		if (in_list(SALES_DOCTYPES, doctype) && frm.doc.sales_uom) {
+		if (SALES_DOCTYPES.includes(doctype) && frm.doc.sales_uom) {
 			new_child_doc.uom = frm.doc.sales_uom;
-		} else if (in_list(PURCHASE_DOCTYPES, doctype) && frm.doc.purchase_uom) {
+		} else if (PURCHASE_DOCTYPES.includes(doctype) && frm.doc.purchase_uom) {
 			new_child_doc.uom = frm.doc.purchase_uom;
 		} else {
 			new_child_doc.uom = frm.doc.stock_uom;

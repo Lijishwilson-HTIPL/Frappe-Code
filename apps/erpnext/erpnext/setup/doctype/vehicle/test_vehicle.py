@@ -1,15 +1,14 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
 from frappe.utils import random_string
 
-# test_records = frappe.get_test_records('Vehicle')
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestVehicle(unittest.TestCase):
+class TestVehicle(ERPNextTestSuite):
 	def test_make_vehicle(self):
 		vehicle = frappe.get_doc(
 			{

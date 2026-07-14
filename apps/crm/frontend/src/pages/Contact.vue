@@ -194,8 +194,7 @@ import { globalStore } from '@/stores/global.js'
 import { usersStore } from '@/stores/users.js'
 import { organizationsStore } from '@/stores/organizations.js'
 import { statusesStore } from '@/stores/statuses'
-import { showAddressModal, addressProps } from '@/composables/modals'
-import { callEnabled } from '@/composables/settings'
+import { callEnabled } from '@/composables/telephony'
 import {
   Breadcrumbs,
   Avatar,
@@ -207,6 +206,8 @@ import {
   Dropdown,
   toast,
 } from 'frappe-ui'
+import { useDoctypeModal } from '@/composables/doctypeModal'
+import { useTelemetry } from 'frappe-ui/frappe'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '@/components/ListViews/EmptyState.vue'
@@ -218,6 +219,7 @@ const { getUser } = usersStore()
 const { getOrganization } = organizationsStore()
 const { getDealStatus } = statusesStore()
 const { doctypeMeta } = getMeta('Contact')
+const { capture } = useTelemetry()
 
 const props = defineProps({
   contactId: { type: String, required: true },
@@ -296,7 +298,7 @@ function changeContactImage(file) {
 const tabIndex = ref(0)
 const tabs = [
   {
-    label: 'Opportunities',
+    label: 'Deals',
     icon: DealsIcon,
     count: computed(() => deals.data?.length),
   },
@@ -417,10 +419,10 @@ const parsedSections = computed(() => {
           return {
             ...field,
             create: (_value, close) => {
-              openAddressModal()
+              showAddressModal()
               close?.()
             },
-            edit: (address) => openAddressModal(address),
+            edit: (address) => showAddressModal(address),
           }
         }
         return field
@@ -431,7 +433,7 @@ const parsedSections = computed(() => {
 
 const fieldLabelMap = {
   mobile_no: __('Mobile Number'),
-  company_name: __('Account'),
+  company_name: __('Organization'),
 }
 
 const fieldPlaceholderMap = {
@@ -517,7 +519,7 @@ function getDealRowObject(deal) {
 
 const dealColumns = [
   {
-    label: __('Account'),
+    label: __('Organization'),
     key: 'organization',
     width: '11rem',
   },
@@ -554,12 +556,20 @@ const dealColumns = [
   },
 ]
 
-function openAddressModal(_address) {
-  showAddressModal.value = true
-  addressProps.value = {
+const { showModal } = useDoctypeModal()
+
+function showAddressModal(_address) {
+  showModal({
+    name: _address || null,
     doctype: 'Address',
-    address: _address,
-  }
+    callbacks: {
+      afterInsert: (d) => {
+        capture('address_created')
+        contact.doc.address = d.name
+        contact.save.submit()
+      },
+    },
+  })
 }
 
 // Setup custom actions from Form Scripts

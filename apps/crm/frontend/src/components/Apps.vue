@@ -54,7 +54,14 @@ const apps = createResource({
   cache: 'apps',
   auto: true,
   transform: (data) => {
-    let _apps = []
+    let _apps = [
+      {
+        name: 'frappe',
+        logo: '/assets/frappe/images/framework.png',
+        title: __('Desk'),
+        route: '/app',
+      },
+    ]
     data.map((app) => {
       if (app.name === 'crm') return
       _apps.push({

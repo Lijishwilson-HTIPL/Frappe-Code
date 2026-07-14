@@ -1,14 +1,14 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
 
 from erpnext.accounts.doctype.journal_entry.test_journal_entry import make_journal_entry
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestFinanceBook(unittest.TestCase):
+class TestFinanceBook(ERPNextTestSuite):
 	def test_finance_book(self):
 		finance_book = create_finance_book()
 

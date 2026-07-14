@@ -4,7 +4,7 @@
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h3 class="text-2xl font-semibold leading-6 text-ink-gray-9">
-            {{ __('Convert to Opportunity') }}
+            {{ __('Convert to Deal') }}
           </h3>
         </div>
         <div class="flex items-center gap-1">
@@ -22,7 +22,7 @@
     <template #body-content>
       <div class="mb-4 flex items-center gap-2 text-ink-gray-5">
         <OrganizationsIcon class="h-4 w-4" />
-        <label class="block text-base">{{ __('Account') }}</label>
+        <label class="block text-base">{{ __('Organization') }}</label>
       </div>
       <div class="ml-6 text-ink-gray-9">
         <div class="flex items-center justify-between text-base">

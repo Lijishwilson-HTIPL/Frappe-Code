@@ -5,11 +5,23 @@
 import frappe
 from frappe import _
 
+from erpnext import get_region
+
 
 def execute(filters=None):
+	validate_company_region(filters)
 	columns = get_columns()
 	data, emirates, amounts_by_emirate = get_data(filters)
 	return columns, data
+
+
+def validate_company_region(filters):
+	if filters.get("company") and get_region(filters.get("company")) != "United Arab Emirates":
+		frappe.throw(
+			_(
+				"The company {0} is not in United Arab Emirates. UAE VAT 201 report is only available for companies in United Arab Emirates."
+			).format(frappe.bold(filters.get("company")))
+		)
 
 
 def get_columns():
@@ -179,7 +191,11 @@ def get_reverse_charge_total(filters):
 	try:
 		return (
 			frappe.db.get_all(
-				"Purchase Invoice", filters=query_filters, fields=["sum(base_total)"], as_list=True, limit=1
+				"Purchase Invoice",
+				filters=query_filters,
+				fields=[{"SUM": "base_total"}],
+				as_list=True,
+				limit=1,
 			)[0][0]
 			or 0
 		)
@@ -219,7 +235,11 @@ def get_reverse_charge_recoverable_total(filters):
 	try:
 		return (
 			frappe.db.get_all(
-				"Purchase Invoice", filters=query_filters, fields=["sum(base_total)"], as_list=True, limit=1
+				"Purchase Invoice",
+				filters=query_filters,
+				fields=[{"SUM": "base_total"}],
+				as_list=True,
+				limit=1,
 			)[0][0]
 			or 0
 		)
@@ -274,7 +294,11 @@ def get_standard_rated_expenses_total(filters):
 	try:
 		return (
 			frappe.db.get_all(
-				"Purchase Invoice", filters=query_filters, fields=["sum(base_total)"], as_list=True, limit=1
+				"Purchase Invoice",
+				filters=query_filters,
+				fields=[{"SUM": "base_total"}],
+				as_list=True,
+				limit=1,
 			)[0][0]
 			or 0
 		)
@@ -292,7 +316,7 @@ def get_standard_rated_expenses_tax(filters):
 			frappe.db.get_all(
 				"Purchase Invoice",
 				filters=query_filters,
-				fields=["sum(recoverable_standard_rated_expenses)"],
+				fields=[{"SUM": "recoverable_standard_rated_expenses"}],
 				as_list=True,
 				limit=1,
 			)[0][0]
@@ -310,7 +334,7 @@ def get_tourist_tax_return_total(filters):
 	try:
 		return (
 			frappe.db.get_all(
-				"Sales Invoice", filters=query_filters, fields=["sum(base_total)"], as_list=True, limit=1
+				"Sales Invoice", filters=query_filters, fields=[{"SUM": "base_total"}], as_list=True, limit=1
 			)[0][0]
 			or 0
 		)
@@ -328,7 +352,7 @@ def get_tourist_tax_return_tax(filters):
 			frappe.db.get_all(
 				"Sales Invoice",
 				filters=query_filters,
-				fields=["sum(tourist_tax_return)"],
+				fields=[{"SUM": "tourist_tax_return"}],
 				as_list=True,
 				limit=1,
 			)[0][0]

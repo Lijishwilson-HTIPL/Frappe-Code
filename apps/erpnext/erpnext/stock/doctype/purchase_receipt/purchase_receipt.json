@@ -59,8 +59,6 @@
   "column_break_27",
   "total",
   "net_total",
-  "tax_withholding_net_total",
-  "base_tax_withholding_net_total",
   "taxes_charges_section",
   "tax_category",
   "taxes_and_charges",
@@ -79,7 +77,6 @@
   "taxes_and_charges_added",
   "taxes_and_charges_deducted",
   "total_taxes_and_charges",
-  "section_break_46",
   "base_grand_total",
   "base_rounding_adjustment",
   "base_rounded_total",
@@ -155,7 +152,11 @@
   "amended_from",
   "is_old_subcontracting_flow",
   "other_details",
-  "connections_tab"
+  "connections_tab",
+  "item_wise_tax_details",
+  "totals_section",
+  "base_totals_section",
+  "column_break_ugyv"
  ],
  "fields": [
   {
@@ -774,11 +775,6 @@
    "print_hide": 1
   },
   {
-   "fieldname": "section_break_46",
-   "fieldtype": "Section Break",
-   "label": "Totals"
-  },
-  {
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Grand Total (Company Currency)",
@@ -1257,24 +1253,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "tax_withholding_net_total",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Tax Withholding Net Total",
-   "no_copy": 1,
-   "options": "currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "base_tax_withholding_net_total",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Base Tax Withholding Net Total",
-   "no_copy": 1,
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
    "fieldname": "dispatch_address",
    "fieldtype": "Link",
    "label": "Dispatch Address Template",
@@ -1294,6 +1272,29 @@
    "fieldtype": "Data",
    "is_virtual": 1,
    "label": "Last Scanned Warehouse"
+  },
+  {
+   "fieldname": "item_wise_tax_details",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Item Wise Tax Details",
+   "no_copy": 1,
+   "options": "Item Wise Tax Detail"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "base_totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals (Company Currency)",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "column_break_ugyv",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,

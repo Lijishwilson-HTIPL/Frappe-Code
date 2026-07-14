@@ -1,13 +1,8 @@
-import unittest
-
-import frappe
-
 from erpnext import encode_company_abbr
+from erpnext.tests.utils import ERPNextTestSuite
 
-test_records = frappe.get_test_records("Company")
 
-
-class TestInit(unittest.TestCase):
+class TestInit(ERPNextTestSuite):
 	def test_encode_company_abbr(self):
 		abbr = "NFECT"
 

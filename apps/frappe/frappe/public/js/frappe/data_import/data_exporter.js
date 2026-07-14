@@ -1,15 +1,15 @@
 frappe.provide("frappe.data_import");
 
 frappe.data_import.DataExporter = class DataExporter {
-	constructor(doctype, exporting_for) {
+	constructor(doctype, exporting_for, filetype = "CSV") {
 		this.doctype = doctype;
 		this.exporting_for = exporting_for;
 		frappe.model.with_doctype(doctype, () => {
-			this.make_dialog();
+			this.make_dialog(filetype);
 		});
 	}
 
-	make_dialog() {
+	make_dialog(filetype = "CSV") {
 		this.dialog = new frappe.ui.Dialog({
 			title: __("Export Data"),
 			fields: [
@@ -18,7 +18,7 @@ frappe.data_import.DataExporter = class DataExporter {
 					fieldname: "file_type",
 					label: __("File Type"),
 					options: ["Excel", "CSV"],
-					default: "CSV",
+					default: filetype,
 				},
 				{
 					fieldtype: "Select",
@@ -91,12 +91,13 @@ frappe.data_import.DataExporter = class DataExporter {
 			],
 			primary_action_label: __("Export"),
 			primary_action: (values) => this.export_records(values),
-			on_page_show: () => this.select_mandatory(),
+			on_page_show: () => this.setup_on_page_show(),
 		});
 
 		this.make_filter_area();
 		this.make_select_all_buttons();
 		this.update_record_count_message();
+		this.setup_search_input();
 
 		this.dialog.show();
 	}
@@ -289,6 +290,19 @@ frappe.data_import.DataExporter = class DataExporter {
 			return false;
 		};
 
+		let is_field_depends_on = (df) => {
+			if (df.depends_on && this.exporting_for == "Insert New Records") {
+				return true;
+			}
+			if (autoname_field && df.fieldname == autoname_field.fieldname) {
+				return true;
+			}
+			if (df.fieldname === "name") {
+				return true;
+			}
+			return false;
+		};
+
 		return fields
 			.filter((df) => {
 				if (autoname_field && df.fieldname === "name") {
@@ -301,10 +315,34 @@ frappe.data_import.DataExporter = class DataExporter {
 					label: __(df.label, null, df.parent),
 					value: df.fieldname,
 					danger: is_field_mandatory(df),
+					warning: is_field_depends_on(df),
 					checked: false,
 					description: `${df.fieldname} ${df.reqd ? __("(Mandatory)") : ""}`,
 				};
 			});
+	}
+
+	setup_search_input() {
+		const $wrapper = this.dialog.get_field("select_all_buttons").$wrapper;
+
+		// prevent duplicate search inputs
+		if (this.dialog.$wrapper.find(".filters-search").length) return;
+
+		$wrapper.before(`
+			<div class="filters-search">
+				<input
+					type="text"
+					placeholder="${__("Search")}"
+					data-element="search"
+					class="form-control input-xs"
+				>
+			</div>
+		`);
+	}
+
+	setup_on_page_show() {
+		frappe.utils.setup_search(this.dialog.$body, ".unit-checkbox", ".label-area");
+		this.select_mandatory();
 	}
 };
 

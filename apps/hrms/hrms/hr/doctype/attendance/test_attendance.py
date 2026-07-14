@@ -4,7 +4,6 @@
 from datetime import datetime
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import (
 	add_days,
 	add_months,
@@ -23,24 +22,22 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from hrms.hr.doctype.attendance.attendance import (
 	DuplicateAttendanceError,
 	OverlappingShiftAttendanceError,
+	get_events,
 	get_unmarked_days,
 	mark_attendance,
 	mark_bulk_attendance,
 )
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
+	assign_holiday_list,
+	create_holiday_list_assignment,
+)
 from hrms.tests.test_utils import get_first_sunday
+from hrms.tests.utils import HRMSTestSuite
 
-test_records = frappe.get_test_records("Attendance")
 
-
-class TestAttendance(FrappeTestCase):
+class TestAttendance(HRMSTestSuite):
 	def setUp(self):
-		from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
-
-		frappe.set_user("Administrator")
-		from_date = get_year_start(add_months(getdate(), -1))
-		to_date = get_year_ending(getdate())
-		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
-		frappe.db.delete("Attendance")
+		self.holiday_list = "Salary Slip Test Holiday List"
 
 	def test_duplicate_attendance(self):
 		employee = make_employee("test_duplicate_attendance@example.com", company="_Test Company")
@@ -143,7 +140,7 @@ class TestAttendance(FrappeTestCase):
 		).insert()
 
 	def test_mark_absent(self):
-		employee = make_employee("test_mark_absent@example.com")
+		employee = make_employee("test_mark_absent@example.com", company="_Test Company")
 		date = nowdate()
 
 		attendance = mark_attendance(employee, date, "Absent")
@@ -157,7 +154,9 @@ class TestAttendance(FrappeTestCase):
 		attendance_date = add_days(first_sunday, 1)
 
 		employee = make_employee(
-			"test_unmarked_days@example.com", date_of_joining=add_days(attendance_date, -1)
+			"test_unmarked_days@example.com",
+			date_of_joining=add_days(attendance_date, -1),
+			company="_Test Company",
 		)
 		frappe.db.set_value("Employee", employee, "holiday_list", self.holiday_list)
 
@@ -175,14 +174,16 @@ class TestAttendance(FrappeTestCase):
 		# holiday considered in unmarked days
 		self.assertIn(first_sunday, unmarked_days)
 
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_unmarked_days_excluding_holidays(self):
 		first_sunday = get_first_sunday(self.holiday_list, for_date=get_last_day(add_months(getdate(), -1)))
 		attendance_date = add_days(first_sunday, 1)
 
 		employee = make_employee(
-			"test_unmarked_days@example.com", date_of_joining=add_days(attendance_date, -1)
+			"test_unmarked_days@example.com",
+			date_of_joining=add_days(attendance_date, -1),
+			company="_Test Company",
 		)
-		frappe.db.set_value("Employee", employee, "holiday_list", self.holiday_list)
 
 		mark_attendance(employee, attendance_date, "Present")
 
@@ -198,6 +199,28 @@ class TestAttendance(FrappeTestCase):
 		# holidays not considered in unmarked days
 		self.assertNotIn(first_sunday, unmarked_days)
 
+	def test_unmarked_days_excluding_holidays_across_two_holiday_list_assignments(self):
+		from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
+
+		employee = make_employee("test_unmarked_days_exclude_holidays@example.com", company="_Test Company")
+		start_date = get_first_day(getdate())
+		mid_date = add_days(start_date, 15)
+		end_date = get_last_day(getdate())
+		holiday_list_1 = make_holiday_list(
+			"First Holiday List", from_date=start_date, to_date=add_days(mid_date, -1)
+		)
+		holiday_list_2 = make_holiday_list("Second Holiday List", from_date=mid_date, to_date=end_date)
+		create_holiday_list_assignment("Employee", employee, holiday_list=holiday_list_1)
+		create_holiday_list_assignment("Employee", employee, holiday_list=holiday_list_2)
+
+		unmarked_days = get_unmarked_days(employee, start_date, end_date, exclude_holidays=True)
+		unmarked_days = [getdate(date) for date in unmarked_days]
+		sunday_in_holiday_list_1 = get_first_sunday(holiday_list=holiday_list_1, for_date=start_date)
+		sunday_in_holiday_list_2 = get_first_sunday(holiday_list=holiday_list_2, for_date=end_date)
+
+		self.assertNotIn(sunday_in_holiday_list_1, unmarked_days)
+		self.assertNotIn(sunday_in_holiday_list_2, unmarked_days)
+
 	def test_unmarked_days_as_per_joining_and_relieving_dates(self):
 		first_sunday = get_first_sunday(self.holiday_list, for_date=get_last_day(add_months(getdate(), -1)))
 		date = add_days(first_sunday, 1)
@@ -205,7 +228,10 @@ class TestAttendance(FrappeTestCase):
 		doj = add_days(date, 1)
 		relieving_date = add_days(date, 5)
 		employee = make_employee(
-			"test_unmarked_days_as_per_doj@example.com", date_of_joining=doj, relieving_date=relieving_date
+			"test_unmarked_days_as_per_doj@example.com",
+			date_of_joining=doj,
+			relieving_date=relieving_date,
+			company="_Test Company",
 		)
 
 		frappe.db.set_value("Employee", employee, "holiday_list", self.holiday_list)
@@ -229,8 +255,10 @@ class TestAttendance(FrappeTestCase):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 		from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
 
-		shift = setup_shift_type(shift_type="Test Duplicate", start_time="08:00:00", end_time="17:00:00")
-		employee = make_employee("test_duplicate@attendance.com", default_shift=shift.name)
+		shift = setup_shift_type(shift_type="Shift 1", start_time="08:00:00", end_time="17:00:00")
+		employee = make_employee(
+			"test_duplicate@attendance.com", company="_Test Company", default_shift=shift.name
+		)
 		mark_attendance(employee, getdate(), "Half Day", shift=shift.name, half_day_status="Absent")
 		make_checkin(employee, datetime.combine(getdate(), get_time("14:00:00")))
 		shift.process_auto_attendance()
@@ -243,6 +271,60 @@ class TestAttendance(FrappeTestCase):
 			},
 		)
 		self.assertEqual(len(attendances), 1)
+
+	def test_get_events_returns_attendance(self):
+		employee = frappe.get_doc("Employee", {"first_name": "_Test Employee"})
+
+		attendance_name = mark_attendance(employee.name, getdate(), status="Present")
+		attendance = frappe.get_value("Attendance", attendance_name, "status")
+
+		self.assertEqual(attendance, "Present")
+
+		frappe.set_user(employee.user_id)
+		try:
+			events = get_events(start=getdate(), end=getdate())
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertTrue(events)
+		attendance_events = [e for e in events if e.get("doctype") == "Attendance"]
+		self.assertTrue(attendance_events)
+		self.assertEqual(attendance_events[0].get("status"), "Present")
+		self.assertEqual(
+			attendance_events[0].get("employee_name"),
+			frappe.db.get_value("Employee", employee.name, "employee_name"),
+		)
+		self.assertEqual(attendance_events[0].get("attendance_date"), getdate())
+
+	def test_bulk_attendance_marking_through_bg(self):
+		user1 = "test_bg1@example.com"
+		user2 = "test_bg2@example.com"
+		employee1 = make_employee("test_bg1@example.com", company="_Test Company")
+		employee2 = make_employee("test_bg2@example.com", company="_Test Company")
+		add_role(user1, "HR Manager")
+		add_role(user2, "HR Manager")
+		frappe.flags.test_bg_job = True
+		frappe.set_user(user1)
+		data1 = frappe._dict(unmarked_days=[getdate()], employee=employee1, status="Present", shift="")
+		data2 = frappe._dict(unmarked_days=[getdate()], employee=employee2, status="Present", shift="")
+		mark_bulk_attendance(data1)
+		self.assertStartsWith(
+			frappe.message_log[-1].message, "Bulk attendance marking is queued with a background job."
+		)
+		frappe.set_user(user2)
+		mark_bulk_attendance(data1)
+		self.assertStartsWith(
+			frappe.message_log[-1].message, "Bulk attendance marking is already in progress for employee"
+		)
+		mark_bulk_attendance(data2)
+		self.assertStartsWith(
+			frappe.message_log[-1].message, "Bulk attendance marking is queued with a background job."
+		)
+		frappe.flags.test_bg_job = False
+		mark_bulk_attendance(data2)
+		frappe.set_user("Administrator")
+		attendance_records = frappe.get_all("Attendance", {"employee": employee2})
+		self.assertEqual(len(attendance_records), 1)
 
 	def tearDown(self):
 		frappe.db.rollback()

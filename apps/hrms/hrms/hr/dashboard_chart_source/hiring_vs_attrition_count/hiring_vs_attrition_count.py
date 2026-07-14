@@ -13,15 +13,15 @@ from frappe.utils.dateutils import get_period
 @frappe.whitelist()
 @cache_source
 def get_data(
-	chart_name=None,
-	chart=None,
-	no_cache=None,
-	filters=None,
-	from_date=None,
-	to_date=None,
-	timespan=None,
-	time_interval=None,
-	heatmap_year=None,
+	chart_name: str | None = None,
+	chart: str | None = None,
+	no_cache: str | None = None,
+	filters: str | None = None,
+	from_date: str | None = None,
+	to_date: str | None = None,
+	timespan: str | None = None,
+	time_interval: str | None = None,
+	heatmap_year: str | None = None,
 ) -> dict[str, list]:
 	if filters:
 		filters = frappe.parse_json(filters)
@@ -61,13 +61,13 @@ def get_data(
 def get_records(from_date: str, to_date: str, datefield: str, company: str) -> tuple[tuple[str, float, int]]:
 	filters = [
 		["Employee", "company", "=", company],
-		["Employee", datefield, ">=", from_date, False],
-		["Employee", datefield, "<=", to_date, False],
+		["Employee", datefield, ">=", from_date],
+		["Employee", datefield, "<=", to_date],
 	]
 
 	data = frappe.db.get_list(
 		"Employee",
-		fields=[f"{datefield} as _unit", "SUM(1)", "COUNT(*)"],
+		fields=[f"{datefield} as _unit", {"SUM": 1}, {"COUNT": "*"}],
 		filters=filters,
 		group_by="_unit",
 		order_by="_unit asc",

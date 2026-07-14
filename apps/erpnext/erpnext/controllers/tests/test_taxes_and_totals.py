@@ -1,11 +1,11 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.controllers.taxes_and_totals import calculate_taxes_and_totals
 from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestTaxesAndTotals(FrappeTestCase):
+class TestTaxesAndTotals(ERPNextTestSuite):
 	def test_disabling_rounded_total_resets_base_fields(self):
 		"""Disabling rounded total should also clear base rounded values."""
 		so = make_sales_order(do_not_save=True)

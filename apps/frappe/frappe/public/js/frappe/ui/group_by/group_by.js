@@ -189,7 +189,7 @@ frappe.ui.GroupBy = class {
 
 	apply_settings(settings) {
 		let get_fieldname = (name) => name.split(".")[1].replace(/`/g, "");
-		let get_doctype = (name) => name.split(".")[0].replace(/`/g, "").replace("tab", "");
+		let get_doctype = (name) => name.split(".")[0].replace(/`/g, "").replace(/^tab/, "");
 
 		if (!settings.group_by.startsWith("`tab")) {
 			settings.group_by = "`tab" + this.doctype + "`.`" + settings.group_by + "`";
@@ -229,7 +229,7 @@ frappe.ui.GroupBy = class {
 		this.page.wrapper.find(".sort-selector").before(
 			$(`<div class="group-by-selector">
 				<button class="btn btn-default btn-sm group-by-button ellipsis">
-					<span class="group-by-icon">
+					<span class="group-by-icon button-icon">
 						${frappe.utils.icon("es-line-folder-alt")}
 					</span>
 					<span class="button-label hidden-xs">
@@ -428,7 +428,9 @@ frappe.ui.GroupBy = class {
 					this.get_group_by_field_label(),
 			  ])
 			: __("Add Group");
-
+		if (group_by_applied) {
+			this.group_by_button.find(".button-label").css("gap", "4px");
+		}
 		this.group_by_button
 			.toggleClass("btn-default", !group_by_applied)
 			.toggleClass("btn-primary-light", group_by_applied);

@@ -8,11 +8,11 @@ frappe.ui.form.on("Workspace", {
 
 	refresh: function (frm) {
 		frm.enable_save();
-
-		let url = `/app/${
+		frm.trigger("add_to_desktop");
+		let url = `/desk/${
 			frm.doc.public
-				? frappe.router.slug(frm.doc.title)
-				: "private/" + frappe.router.slug(frm.doc.title)
+				? frappe.router.slug(frm.doc.name)
+				: "private/" + frappe.router.slug(frm.doc.name)
 		}`;
 		frm.sidebar
 			.add_user_action(__("Go to Workspace"))
@@ -20,9 +20,7 @@ frappe.ui.form.on("Workspace", {
 			.attr("target", "_blank");
 
 		frm.layout.message.empty();
-		let message = __(
-			"This document allows you to edit limited fields. For all kinds of workspace customization, use the Edit button located on the workspace page"
-		);
+		let message = __("Please click Edit on the Workspace for best results");
 
 		if (
 			(frm.doc.for_user && frm.doc.for_user !== frappe.session.user) ||
@@ -46,6 +44,26 @@ frappe.ui.form.on("Workspace", {
 		frm.layout.show_message(message);
 	},
 
+	add_to_desktop: function (frm) {
+		if (frappe.app.sidebar.get_workspace_sidebars(frm.doc.title).length === 0) {
+			frm.add_custom_button(__("Add to Desktop"), function () {
+				frappe.call({
+					method: "frappe.desk.doctype.desktop_icon.desktop_icon.add_workspace_to_desktop",
+					args: {
+						workspace: frm.doc.name,
+					},
+					callback: function (r) {
+						if (r.message.status) {
+							frappe.toast({
+								message: __("Workspace added to desktop"),
+								indicator: "green",
+							});
+						}
+					},
+				});
+			});
+		}
+	},
 	disable_form: function (frm) {
 		frm.fields
 			.filter((field) => field.has_input)

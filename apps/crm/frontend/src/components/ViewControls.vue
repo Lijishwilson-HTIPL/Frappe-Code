@@ -290,43 +290,9 @@
       />
       <div class="mt-3">
         <FormControl
-          v-model="export_date_range"
-          variant="outline"
-          :label="__('Time Range')"
-          type="select"
-          :options="[
-            { label: __('All Time'), value: 'all' },
-            { label: __('Today'), value: 'today' },
-            { label: __('Last 7 Days'), value: 'last_7_days' },
-            { label: __('Last 30 Days'), value: 'last_30_days' },
-            { label: __('This Month'), value: 'this_month' },
-            { label: __('Last Month'), value: 'last_month' },
-            { label: __('This Year'), value: 'this_year' },
-            { label: __('Custom Range'), value: 'custom' },
-          ]"
-        />
-      </div>
-      <div v-if="export_date_range === 'custom'" class="mt-3 flex gap-2">
-        <FormControl
-          v-model="export_date_from"
-          variant="outline"
-          :label="__('From')"
-          type="date"
-          class="flex-1"
-        />
-        <FormControl
-          v-model="export_date_to"
-          variant="outline"
-          :label="__('To')"
-          type="date"
-          class="flex-1"
-        />
-      </div>
-      <div class="mt-3">
-        <FormControl
           v-model="export_all"
           type="checkbox"
-          :label="__('Export all {0} record(s)', [export_record_count])"
+          :label="__('Export all {0} record(s)', [list.data.total_count])"
         />
       </div>
     </template>
@@ -587,90 +553,19 @@ function reload() {
 const showExportDialog = ref(false)
 const export_type = ref('Excel')
 const export_all = ref(false)
-const export_date_range = ref('all')
-const export_date_from = ref('')
-const export_date_to = ref('')
-const export_record_count = ref(0)
 const selectedRows = ref([])
 
 function updateSelections(selections) {
   selectedRows.value = Array.from(selections)
 }
 
-async function fetchExportCount() {
-  const dateFilters = getExportDateFilters()
-  const baseFilters = { ...props.filters, ...list.value.params.filters }
-  let filters
-  if (dateFilters.length) {
-    const baseArr = Object.entries(baseFilters).map(([k, v]) => [k, '=', v])
-    filters = [...baseArr, ...dateFilters]
-  } else {
-    filters = baseFilters
-  }
-  const count = await call('frappe.client.get_count', {
-    doctype: props.doctype,
-    filters,
-  })
-  export_record_count.value = count
-}
-
-watch(
-  [showExportDialog, export_date_range, export_date_from, export_date_to],
-  ([visible]) => {
-    if (visible) fetchExportCount()
-  },
-)
-
-function getExportDateFilters() {
-  const now = new Date()
-  const fmt = (d) => d.toISOString().slice(0, 10)
-
-  if (export_date_range.value === 'today') {
-    const today = fmt(now)
-    return [['modified', '>=', today + ' 00:00:00'], ['modified', '<=', today + ' 23:59:59']]
-  }
-  if (export_date_range.value === 'last_7_days') {
-    const from = new Date(now); from.setDate(from.getDate() - 6)
-    return [['modified', '>=', fmt(from) + ' 00:00:00']]
-  }
-  if (export_date_range.value === 'last_30_days') {
-    const from = new Date(now); from.setDate(from.getDate() - 29)
-    return [['modified', '>=', fmt(from) + ' 00:00:00']]
-  }
-  if (export_date_range.value === 'this_month') {
-    const from = new Date(now.getFullYear(), now.getMonth(), 1)
-    return [['modified', '>=', fmt(from) + ' 00:00:00']]
-  }
-  if (export_date_range.value === 'last_month') {
-    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const to = new Date(now.getFullYear(), now.getMonth(), 0)
-    return [['modified', '>=', fmt(from) + ' 00:00:00'], ['modified', '<=', fmt(to) + ' 23:59:59']]
-  }
-  if (export_date_range.value === 'this_year') {
-    const from = new Date(now.getFullYear(), 0, 1)
-    return [['modified', '>=', fmt(from) + ' 00:00:00']]
-  }
-  if (export_date_range.value === 'custom' && export_date_from.value) {
-    const result = [['modified', '>=', export_date_from.value + ' 00:00:00']]
-    if (export_date_to.value) result.push(['modified', '<=', export_date_to.value + ' 23:59:59'])
-    return result
-  }
-  return []
-}
-
 async function exportRows() {
   let fields = JSON.stringify(list.value.data.columns.map((f) => f.key))
 
-  const baseFilters = { ...props.filters, ...list.value.params.filters }
-  const dateFilters = getExportDateFilters()
-  let filters
-
-  if (dateFilters.length) {
-    const baseArr = Object.entries(baseFilters).map(([k, v]) => [k, '=', v])
-    filters = JSON.stringify([...baseArr, ...dateFilters])
-  } else {
-    filters = JSON.stringify(baseFilters)
-  }
+  let filters = JSON.stringify({
+    ...props.filters,
+    ...list.value.params.filters,
+  })
 
   let order_by = list.value.params.order_by
   let page_length = list.value.params.page_length
@@ -690,10 +585,6 @@ async function exportRows() {
   showExportDialog.value = false
   export_all.value = false
   export_type.value = 'Excel'
-  export_date_range.value = 'all'
-  export_date_from.value = ''
-  export_date_to.value = ''
-  export_record_count.value = 0
 }
 
 let standardViews = []

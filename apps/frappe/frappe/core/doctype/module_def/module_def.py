@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.modules.export_file import delete_folder
 
@@ -24,8 +25,14 @@ class ModuleDef(Document):
 		module_name: DF.Data
 		package: DF.Link | None
 		restrict_to_domain: DF.Link | None
-
 	# end: auto-generated types
+
+	def validate(self):
+		from frappe.modules.utils import get_module_app
+
+		if not self.app_name and not self.custom:
+			self.app_name = get_module_app(self.name)
+
 	def on_update(self):
 		"""If in `developer_mode`, create folder for module and
 		add in `modules.txt` of app if missing."""
@@ -82,6 +89,10 @@ class ModuleDef(Document):
 			modules_txt.write_text("\n".join(modules))
 			frappe.clear_cache()
 			frappe.setup_module_map()
+
+	def before_rename(self, old, new, merge=False):
+		if not self.custom:
+			frappe.throw(_("Only Custom Modules can be renamed."))
 
 
 @frappe.whitelist()

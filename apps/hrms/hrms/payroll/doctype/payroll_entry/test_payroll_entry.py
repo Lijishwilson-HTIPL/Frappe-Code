@@ -4,8 +4,7 @@
 from dateutil.relativedelta import relativedelta
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_days, add_months, cstr, flt
+from frappe.utils import add_days, add_months, cstr, date_diff, flt
 
 import erpnext
 from erpnext.accounts.utils import get_fiscal_year, getdate, nowdate
@@ -16,7 +15,7 @@ from hrms.hr.doctype.employee_advance.employee_advance import (
 )
 from hrms.hr.doctype.employee_advance.test_employee_advance import (
 	make_employee_advance,
-	make_journal_entry_for_advance,
+	make_payment_entry,
 )
 from hrms.payroll.doctype.payroll_entry.payroll_entry import (
 	PayrollEntry,
@@ -37,27 +36,12 @@ from hrms.payroll.doctype.salary_structure.test_salary_structure import (
 	make_salary_structure,
 )
 from hrms.tests.test_utils import create_department
+from hrms.tests.utils import HRMSTestSuite
 from hrms.utils import get_date_range
 
-test_dependencies = ["Holiday List"]
 
-
-class TestPayrollEntry(FrappeTestCase):
+class TestPayrollEntry(HRMSTestSuite):
 	def setUp(self):
-		for dt in [
-			"Salary Slip",
-			"Salary Detail",
-			"Salary Component",
-			"Salary Component Account",
-			"Payroll Entry",
-			"Salary Structure",
-			"Salary Structure Assignment",
-			"Employee Cost Center",
-			"Payroll Employee Detail",
-			"Additional Salary",
-		]:
-			frappe.db.delete(dt)
-
 		make_earning_salary_component(setup=True, company_list=["_Test Company"])
 		make_deduction_salary_component(setup=True, test_tax=False, company_list=["_Test Company"])
 
@@ -77,6 +61,13 @@ class TestPayrollEntry(FrappeTestCase):
 				"Company", "_Test Company", "default_payroll_payable_account", "_Test Payroll Payable - _TC"
 			)
 
+		payroll_account = frappe.get_doc("Account", "_Test Payroll Payable - _TC")
+		if payroll_account and payroll_account.account_type != "Payable":
+			frappe.db.set_value("Account", "_Test Payroll Payable - _TC", "account_type", "Payable")
+
+		if "lending" in frappe.get_installed_apps():
+			frappe.db.set_value("Company", "_Test Company", "loan_accrual_frequency", "Monthly")
+
 	def test_payroll_entry(self):
 		company = frappe.get_doc("Company", "_Test Company")
 		employee = frappe.db.get_value("Employee", {"company": "_Test Company"})
@@ -89,6 +80,7 @@ class TestPayrollEntry(FrappeTestCase):
 			payable_account=company.default_payroll_payable_account,
 			currency=company.default_currency,
 			company=company.name,
+			cost_center="Main - _TC",
 		)
 
 	def test_multi_currency_payroll_entry(self):
@@ -138,7 +130,9 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertEqual(salary_slip.base_net_pay, payment_entry[0].total_debit)
 		self.assertEqual(salary_slip.base_net_pay, payment_entry[0].total_credit)
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_payroll_entry_with_employee_cost_center(self):
 		department = create_department("Cost Center Test")
 
@@ -183,7 +177,9 @@ class TestPayrollEntry(FrappeTestCase):
 
 		self.assertEqual(je_entries, expected_je)
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_employee_cost_center_breakup(self):
 		"""Test only the latest salary structure assignment is considered for cost center breakup"""
 		COMPANY = "_Test Company"
@@ -245,7 +241,9 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertEqual(get_end_date("2017-02-15", "daily"), {"end_date": "2017-02-15"})
 
 	@if_lending_app_installed
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1}
+	)
 	def test_loan_with_settings_enabled(self):
 		from lending.loan_management.doctype.loan.test_loan import make_loan_disbursement_entry
 
@@ -253,9 +251,14 @@ class TestPayrollEntry(FrappeTestCase):
 
 		[applicant, branch, currency, payroll_payable_account] = setup_lending()
 		loan = create_loan_for_employee(applicant)
+		dates = frappe._dict({"start_date": add_months(getdate(), -1), "end_date": getdate()})
 
-		make_loan_disbursement_entry(loan.name, loan.loan_amount, disbursement_date=add_months(nowdate(), -1))
-		dates = get_start_end_dates("Monthly", nowdate())
+		make_loan_disbursement_entry(
+			loan.name,
+			loan.loan_amount,
+			disbursement_date=dates.start_date,
+			repayment_start_date=dates.end_date,
+		)
 		make_payroll_entry(
 			company="_Test Company",
 			start_date=dates.start_date,
@@ -267,16 +270,18 @@ class TestPayrollEntry(FrappeTestCase):
 			payment_account="Cash - _TC",
 		)
 
-		name = frappe.db.get_value("Salary Slip", {"posting_date": nowdate(), "employee": applicant}, "name")
+		name = frappe.db.get_value(
+			"Salary Slip", {"posting_date": dates.end_date, "employee": applicant}, "name"
+		)
 
 		salary_slip = frappe.get_doc("Salary Slip", name)
 		for row in salary_slip.loans:
 			if row.loan == loan.name:
-				interest_amount = (280000 * 8.4) / (12 * 100)
-				principal_amount = loan.monthly_repayment_amount - interest_amount
+				interest_amount = flt(
+					(280000) * 8.4 / 100 * (date_diff(dates.end_date, dates.start_date)) / 365, 2
+				)
 				self.assertEqual(row.interest_amount, interest_amount)
-				self.assertEqual(row.principal_amount, principal_amount)
-				self.assertEqual(row.total_payment, interest_amount + principal_amount)
+				self.assertEqual(row.total_payment, interest_amount + row.principal_amount)
 
 		[party_type, party] = get_repayment_party_type(loan.name)
 
@@ -284,7 +289,9 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertEqual(party, applicant)
 
 	@if_lending_app_installed
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_loan_with_settings_disabled(self):
 		from lending.loan_management.doctype.loan.test_loan import make_loan_disbursement_entry
 
@@ -292,10 +299,14 @@ class TestPayrollEntry(FrappeTestCase):
 
 		[applicant, branch, currency, payroll_payable_account] = setup_lending()
 		loan = create_loan_for_employee(applicant)
+		dates = frappe._dict({"start_date": add_months(getdate(), -1), "end_date": getdate()})
 
-		make_loan_disbursement_entry(loan.name, loan.loan_amount, disbursement_date=add_months(nowdate(), -1))
-		dates = get_start_end_dates("Monthly", nowdate())
-
+		make_loan_disbursement_entry(
+			loan.name,
+			loan.loan_amount,
+			disbursement_date=dates.start_date,
+			repayment_start_date=dates.end_date,
+		)
 		make_payroll_entry(
 			company="_Test Company",
 			start_date=dates.start_date,
@@ -374,9 +385,10 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertIsNotNone(payroll_entry.error_message)
 
 		frappe.db.set_value("Employee", employee, "status", "Active")
+
+		payroll_entry.create_salary_slips()
 		payroll_entry.submit()
 		payroll_entry.submit_salary_slips()
-
 		payroll_entry.reload()
 		self.assertEqual(payroll_entry.status, "Failed")
 		self.assertIsNotNone(payroll_entry.error_message)
@@ -386,6 +398,9 @@ class TestPayrollEntry(FrappeTestCase):
 			set_salary_component_account(data, company_list=[company])
 
 		# Payroll Entry successful, status should change to Submitted
+
+		payroll_entry.create_salary_slips()
+		payroll_entry.submit()
 		payroll_entry.submit_salary_slips()
 		payroll_entry.reload()
 
@@ -428,6 +443,41 @@ class TestPayrollEntry(FrappeTestCase):
 		# 2 cancelled JVs
 		journal_entries = get_linked_journal_entries(payroll_entry.name, docstatus=2)
 		self.assertEqual(len(journal_entries), 2)
+
+	def test_payroll_entry_cancellation_with_hr_manager(self):
+		company_doc = frappe.get_doc("Company", "_Test Company")
+		employee = make_employee("test_hr_manager_employee@payroll.com", company=company_doc.name)
+
+		setup_salary_structure(employee, company_doc)
+		dates = get_start_end_dates("Monthly", nowdate())
+		payroll_entry = make_payroll_entry(
+			start_date=dates.start_date,
+			end_date=dates.end_date,
+			payable_account=company_doc.default_payroll_payable_account,
+			currency=company_doc.default_currency,
+			company=company_doc.name,
+			cost_center="Main - _TC",
+			payment_account="Cash - _TC",
+		)
+
+		hr_user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": "test_hr_manager@payroll.com",
+				"first_name": "Test HR Manager",
+				"enabled": 1,
+			}
+		).insert(ignore_if_duplicate=True)
+		hr_user.add_roles("HR Manager")
+		frappe.set_user(hr_user.name)
+
+		payroll_entry.submit()
+		self.assertEqual(payroll_entry.status, "Submitted")
+
+		payroll_entry.cancel()
+		self.assertEqual(payroll_entry.status, "Cancelled")
+
+		frappe.set_user("Administrator")
 
 	def test_payroll_entry_status(self):
 		company_doc = frappe.get_doc("Company", "_Test Company")
@@ -484,7 +534,9 @@ class TestPayrollEntry(FrappeTestCase):
 		payroll_entry.cancel()
 		self.assertEqual(payroll_entry.status, "Cancelled")
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1}
+	)
 	def test_payroll_accrual_journal_entry_with_employee_tagging(self):
 		company_doc = frappe.get_doc("Company", "_Test Company")
 		employee = make_employee(
@@ -515,7 +567,9 @@ class TestPayrollEntry(FrappeTestCase):
 					self.assertEqual(account.party_type, "Employee")
 					self.assertEqual(account.party, employee)
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_payroll_accrual_journal_entry_without_employee_tagging(self):
 		company_doc = frappe.get_doc("Company", "_Test Company")
 		employee = make_employee(
@@ -555,8 +609,7 @@ class TestPayrollEntry(FrappeTestCase):
 
 		# create employee advance
 		advance = make_employee_advance(employee, {"repay_unclaimed_amount_from_salary": 1})
-		journal_entry = make_journal_entry_for_advance(advance)
-		journal_entry.submit()
+		make_payment_entry(advance)
 		advance.reload()
 
 		# return advance through additional salary (deduction)
@@ -604,7 +657,9 @@ class TestPayrollEntry(FrappeTestCase):
 
 		self.assertEqual(deduction_entry, expected_entry)
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1}
+	)
 	def test_employee_wise_bank_entry_with_cost_centers(self):
 		department = create_department("Cost Center Test")
 		employee1 = make_employee(
@@ -683,6 +738,7 @@ class TestPayrollEntry(FrappeTestCase):
 			payable_account=company.default_payroll_payable_account,
 			currency=company.default_currency,
 			company=company.name,
+			cost_center="Main - _TC",
 		)
 
 		# case 1: validate unmarked attendance
@@ -709,7 +765,7 @@ class TestPayrollEntry(FrappeTestCase):
 		employees = payroll_entry.get_employees_with_unmarked_attendance()
 		self.assertFalse(employees)
 
-	@change_settings(
+	@HRMSTestSuite.change_settings(
 		"Payroll Settings",
 		{
 			"payroll_based_on": "Attendance",
@@ -746,12 +802,16 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertTrue(journal_entry)
 
 	@if_lending_app_installed
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_loan_repayment_from_salary(self):
 		self.run_test_for_loan_repayment_from_salary()
 
 	@if_lending_app_installed
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1})
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 1}
+	)
 	def test_loan_repayment_from_salary_with_employee_tagging(self):
 		self.run_test_for_loan_repayment_from_salary()
 
@@ -766,9 +826,14 @@ class TestPayrollEntry(FrappeTestCase):
 		loan_doc.repay_from_salary = 1
 		loan_doc.save()
 
-		make_loan_disbursement_entry(loan.name, loan.loan_amount, disbursement_date=add_months(nowdate(), -1))
+		dates = frappe._dict({"start_date": add_months(getdate(), -1), "end_date": getdate()})
+		make_loan_disbursement_entry(
+			loan.name,
+			loan.loan_amount,
+			disbursement_date=dates.start_date,
+			repayment_start_date=dates.end_date,
+		)
 
-		dates = get_start_end_dates("Monthly", nowdate())
 		payroll_entry = make_payroll_entry(
 			company="_Test Company",
 			start_date=dates.start_date,
@@ -778,7 +843,6 @@ class TestPayrollEntry(FrappeTestCase):
 			branch=branch,
 			cost_center="Main - _TC",
 			payment_account="Cash - _TC",
-			total_loan_repayment=loan.monthly_repayment_amount,
 		)
 
 		salary_slip_name = frappe.db.get_value("Salary Slip", {"payroll_entry": payroll_entry.name}, "name")
@@ -809,7 +873,66 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertEqual(total_debit, expected_bank_entry_amount)
 		self.assertEqual(total_credit, expected_bank_entry_amount)
 
-	@change_settings("Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0})
+	@if_lending_app_installed
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
+	def test_loan_repayment_value_date_for_future_payroll(self):
+		from lending.loan_management.doctype.loan.test_loan import make_loan_disbursement_entry
+		from lending.tests.test_utils import create_loan
+
+		frappe.db.delete("Loan")
+		applicant, branch, currency, payroll_payable_account = setup_lending()
+
+		loan = create_loan(
+			applicant,
+			"Car Loan",
+			280000,
+			"Repay Over Number of Periods",
+			20,
+			applicant_type="Employee",
+			posting_date="2026-06-02",
+			repayment_start_date="2026-07-05",
+		)
+		loan.repay_from_salary = 1
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name,
+			loan.loan_amount,
+			disbursement_date="2026-06-02",
+			repayment_start_date="2026-07-05",
+		)
+
+		# July 2026 payroll — end_date 2026-07-31 covers the 2026-07-05 demand
+		payroll_entry = make_payroll_entry(
+			company="_Test Company",
+			start_date="2026-07-01",
+			end_date="2026-07-31",
+			payable_account=payroll_payable_account,
+			currency=currency,
+			branch=branch,
+			cost_center="Main - _TC",
+			payment_account="Cash - _TC",
+		)
+
+		salary_slip_name = frappe.db.get_value(
+			"Salary Slip", {"payroll_entry": payroll_entry.name, "employee": applicant}, "name"
+		)
+		loan_repayment_name = frappe.db.get_value(
+			"Salary Slip Loan", {"parent": salary_slip_name}, "loan_repayment_entry"
+		)
+
+		lr_value_date, lr_interest_payable = frappe.db.get_value(
+			"Loan Repayment", loan_repayment_name, ["value_date", "interest_payable"]
+		)
+
+		self.assertEqual(getdate(lr_value_date), getdate("2026-07-31"))
+		self.assertGreater(flt(lr_interest_payable), 0)
+
+	@HRMSTestSuite.change_settings(
+		"Payroll Settings", {"process_payroll_accounting_entry_based_on_employee": 0}
+	)
 	def test_component_exclusion_from_accounting_entries(self):
 		company = frappe.get_doc("Company", "_Test Company")
 		employee = make_employee("exclude_component_test@payroll.com", company=company.name)
@@ -873,12 +996,178 @@ class TestPayrollEntry(FrappeTestCase):
 		self.assertIn(company.default_payroll_payable_account, accounts)
 		self.assertNotIn("ESIC Payable - _TC", accounts, "ESIC component wrongly included in JE")
 
+	def test_employee_benefits_accruals_in_salary_slip(self):
+		"""Test to verify
+		- employee flexible benefits of accrual payout methods are fetched into salary slip
+		- employee benefit ledger entries are created for each component
+		- accrual earning components are excluded from earnings and added to accrued_benefts instead
+		- additional salary for accrual component is included in totals and benefit ledger entries are created
+		- unclaimed benefits and benefit type of "Accrue and Payout at end of Payroll Perod" are paid out in final month of payroll period
+		"""
+		from hrms.payroll.doctype.salary_slip.test_salary_slip import (
+			create_salary_slips_for_payroll_period,
+			make_payroll_period,
+		)
+
+		frappe.db.set_value("Company", "_Test Company", "default_holiday_list", "_Test Holiday List")
+
+		make_payroll_period(company="_Test Company")
+		emp = make_employee(
+			"test_employee_benefits@salary.com",
+			company="_Test Company",
+			date_of_joining="2021-01-01",
+		)
+		payroll_period = frappe.get_last_doc("Payroll Period", filters={"company": "_Test Company"})
+
+		make_salary_structure(
+			"Test Benefit Accrual",
+			"Monthly",
+			company="_Test Company",
+			employee=emp,
+			payroll_period=payroll_period,
+			base=65000,
+			include_flexi_benefits=True,
+			test_accrual_component=True,
+			test_tax=True,
+		)
+
+		# Create and submit payroll entry for first month of payroll period
+		first_month_start = payroll_period.start_date
+		first_month_end = add_months(first_month_start, 1)
+		company_doc = frappe.get_doc("Company", "_Test Company")
+
+		payroll_entry = make_payroll_entry(
+			start_date=first_month_start,
+			end_date=first_month_end,
+			payable_account=company_doc.default_payroll_payable_account,
+			currency=company_doc.default_currency,
+			company="_Test Company",
+			cost_center="Main - _TC",
+		)
+		salary_slip = frappe.get_doc("Salary Slip", {"payroll_entry": payroll_entry.name})
+
+		# Check if employee benefits have been fetched to accrued benefits table
+		self.assertTrue(salary_slip.accrued_benefits)
+		accrual_payout_methods = [
+			"Accrue and payout at end of payroll period",
+			"Accrue per cycle, pay only on claim",
+		]
+		for benefit in salary_slip.accrued_benefits:
+			if benefit.salary_component != "Accrued Earnings":
+				payout_method = frappe.db.get_value(
+					"Salary Component", benefit.salary_component, "payout_method"
+				)
+				self.assertIn(payout_method, accrual_payout_methods)
+			else:
+				self.assertEqual(benefit.amount, 1000)
+
+		# Check if employee benefit ledger entries have been created for each component
+		for benefit_row in salary_slip.accrued_benefits:
+			self.assertTrue(
+				frappe.db.exists(
+					"Employee Benefit Ledger",
+					{"salary_slip": salary_slip.name, "salary_component": benefit_row.salary_component},
+				)
+			)
+
+		earnings_list = [earning.salary_component for earning in salary_slip.earnings]
+		self.assertNotIn(
+			"Accrued Earnings", earnings_list
+		)  # "Accrued Earnings component should not be in earnings table but in accrued benefits")
+
+		# Check if Employee Benefit Ledger exists for Accrued Earnings Component
+		self.assertTrue(
+			frappe.db.exists(
+				"Employee Benefit Ledger",
+				{"salary_slip": salary_slip.name, "salary_component": "Accrued Earnings"},
+			)
+		)
+
+		# Create additional salary for accrual component for second month of payroll period
+		second_month_start = add_months(first_month_start, 1)
+		second_month_end = add_months(first_month_start, 2)
+
+		additional_salary = frappe.get_doc(
+			{
+				"doctype": "Additional Salary",
+				"employee": emp,
+				"salary_component": "Accrued Earnings",
+				"amount": 1000,
+				"payroll_date": second_month_end,
+				"company": "_Test Company",
+				"overwrite_salary_structure_amount": 0,
+			}
+		)
+		additional_salary.insert()
+		additional_salary.submit()
+
+		next_month_payroll_entry = make_payroll_entry(
+			start_date=second_month_start,
+			end_date=second_month_end,
+			payable_account=company_doc.default_payroll_payable_account,
+			currency=company_doc.default_currency,
+			company="_Test Company",
+			cost_center="Main - _TC",
+		)
+		next_salary_slip = frappe.get_doc("Salary Slip", {"payroll_entry": next_month_payroll_entry.name})
+
+		# Payout against accrual component as additional salary is recorded in Employee Benefit Ledger
+		self.assertTrue(
+			frappe.db.exists(
+				"Employee Benefit Ledger",
+				{
+					"salary_slip": next_salary_slip.name,
+					"salary_component": "Accrued Earnings",
+					"transaction_type": "Payout",
+				},
+			)
+		)
+
+		frappe.db.delete("Salary Slip", {"employee": emp})
+		frappe.db.delete("Employee Benefit Ledger")
+
+		# check if unclaimed benefits and benefit type of "Accrue and Payout at end of Payroll Perod" are paid out in final month of payroll period
+		create_salary_slips_for_payroll_period(emp, "Test Benefit Accrual", payroll_period)
+
+		salary_slip = frappe.get_all(
+			"Salary Slip", filters={"employee": emp}, order_by="posting_date desc", limit=1, pluck="name"
+		)
+		salary_slip = frappe.get_doc("Salary Slip", salary_slip[0])
+		earnings_components = {earning.salary_component: earning.amount for earning in salary_slip.earnings}
+
+		self.assertEqual(
+			earnings_components.get("Internet Reimbursement"),
+			12000,
+		)
+		self.assertEqual(
+			earnings_components.get("Mediclaim Allowance"),
+			24000,
+		)
+
+	def test_status_on_discard(self):
+		company = frappe.get_doc("Company", "_Test Company")
+		employee = frappe.db.get_value("Employee", {"company": "_Test Company"})
+		setup_salary_structure(employee, company)
+
+		dates = get_start_end_dates("Monthly", nowdate())
+		payroll_entry = get_payroll_entry(
+			start_date=dates.start_date,
+			end_date=dates.end_date,
+			payable_account=company.default_payroll_payable_account,
+			currency=company.default_currency,
+			company=company.name,
+			cost_center="Main - _TC",
+		)
+		payroll_entry.discard()
+		payroll_entry.reload()
+		self.assertEqual(payroll_entry.status, "Cancelled")
+
 
 def get_payroll_entry(**args):
 	args = frappe._dict(args)
 
 	payroll_entry: PayrollEntry = frappe.new_doc("Payroll Entry")
-	payroll_entry.company = args.company or erpnext.get_default_company()
+	payroll_entry.company = args.company or "_Test Company"
 	payroll_entry.start_date = args.start_date or "2016-11-01"
 	payroll_entry.end_date = args.end_date or "2016-11-30"
 	payroll_entry.payment_account = get_payment_account()
@@ -899,9 +1188,6 @@ def get_payroll_entry(**args):
 	payroll_entry.fill_employee_details()
 	payroll_entry.insert()
 
-	# Commit so that the first salary slip creation failure does not rollback the Payroll Entry insert.
-	frappe.db.commit()  # nosemgrep
-
 	return payroll_entry
 
 
@@ -918,7 +1204,7 @@ def make_payroll_entry(**args):
 def get_payment_account():
 	return frappe.get_value(
 		"Account",
-		{"account_type": "Cash", "company": erpnext.get_default_company(), "is_group": 0},
+		{"account_type": "Cash", "company": "_Test Company" or "_Test Company", "is_group": 0},
 		"name",
 	)
 
@@ -964,6 +1250,12 @@ def setup_lending():
 		create_loan_product,
 		set_loan_settings_in_company,
 	)
+	from lending.tests.test_utils import create_demand_offset_order
+
+	create_demand_offset_order(
+		"Test EMI Based Standard Loan Demand Offset Order",
+		["EMI (Principal + Interest)", "Penalty", "Charges"],
+	)
 
 	company = "_Test Company"
 	branch = "Test Employee Branch"
@@ -979,6 +1271,7 @@ def setup_lending():
 		"Test Salary Structure for Loan",
 		"Monthly",
 		employee=applicant,
+		from_date=add_months(getdate(), -1),
 		company="_Test Company",
 		currency=company_doc.default_currency,
 	)
@@ -997,6 +1290,7 @@ def setup_lending():
 			interest_income_account="Interest Income Account - _TC",
 			penalty_income_account="Penalty Income Account - _TC",
 			repayment_schedule_type="Monthly as per repayment start date",
+			collection_offset_sequence_for_standard_asset="Test EMI Based Standard Loan Demand Offset Order",
 		)
 
 	return (
@@ -1008,7 +1302,9 @@ def setup_lending():
 
 
 def create_loan_for_employee(applicant):
-	from lending.loan_management.doctype.loan.test_loan import create_loan
+	from lending.tests.test_utils import create_loan
+
+	dates = frappe._dict({"start_date": add_months(getdate(), -1), "end_date": getdate()})
 
 	loan = create_loan(
 		applicant,
@@ -1016,7 +1312,9 @@ def create_loan_for_employee(applicant):
 		280000,
 		"Repay Over Number of Periods",
 		20,
-		posting_date=add_months(nowdate(), -1),
+		applicant_type="Employee",
+		posting_date=dates.start_date,
+		repayment_start_date=dates.end_date,
 	)
 	loan.repay_from_salary = 1
 	loan.submit()
@@ -1025,17 +1323,21 @@ def create_loan_for_employee(applicant):
 
 
 def get_repayment_party_type(loan):
-	loan_repayment_entry, payroll_payable_account = frappe.db.get_value(
-		"Loan Repayment", {"against_loan": loan}, ["name", "payroll_payable_account"]
+	loan_repayment = frappe.db.get_value(
+		"Loan Repayment", {"against_loan": loan}, ["name", "payroll_payable_account"], as_dict=True
 	)
+	if not loan_repayment:
+		return "", ""
 
-	party_type, party = frappe.db.get_value(
+	return frappe.db.get_value(
 		"GL Entry",
-		{"voucher_no": loan_repayment_entry, "account": payroll_payable_account, "is_cancelled": 0},
+		{
+			"voucher_no": loan_repayment.name,
+			"account": loan_repayment.payroll_payable_account,
+			"is_cancelled": 0,
+		},
 		["party_type", "party"],
-	)
-
-	return party_type, party
+	) or ("", "")
 
 
 def submit_bank_entry(payroll_entry_id):

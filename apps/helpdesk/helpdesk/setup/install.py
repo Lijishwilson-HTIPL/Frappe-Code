@@ -5,6 +5,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
 
 from helpdesk.consts import DEFAULT_ARTICLE_CATEGORY
+from helpdesk.setup.default_views import add_default_views
 
 from .default_template import create_default_template
 from .file import create_helpdesk_folder
@@ -30,6 +31,8 @@ def after_install():
     create_welcome_ticket()
     create_ticket_feedback_options()
     add_property_setters()
+    add_website_settings_permission()
+    add_default_views()
     # Always keep this at last, because sql_ddl makes the db commit
     add_fts_index()
 
@@ -169,7 +172,7 @@ def add_default_agent_groups():
         if not frappe.db.exists("HD Team", agent_group):
             agent_group_doc = frappe.new_doc("HD Team")
             agent_group_doc.team_name = agent_group
-            agent_group_doc.insert()
+            agent_group_doc.insert(ignore_mandatory=True)
 
 
 def update_agent_role_permissions():
@@ -202,12 +205,22 @@ def add_agent_manager_permissions():
         "Communication": ["create", "delete", "write"],
         "User Invitation": ["create", "write"],
         "Role": [],
+        "Assignment Rule": ["create", "delete", "write"],
     }
     for dt in doc_to_permissions.keys():
         # this adds read permission to the role
         add_permission(dt, "Agent Manager")
         for p in doc_to_permissions[dt]:
             update_permission_property(dt, "Agent Manager", 0, p, 1)
+
+
+def add_website_settings_permission():
+    doctype = "Website Settings"
+    role = "System Manager"
+    permissions = ["create", "write", "delete"]
+    add_permission(doctype, role)
+    for p in permissions:
+        update_permission_property(doctype, role, 0, p, 1)
 
 
 def add_default_assignment_rule():
@@ -361,8 +374,8 @@ def add_fts_index():
 def add_index_if_not_exists(table, column, index_name):
     index_exists = frappe.db.sql(
         """
-        SHOW INDEX FROM `{table}` 
-            WHERE Column_name = '{column}' 
+        SHOW INDEX FROM `{table}`
+            WHERE Column_name = '{column}'
             AND Index_type = 'FULLTEXT'
         """.format(
             table=table, column=column

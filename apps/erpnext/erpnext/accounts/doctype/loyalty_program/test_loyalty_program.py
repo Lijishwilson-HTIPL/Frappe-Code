@@ -1,23 +1,19 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
 from frappe.utils import cint, flt, getdate, today
 
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
+	get_loyalty_details,
 	get_loyalty_program_details_with_points,
 )
 from erpnext.accounts.party import get_dashboard_info
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestLoyaltyProgram(unittest.TestCase):
-	@classmethod
-	def setUpClass(self):
-		# create relevant item, customer, loyalty program, etc
-		create_records()
-
+class TestLoyaltyProgram(ERPNextTestSuite):
 	def test_loyalty_points_earned_single_tier(self):
 		frappe.db.set_value("Customer", "Test Loyalty Customer", "loyalty_program", "Test Single Loyalty")
 		# create a new sales invoice
@@ -38,6 +34,7 @@ class TestLoyaltyProgram(unittest.TestCase):
 		)
 
 		self.assertEqual(si_original.get("loyalty_program"), customer.loyalty_program)
+		self.assertEqual(lpe.get("loyalty_program_tier"), "Bronce")  # is always in the first tier
 		self.assertEqual(lpe.get("loyalty_program_tier"), customer.loyalty_program_tier)
 		self.assertEqual(lpe.loyalty_points, earned_points)
 
@@ -79,6 +76,7 @@ class TestLoyaltyProgram(unittest.TestCase):
 		si_original = create_sales_invoice_record()
 		si_original.insert()
 		si_original.submit()
+		customer.reload()
 
 		earned_points = get_points_earned(si_original)
 
@@ -101,8 +99,8 @@ class TestLoyaltyProgram(unittest.TestCase):
 		si_redeem.loyalty_points = earned_points
 		si_redeem.insert()
 		si_redeem.submit()
+		customer.reload()
 
-		customer = frappe.get_doc("Customer", {"customer_name": "Test Loyalty Customer"})
 		earned_after_redemption = get_points_earned(si_redeem)
 
 		lpe_redeem = frappe.get_doc(
@@ -197,6 +195,70 @@ class TestLoyaltyProgram(unittest.TestCase):
 		for d in company_wise_info:
 			self.assertTrue(d.get("loyalty_points"))
 
+	@unittest.mock.patch("erpnext.accounts.doctype.loyalty_program.loyalty_program.get_loyalty_details")
+	def test_tier_selection(self, mock_get_loyalty_details):
+		# Create a new loyalty program with multiple tiers
+		loyalty_program = frappe.get_doc(
+			{
+				"doctype": "Loyalty Program",
+				"loyalty_program_name": "Test Tier Selection",
+				"auto_opt_in": 1,
+				"from_date": today(),
+				"loyalty_program_type": "Multiple Tier Program",
+				"conversion_factor": 1,
+				"expiry_duration": 10,
+				"company": "_Test Company",
+				"cost_center": "Main - _TC",
+				"expense_account": "Loyalty - _TC",
+				"collection_rules": [
+					{"tier_name": "Gold", "collection_factor": 1000, "min_spent": 20000},
+					{"tier_name": "Silver", "collection_factor": 1000, "min_spent": 10000},
+					{"tier_name": "Bronze", "collection_factor": 1000, "min_spent": 0},
+				],
+			}
+		)
+		loyalty_program.insert()
+
+		# Test cases with different total_spent and current_transaction_amount combinations
+		test_cases = [
+			(0, 6000, "Bronze"),
+			(0, 15000, "Silver"),
+			(0, 25000, "Gold"),
+			(4000, 500, "Bronze"),
+			(8000, 3000, "Silver"),
+			(18000, 3000, "Gold"),
+			(22000, 5000, "Gold"),
+		]
+
+		for total_spent, current_transaction_amount, expected_tier in test_cases:
+			with self.subTest(total_spent=total_spent, current_transaction_amount=current_transaction_amount):
+				# Mock the get_loyalty_details function to update the total_spent
+				def side_effect(*args, **kwargs):
+					result = get_loyalty_details(*args, **kwargs)
+					result.update({"total_spent": total_spent})
+					return result
+
+				mock_get_loyalty_details.side_effect = side_effect
+
+				lp_details = get_loyalty_program_details_with_points(
+					"Test Loyalty Customer",
+					loyalty_program=loyalty_program.name,
+					company="_Test Company",
+					current_transaction_amount=current_transaction_amount,
+				)
+
+				# Get the selected tier based on the current implementation
+				selected_tier = lp_details.tier_name
+
+				self.assertEqual(
+					selected_tier,
+					expected_tier,
+					f"Expected tier {expected_tier} for total_spent {total_spent} and current_transaction_amount {current_transaction_amount}, but got {selected_tier}",
+				)
+
+		# Clean up
+		loyalty_program.delete()
+
 
 def get_points_earned(self):
 	def get_returned_amount():
@@ -255,95 +317,3 @@ def create_sales_invoice_record(qty=1):
 			],
 		}
 	)
-
-
-def create_records():
-	# create a new loyalty Account
-	if not frappe.db.exists("Account", "Loyalty - _TC"):
-		frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "Loyalty",
-				"parent_account": "Direct Expenses - _TC",
-				"company": "_Test Company",
-				"is_group": 0,
-				"account_type": "Expense Account",
-			}
-		).insert()
-
-	# create a new loyalty program Single tier
-	if not frappe.db.exists("Loyalty Program", "Test Single Loyalty"):
-		frappe.get_doc(
-			{
-				"doctype": "Loyalty Program",
-				"loyalty_program_name": "Test Single Loyalty",
-				"auto_opt_in": 1,
-				"from_date": today(),
-				"loyalty_program_type": "Single Tier Program",
-				"conversion_factor": 1,
-				"expiry_duration": 10,
-				"company": "_Test Company",
-				"cost_center": "Main - _TC",
-				"expense_account": "Loyalty - _TC",
-				"collection_rules": [{"tier_name": "Silver", "collection_factor": 1000, "min_spent": 1000}],
-			}
-		).insert()
-
-	# create a new customer
-	if not frappe.db.exists("Customer", "Test Loyalty Customer"):
-		frappe.get_doc(
-			{
-				"customer_group": "_Test Customer Group",
-				"customer_name": "Test Loyalty Customer",
-				"customer_type": "Individual",
-				"doctype": "Customer",
-				"territory": "_Test Territory",
-			}
-		).insert()
-
-	# create a new loyalty program Multiple tier
-	if not frappe.db.exists("Loyalty Program", "Test Multiple Loyalty"):
-		frappe.get_doc(
-			{
-				"doctype": "Loyalty Program",
-				"loyalty_program_name": "Test Multiple Loyalty",
-				"auto_opt_in": 1,
-				"from_date": today(),
-				"loyalty_program_type": "Multiple Tier Program",
-				"conversion_factor": 1,
-				"expiry_duration": 10,
-				"company": "_Test Company",
-				"cost_center": "Main - _TC",
-				"expense_account": "Loyalty - _TC",
-				"collection_rules": [
-					{"tier_name": "Silver", "collection_factor": 1000, "min_spent": 10000},
-					{"tier_name": "Gold", "collection_factor": 1000, "min_spent": 19000},
-				],
-			}
-		).insert()
-
-	# create an item
-	if not frappe.db.exists("Item", "Loyal Item"):
-		frappe.get_doc(
-			{
-				"doctype": "Item",
-				"item_code": "Loyal Item",
-				"item_name": "Loyal Item",
-				"item_group": "All Item Groups",
-				"company": "_Test Company",
-				"is_stock_item": 1,
-				"opening_stock": 100,
-				"valuation_rate": 10000,
-			}
-		).insert()
-
-	# create item price
-	if not frappe.db.exists("Item Price", {"price_list": "Standard Selling", "item_code": "Loyal Item"}):
-		frappe.get_doc(
-			{
-				"doctype": "Item Price",
-				"price_list": "Standard Selling",
-				"item_code": "Loyal Item",
-				"price_list_rate": 10000,
-			}
-		).insert()

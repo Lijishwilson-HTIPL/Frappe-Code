@@ -2,24 +2,19 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, now_datetime, today
 
-from erpnext.assets.doctype.asset.test_asset import create_asset_data
 from erpnext.setup.doctype.employee.test_employee import make_employee
 from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
 
+from hrms.tests.utils import HRMSTestSuite
 
-class TestFullandFinalStatement(FrappeTestCase):
+
+class TestFullandFinalStatement(HRMSTestSuite):
 	def setUp(self):
-		for dt in ["Full and Final Statement", "Asset", "Asset Movement", "Asset Movement Item"]:
-			frappe.db.delete(dt)
-
 		self.setup_fnf()
 
 	def setup_fnf(self):
-		create_asset_data()
-
 		self.employee = make_employee(
 			"test_fnf@example.com", company="_Test Company", relieving_date=add_days(today(), 30)
 		)
@@ -70,6 +65,11 @@ class TestFullandFinalStatement(FrappeTestCase):
 		self.assertEqual(debit_entry.debit_in_account_currency, 150000.0)
 		self.assertEqual(debit_entry.reference_type, "Full and Final Statement")
 		self.assertEqual(debit_entry.reference_name, self.fnf.name)
+
+	def test_status_on_discard(self):
+		self.fnf.discard()
+		self.fnf.reload()
+		self.assertEqual(self.fnf.status, "Cancelled")
 
 
 def create_full_and_final_statement(employee):

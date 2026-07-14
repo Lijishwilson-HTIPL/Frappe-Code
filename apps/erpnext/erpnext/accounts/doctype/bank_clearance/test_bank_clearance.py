@@ -1,6 +1,5 @@
 # Copyright (c) 2020, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
@@ -15,12 +14,12 @@ from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.stock.doctype.item.test_item import create_item
 from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
-from erpnext.tests.utils import if_lending_app_installed, if_lending_app_not_installed
+from erpnext.tests.utils import ERPNextTestSuite, if_lending_app_installed, if_lending_app_not_installed
 
 
-class TestBankClearance(unittest.TestCase):
-	@classmethod
-	def setUpClass(cls):
+class TestBankClearance(ERPNextTestSuite):
+	def setUp(self):
+		frappe.clear_cache()
 		create_warehouse(
 			warehouse_name="_Test Warehouse",
 			properties={"parent_warehouse": "All Warehouses - _TC"},
@@ -29,9 +28,6 @@ class TestBankClearance(unittest.TestCase):
 		create_item("_Test Item")
 		create_cost_center(cost_center_name="_Test Cost Center", company="_Test Company")
 
-		clear_payment_entries()
-		clear_loan_transactions()
-		clear_pos_sales_invoices()
 		make_bank_account()
 		add_transactions()
 
@@ -126,23 +122,6 @@ class TestBankClearance(unittest.TestCase):
 		self.assertEqual(si_clearance_date, date)
 
 
-def clear_payment_entries():
-	frappe.db.delete("Payment Entry")
-
-
-def clear_pos_sales_invoices():
-	frappe.db.delete("Sales Invoice", {"is_pos": 1})
-
-
-@if_lending_app_installed
-def clear_loan_transactions():
-	for dt in [
-		"Loan Disbursement",
-		"Loan Repayment",
-	]:
-		frappe.db.delete(dt)
-
-
 def make_bank_account():
 	if not frappe.db.get_value("Account", "_Test Bank Clearance - _TC"):
 		frappe.get_doc(
@@ -165,7 +144,7 @@ def make_payment_entry():
 
 	supplier = create_supplier(supplier_name="_Test Supplier")
 	pi = make_purchase_invoice(
-		supplier=supplier,
+		supplier=supplier.name,
 		supplier_warehouse="_Test Warehouse - _TC",
 		expense_account="Cost of Goods Sold - _TC",
 		uom="Nos",

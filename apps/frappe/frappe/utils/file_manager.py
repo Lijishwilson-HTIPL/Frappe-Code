@@ -3,7 +3,6 @@
 
 import base64
 import hashlib
-import io
 import json
 import mimetypes
 import os
@@ -72,7 +71,7 @@ def upload():
 
 
 def get_file_doc(dt=None, dn=None, folder=None, is_private=None, df=None):
-	"""returns File object (Document) from given parameters or form_dict"""
+	"""Return File object (Document) from given parameters or `form_dict`."""
 	r = frappe.form_dict
 
 	if dt is None:
@@ -279,9 +278,7 @@ def remove_file(
 	ignore_permissions, comment = False, None
 	if attached_to_doctype and attached_to_name and not from_delete:
 		doc = frappe.get_doc(attached_to_doctype, attached_to_name)
-		ignore_permissions = doc.has_permission("write") or False
-		if frappe.flags.in_web_form:
-			ignore_permissions = True
+		ignore_permissions = frappe.flags.in_web_form or doc.has_permission("write")
 		if not file_name:
 			file_name = frappe.db.get_value("File", fid, "file_name")
 		comment = doc.add_comment("Attachment Removed", file_name)
@@ -327,7 +324,7 @@ def delete_file(path):
 
 
 def get_file(fname):
-	"""Returns [`file_name`, `content`] for given file name `fname`"""
+	"""Return [`file_name`, `content`] for given file name `fname`."""
 	file_path = get_file_path(fname)
 
 	# read the file
@@ -344,7 +341,7 @@ def get_file(fname):
 
 
 def get_file_path(file_name):
-	"""Returns file path from given file name"""
+	"""Return file path from given file name."""
 	if "../" in file_name:
 		return
 
@@ -401,12 +398,18 @@ def get_file_name(fname, optional_suffix):
 @frappe.whitelist()
 def add_attachments(doctype, name, attachments):
 	"""Add attachments to the given DocType"""
+	if not frappe.has_permission(doctype, "write", doc=name):
+		frappe.throw(_("You need write permissions to add attachments to this record."))
+
 	if isinstance(attachments, str):
 		attachments = json.loads(attachments)
 	# loop through attachments
 	files = []
 	for a in attachments:
 		if isinstance(a, str):
+			if not frappe.has_permission("File", ptype="read", doc=a):
+				frappe.throw(_("You don't have permission to read/attach the file {0}.").format(a))
+
 			attach = frappe.db.get_value(
 				"File", {"name": a}, ["file_name", "file_url", "is_private"], as_dict=1
 			)
@@ -420,7 +423,7 @@ def add_attachments(doctype, name, attachments):
 
 
 def is_safe_path(path: str) -> bool:
-	if path.startswith(("http://", "https://")):
+	if path.startswith(("http://", "https://", "/api/method/")):
 		return True
 
 	basedir = frappe.get_site_path()

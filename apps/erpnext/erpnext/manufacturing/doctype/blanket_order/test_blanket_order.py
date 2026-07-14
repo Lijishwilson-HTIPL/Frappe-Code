@@ -1,16 +1,16 @@
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 import frappe
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_months, today
 
 from erpnext import get_company_currency
 from erpnext.stock.doctype.item.test_item import make_item
+from erpnext.tests.utils import ERPNextTestSuite
 
 from .blanket_order import make_order
 
 
-class TestBlanketOrder(FrappeTestCase):
+class TestBlanketOrder(ERPNextTestSuite):
 	def setUp(self):
 		frappe.flags.args = frappe._dict()
 

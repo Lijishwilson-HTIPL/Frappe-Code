@@ -13,11 +13,27 @@ from hrms.hr.utils import validate_active_employee
 class EmployeeReferral(Document):
 	def validate(self):
 		validate_active_employee(self.referrer)
+		self.validate_unique_referral()
 		self.set_full_name()
+		self.set_status()
 		self.set_referral_bonus_payment_status()
+
+	def validate_unique_referral(self):
+		if referral := frappe.db.exists(
+			"Employee Referral", {"name": ("!=", self.name), "email": self.email, "docstatus": ("!=", 2)}
+		):
+			frappe.throw(
+				_("Employee Referral {0} already exists for email: {1}").format(
+					get_link_to_form("Employee Referral", referral), frappe.bold(self.email)
+				),
+				frappe.DuplicateEntryError,
+			)
 
 	def set_full_name(self):
 		self.full_name = " ".join(filter(None, [self.first_name, self.last_name]))
+
+	def set_status(self):
+		self.status = "Pending"
 
 	def set_referral_bonus_payment_status(self):
 		if not self.is_applicable_for_referral_bonus:
@@ -26,9 +42,12 @@ class EmployeeReferral(Document):
 			if not self.referral_payment_status:
 				self.referral_payment_status = "Unpaid"
 
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
+
 
 @frappe.whitelist()
-def create_job_applicant(source_name, target_doc=None):
+def create_job_applicant(source_name: str, target_doc: str | Document | None = None) -> Document:
 	emp_ref = frappe.get_doc("Employee Referral", source_name)
 	# just for Api call if some set status apart from default Status
 	status = emp_ref.status
@@ -61,11 +80,8 @@ def create_job_applicant(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def create_additional_salary(doc):
-	import json
-
-	if isinstance(doc, str):
-		doc = frappe._dict(json.loads(doc))
+def create_additional_salary(employee_referral: str) -> Document:
+	doc = frappe.get_doc("Employee Referral", employee_referral)
 
 	if not frappe.db.exists("Additional Salary", {"ref_docname": doc.name}):
 		additional_salary = frappe.new_doc("Additional Salary")

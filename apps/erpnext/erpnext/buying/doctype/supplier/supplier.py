@@ -33,6 +33,9 @@ class Supplier(TransactionBase):
 			AllowedToTransactWith,
 		)
 		from erpnext.accounts.doctype.party_account.party_account import PartyAccount
+		from erpnext.buying.doctype.customer_number_at_supplier.customer_number_at_supplier import (
+			CustomerNumberAtSupplier,
+		)
 		from erpnext.utilities.doctype.portal_user.portal_user import PortalUser
 
 		accounts: DF.Table[PartyAccount]
@@ -40,11 +43,13 @@ class Supplier(TransactionBase):
 		allow_purchase_invoice_creation_without_purchase_receipt: DF.Check
 		companies: DF.Table[AllowedToTransactWith]
 		country: DF.Link | None
+		customer_numbers: DF.Table[CustomerNumberAtSupplier]
 		default_bank_account: DF.Link | None
 		default_currency: DF.Link | None
 		default_price_list: DF.Link | None
 		disabled: DF.Check
 		email_id: DF.ReadOnly | None
+		gender: DF.Link | None
 		hold_type: DF.Literal["", "All", "Invoices", "Payments"]
 		image: DF.AttachImage | None
 		is_frozen: DF.Check
@@ -58,7 +63,7 @@ class Supplier(TransactionBase):
 		portal_users: DF.Table[PortalUser]
 		prevent_pos: DF.Check
 		prevent_rfqs: DF.Check
-		primary_address: DF.Text | None
+		primary_address: DF.TextEditor | None
 		release_date: DF.Date | None
 		represents_company: DF.Link | None
 		supplier_details: DF.Text | None
@@ -70,6 +75,7 @@ class Supplier(TransactionBase):
 		tax_category: DF.Link | None
 		tax_id: DF.Data | None
 		tax_withholding_category: DF.Link | None
+		tax_withholding_group: DF.Link | None
 		warn_pos: DF.Check
 		warn_rfqs: DF.Check
 		website: DF.Data | None
@@ -155,8 +161,6 @@ class Supplier(TransactionBase):
 
 		if doc.payment_terms:
 			self.payment_terms = doc.payment_terms
-
-		self.save()
 
 	def validate_internal_supplier(self):
 		if not self.is_internal_supplier:

@@ -1,5 +1,6 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
+import datetime
 
 import frappe
 from frappe import _
@@ -29,7 +30,7 @@ class LeaveLedgerEntry(Document):
 		# allow cancellation of expiry leaves
 		if self.is_expired:
 			frappe.db.set_value("Leave Allocation", self.transaction_name, "expired", 0)
-		else:
+		elif self.transaction_type != "Leave Adjustment":
 			frappe.throw(_("Only expired allocation can be cancelled"))
 
 
@@ -190,12 +191,12 @@ def get_remaining_leaves(allocation):
 			"to_date": ("<=", allocation.to_date),
 			"docstatus": 1,
 		},
-		fieldname=["SUM(leaves)"],
+		fieldname=[{"SUM": "leaves"}],
 	)
 
 
 @frappe.whitelist()
-def expire_allocation(allocation, expiry_date=None):
+def expire_allocation(allocation: str | Document | frappe._dict, expiry_date: datetime.date | None = None):
 	"""expires non-carry forwarded allocation"""
 	import json
 

@@ -7,7 +7,7 @@ from frappe import _, qb
 from frappe.query_builder import Criterion
 
 from erpnext import get_default_company
-from erpnext.accounts.party import get_party_details
+from erpnext.accounts.party import _get_party_details
 
 
 def execute(filters=None):
@@ -95,7 +95,7 @@ def get_data(filters=None):
 
 	items = get_selling_items(filters)
 	item_stock_map = frappe.get_all(
-		"Bin", fields=["item_code", "sum(actual_qty) AS available"], group_by="item_code"
+		"Bin", fields=["item_code", {"SUM": "actual_qty", "as": "available"}], group_by="item_code"
 	)
 	item_stock_map = {item.item_code: item.available for item in item_stock_map}
 	price_list_map = fetch_item_prices(
@@ -125,7 +125,7 @@ def get_data(filters=None):
 
 
 def get_customer_details(filters):
-	customer_details = get_party_details(party=filters.get("customer"), party_type="Customer")
+	customer_details = _get_party_details(party=filters.get("customer"), party_type="Customer")
 	customer_details.update(
 		{"company": get_default_company(), "price_list": customer_details.get("selling_price_list")}
 	)

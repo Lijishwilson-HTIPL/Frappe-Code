@@ -1,7 +1,6 @@
 import functools
 import json
 import re
-from typing import List
 
 import frappe
 import phonenumbers
@@ -61,7 +60,12 @@ def is_agent(user: str = None) -> bool:
     )
 
 
-def publish_event(event: str, data: dict, user: str = None):
+def publish_event(
+    event: str,
+    room: str | None = None,
+    data: dict | None = None,
+    user: str | None = None,
+):
     """
     Publish `event` to a room with `data`
 
@@ -69,17 +73,15 @@ def publish_event(event: str, data: dict, user: str = None):
     :param data: Data to be sent with the event
     :param user: User to send the event to, defaults to current user
     """
-    room = get_website_room()
+    room = room or get_website_room()
     user = user or frappe.session.user
     frappe.publish_realtime(
         event, message=data, room=room, after_commit=True, user=user
     )
 
 
-def refetch_resource(key: str | List[str], user=None):
-    event = "refetch_resource"
-    data = {"cache_key": key}
-    publish_event(event, data, user=user)
+def get_doc_room(doctype: str, name: str) -> str:
+    return f"open_doc:{doctype}/{name}"
 
 
 def capture_event(event: str):
@@ -173,15 +175,16 @@ def agent_only(fn):
 
 
 def get_agents_team():
-    QBTeam = frappe.qb.DocType("HD Team")
-    QBTeamMember = frappe.qb.DocType("HD Team Member")
+    Team = frappe.qb.DocType("HD Team")
+    TeamMember = frappe.qb.DocType("HD Team Member")
 
     teams = (
-        frappe.qb.from_(QBTeamMember)
-        .where(QBTeamMember.user == frappe.session.user)
-        .join(QBTeam)
-        .on(QBTeam.name == QBTeamMember.parent)
-        .select(QBTeam.team_name, QBTeam.ignore_restrictions)
+        frappe.qb.from_(TeamMember)
+        .join(Team)
+        .on(Team.name == TeamMember.parent)
+        .where(TeamMember.user == frappe.session.user)
+        .where(Team.disabled == 0)
+        .select(Team.team_name, Team.ignore_restrictions)
         .run(as_dict=True)
     )
     return teams
@@ -428,3 +431,44 @@ def is_json_valid(json_string):
         return True
     except json.JSONDecodeError:
         return False
+
+
+def is_frappe_version(version: str, above: bool = False, below: bool = False):
+    from frappe.pulse.utils import get_frappe_version
+
+    current_version = get_frappe_version()
+    major_version = int(current_version.split(".")[0])
+    target_version = int(version.split(".")[0])
+
+    if above:
+        return major_version >= target_version
+    if below:
+        return major_version < target_version
+    return major_version == target_version
+
+
+def format_time_difference(dt, context="ago"):
+    if not dt:
+        return ""
+    now = frappe.utils.now_datetime()
+    if isinstance(dt, str):
+        dt = frappe.utils.get_datetime(dt)
+
+    if context == "until":
+        diff = dt - now
+        past_label = "overdue"
+    else:
+        diff = now - dt
+        past_label = "0m"
+
+    total_seconds = diff.total_seconds()
+
+    if total_seconds < 0:
+        return past_label
+
+    if total_seconds < 3600:
+        return f"{int(total_seconds // 60)}m"
+    elif total_seconds < 86400:
+        return f"{int(total_seconds // 3600)}h"
+    else:
+        return f"{int(total_seconds // 86400)}d"

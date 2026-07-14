@@ -28,13 +28,15 @@ class POSProfile(Document):
 		from erpnext.accounts.doctype.pos_profile_user.pos_profile_user import POSProfileUser
 
 		account_for_change_amount: DF.Link | None
+		action_on_new_invoice: DF.Literal[
+			"Always Ask", "Save Changes and Load New Invoice", "Discard Changes and Load New Invoice"
+		]
 		allow_discount_change: DF.Check
 		allow_partial_payment: DF.Check
 		allow_rate_change: DF.Check
 		applicable_for_users: DF.Table[POSProfileUser]
 		apply_discount_on: DF.Literal["Grand Total", "Net Total"]
 		auto_add_item_to_cart: DF.Check
-		campaign: DF.Link | None
 		company: DF.Link
 		company_address: DF.Link | None
 		cost_center: DF.Link | None
@@ -42,7 +44,6 @@ class POSProfile(Document):
 		currency: DF.Link
 		customer: DF.Link | None
 		customer_groups: DF.Table[POSCustomerGroup]
-		disable_grand_total_to_default_mop: DF.Check
 		disable_rounded_total: DF.Check
 		disabled: DF.Check
 		expense_account: DF.Link | None
@@ -58,9 +59,14 @@ class POSProfile(Document):
 		project: DF.Link | None
 		select_print_heading: DF.Link | None
 		selling_price_list: DF.Link | None
+		set_grand_total_to_default_mop: DF.Check
 		tax_category: DF.Link | None
 		taxes_and_charges: DF.Link | None
 		tc_name: DF.Link | None
+		update_stock: DF.Check
+		utm_campaign: DF.Link | None
+		utm_medium: DF.Link | None
+		utm_source: DF.Link | None
 		validate_stock_on_save: DF.Check
 		warehouse: DF.Link
 		write_off_account: DF.Link
@@ -160,7 +166,7 @@ class POSProfile(Document):
 
 		if len(customer_groups) != len(set(customer_groups)):
 			frappe.throw(
-				_("Duplicate customer group found in the cutomer group table"),
+				_("Duplicate customer group found in the customer group table"),
 				title=_("Duplicate Customer Group"),
 			)
 
@@ -202,15 +208,14 @@ class POSProfile(Document):
 	def set_defaults(self, include_current_pos=True):
 		frappe.defaults.clear_default("is_pos")
 
-		if not include_current_pos:
-			condition = " where pfu.name != '%s' and pfu.default = 1 " % self.name.replace("'", "'")
-		else:
-			condition = " where pfu.default = 1 "
+		pfu = frappe.qb.DocType("POS Profile User")
 
-		pos_view_users = frappe.db.sql_list(
-			f"""select pfu.user
-			from `tabPOS Profile User` as pfu {condition}"""
-		)
+		query = frappe.qb.from_(pfu).select(pfu.user).where(pfu.default == 1)
+
+		if not include_current_pos:
+			query = query.where(pfu.name != self.name)
+
+		pos_view_users = query.run(as_list=1, pluck=True)
 
 		for user in pos_view_users:
 			if user:
@@ -309,32 +314,3 @@ def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
 		)
 
 	return pos_profile
-
-
-@frappe.whitelist()
-def set_default_profile(pos_profile, company):
-	modified = now()
-	user = frappe.session.user
-
-	if pos_profile and company:
-		frappe.db.sql(
-			""" update `tabPOS Profile User` pfu, `tabPOS Profile` pf
-			set
-				pfu.default = 0, pf.modified = %s, pf.modified_by = %s
-			where
-				pfu.user = %s and pf.name = pfu.parent and pf.company = %s
-				and pfu.default = 1""",
-			(modified, user, user, company),
-			auto_commit=1,
-		)
-
-		frappe.db.sql(
-			""" update `tabPOS Profile User` pfu, `tabPOS Profile` pf
-			set
-				pfu.default = 1, pf.modified = %s, pf.modified_by = %s
-			where
-				pfu.user = %s and pf.name = pfu.parent and pf.company = %s and pf.name = %s
-			""",
-			(modified, user, user, company, pos_profile),
-			auto_commit=1,
-		)

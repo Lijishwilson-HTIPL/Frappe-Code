@@ -7,7 +7,7 @@
           class="w-full section-border h-px border-t"
         />
         <div class="p-1 sm:p-3">
-          <CollapsibleSection
+          <Section
             labelClass="px-2 font-semibold"
             headerClass="h-8"
             :label="section.label"
@@ -89,6 +89,7 @@
                               'Attach Image',
                               'HTML',
                               'Geolocation',
+                              'Text Editor',
                             ].includes(field.fieldtype)
                           "
                           class="flex h-7 cursor-pointer items-center px-2 py-1 text-ink-gray-5"
@@ -337,6 +338,17 @@
                           :disabled="Boolean(field.read_only)"
                           @change="(v) => fieldChange(v, field)"
                         />
+                        <TextEditorControl
+                          v-else-if="field.fieldtype === 'Text Editor'"
+                          variant="ghost"
+                          :fixed-menu="false"
+                          :bubble-menu="true"
+                          editorClass="w-full !min-h-[38px] !h-[38px] ml-1"
+                          :value="doc[field.fieldname]"
+                          :placeholder="field.placeholder"
+                          :disabled="Boolean(field.read_only)"
+                          @change="(v) => fieldChange(v, field)"
+                        />
                         <FormControl
                           v-else
                           class="form-control"
@@ -372,7 +384,7 @@
                 </template>
               </FadedScrollableDiv>
             </slot>
-          </CollapsibleSection>
+          </Section>
         </div>
       </div>
     </template>
@@ -393,11 +405,12 @@ import RatingInput from '@/components/Controls/RatingInput.vue'
 import AttachControl from '@/components/Controls/AttachControl.vue'
 import HtmlControl from '@/components/Controls/HtmlControl.vue'
 import GeolocationControl from '@/components/Controls/GeolocationControl.vue'
+import TextEditorControl from '@/components/Controls/TextEditorControl.vue'
 import ButtonControl, {
   getButtonTheme,
   getButtonVariant,
 } from '@/components/Controls/ButtonControl.vue'
-import CollapsibleSection from '@/components/CollapsibleSection.vue'
+import Section from '@/components/Section.vue'
 import PrimaryDropdown from '@/components/PrimaryDropdown.vue'
 import FadedScrollableDiv from '@/components/FadedScrollableDiv.vue'
 import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'

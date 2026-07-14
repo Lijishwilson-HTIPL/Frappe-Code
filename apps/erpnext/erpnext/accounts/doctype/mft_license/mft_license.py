@@ -41,12 +41,7 @@ PLAN_PREFIX = {
 @frappe.whitelist(allow_guest=True)
 def process_payment(stripe_session_id, name, org, email,
                     plan="lifetime", item_code=None):
-	"""
-	Called by MFT landing page after Stripe payment is verified.
-	Creates: Customer (if new), Sales Invoice, Payment Entry, MFT License.
-	Returns: invoice_number, license_key, item_name, amount, purchase_date, expiry.
-	Idempotent: same stripe_session_id always returns the same result.
-	"""
+	frappe.set_user("Administrator")
 	plan = (plan or "lifetime").lower()
 	if plan not in PLAN_ITEM_MAP:
 		plan = "lifetime"
@@ -59,7 +54,6 @@ def process_payment(stripe_session_id, name, org, email,
 	expiry        = add_days(purchase_date, expiry_days) if expiry_days else None
 	grace_expiry  = add_days(str(expiry), 7) if expiry else None
 
-	# ── Idempotency ───────────────────────────────────────────────────────────
 	existing = frappe.db.get_value(
 		"MFT License",
 		{"stripe_session_id": stripe_session_id},
@@ -81,7 +75,6 @@ def process_payment(stripe_session_id, name, org, email,
 			"extended":       False,
 		}
 
-	# ── Layer 2: extend existing license if one already exists ────────────────
 	extended_name, extended_expiry = _check_and_extend_existing(email, item_code, expiry_days)
 	if extended_name:
 		existing_lic = frappe.db.get_value(
@@ -110,6 +103,7 @@ def process_payment(stripe_session_id, name, org, email,
 			"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 			"remarks": f"Stripe Renewal | Session: {stripe_session_id} | Plan: {plan}",
 		})
+		si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 		si.insert(ignore_permissions=True)
 		si.submit()
 		frappe.db.commit()
@@ -148,7 +142,6 @@ def process_payment(stripe_session_id, name, org, email,
 			"extended":       True,
 		}
 
-	# ── Normal path: new purchase ─────────────────────────────────────────────
 	item_name, amount = _get_item_details(item_code)
 	customer_name     = _find_or_create_customer(name, org, email)
 	company = (
@@ -169,6 +162,7 @@ def process_payment(stripe_session_id, name, org, email,
 		"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 		"remarks": f"Stripe | Session: {stripe_session_id} | Plan: {plan}",
 	})
+	si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 	si.insert(ignore_permissions=True)
 	si.submit()
 	frappe.db.commit()
@@ -225,10 +219,6 @@ def process_payment(stripe_session_id, name, org, email,
 
 @frappe.whitelist(allow_guest=True)
 def check_active_license(email, plan):
-	"""
-	Layer 1: called by frontend BEFORE Stripe redirect.
-	Returns has_active=False if no non-expired Active license exists.
-	"""
 	plan = (plan or "lifetime").lower()
 	if plan not in PLAN_ITEM_MAP:
 		plan = "lifetime"
@@ -277,11 +267,6 @@ def check_active_license(email, plan):
 
 @frappe.whitelist(allow_guest=True)
 def check_email_registration(email):
-	"""
-	Pre-layer check: is this email registered in any MFT License (any status)?
-	Returns registered_org so the frontend can warn if the entered org doesn't match.
-	Fail-open: returns registered=False if no matching customer found.
-	"""
 	licenses = frappe.db.get_all(
 		"MFT License",
 		filters={"email": email},
@@ -309,11 +294,7 @@ def _plan_rank(plan):
 
 @frappe.whitelist(allow_guest=True)
 def extend_license(stripe_session_id, email, plan, invoice_name):
-	"""
-	Called after a renewal payment is confirmed (via webhook or polling).
-	Extends the existing Active MFT License expiry.
-	Idempotent: same stripe_session_id always returns the same result.
-	"""
+	frappe.set_user("Administrator")
 	plan = (plan or "monthly").lower()
 	if plan not in PLAN_ITEM_MAP or plan == "lifetime":
 		frappe.throw("extend_license is not applicable for this plan")
@@ -404,11 +385,6 @@ def extend_license(stripe_session_id, email, plan, invoice_name):
 
 
 def send_renewal_requests():
-	"""
-	Scheduled daily job.
-	Finds Active licenses expiring within mft_renewal_days_ahead days (default 7).
-	Creates unpaid Sales Invoice → calls Express for Stripe URL → sends renewal email.
-	"""
 	import requests as http_req
 
 	RENEWAL_DAYS_AHEAD = int(frappe.conf.get("mft_renewal_days_ahead") or 7)
@@ -432,7 +408,6 @@ def send_renewal_requests():
 		if not item_code:
 			continue
 
-		# Skip if unpaid renewal invoice already exists
 		existing_invoice = frappe.db.get_value(
 			"Sales Invoice",
 			{"customer": lic.customer, "status": ["in", ["Unpaid", "Overdue"]],
@@ -463,6 +438,7 @@ def send_renewal_requests():
 				"items": [{"item_code": item_code, "qty": 1, "rate": amount, "price_list_rate": amount}],
 				"remarks": f"MFT Renewal | License: {lic.name} | Plan: {plan}",
 			})
+			si.is_subcontracted = lambda *a, **kw: None  # v16: column removed from tabSales Order
 			si.insert(ignore_permissions=True)
 			si.submit()
 			frappe.db.commit()
@@ -499,11 +475,6 @@ def send_renewal_requests():
 
 
 def auto_expire_licenses():
-	"""
-	Scheduled daily job.
-	Finds Active licenses whose grace_period_expiry has passed → sets status = Expired.
-	Skips Lifetime licenses (grace_period_expiry is null/empty).
-	"""
 	expired = frappe.db.get_all(
 		"MFT License",
 		filters=[
@@ -527,104 +498,13 @@ def auto_expire_licenses():
 
 
 def restore_all_to_active():
-	"""ONE-TIME restore: resets all Expired licenses to Active (emergency use only)."""
 	frappe.db.sql("UPDATE `tabMFT License` SET status='Active' WHERE status='Expired'")
 	frappe.db.commit()
-
-
-def _send_renewal_request_email(to_name, to_email, license_key, invoice_number,
-                                 item_name, amount, current_expiry, plan, payment_url):
-	"""Sends the renewal due email with Stripe Pay Now button (BEFORE payment)."""
-	year       = datetime.datetime.now().year
-	amount_str = f"${float(amount or 0):.2f} USD"
-	plan_label = PLAN_LABEL.get(plan, "Subscription")
-	expiry_str = str(current_expiry) if current_expiry else "—"
-
-	html = f"""<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#0d1117;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;">
-        <tr>
-          <td style="background-color:#1a233a;padding:36px 32px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#4078f2;">Hephzibah Technologies</div>
-            <div style="color:#94a3b8;font-size:14px;margin-top:6px;">MFT Platform — License Renewal</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px 32px 0 32px;">
-            <p style="margin:0;font-size:16px;color:#111827;">Dear <strong>{to_name}</strong>,</p>
-            <p style="margin:12px 0 0 0;font-size:15px;color:#374151;line-height:1.6;">
-              Your MFT Platform license is expiring on <strong>{expiry_str}</strong>.
-              Renew now to continue uninterrupted access.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-              <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Invoice</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{invoice_number}</div>
-              </td></tr>
-              <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Plan</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{plan_label}</div>
-              </td></tr>
-              <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Amount Due</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{amount_str}</div>
-              </td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Current Expiry</div>
-                <div style="color:#dc2626;font-size:15px;font-weight:700;">{expiry_str}</div>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 32px 32px 32px;text-align:center;">
-            <a href="{payment_url}" style="display:inline-block;background:#4078f2;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:10px;">
-              Renew Now →
-            </a>
-            <p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">
-              Your license key <strong>{license_key}</strong> stays the same after renewal.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-            <p style="margin:0;font-size:13px;color:#6b7280;">
-              Questions? Contact <a href="mailto:support@hephzibahtech.com" style="color:#4078f2;text-decoration:none;">support@hephzibahtech.com</a>
-            </p>
-            <p style="margin:8px 0 0 0;font-size:12px;color:#9ca3af;">&copy; {year} Hephzibah Technologies. All rights reserved.</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-	frappe.sendmail(
-		recipients=[to_email],
-		subject="Your MFT License Renewal is Due — Hephzibah Technologies",
-		message=html,
-		now=False,
-	)
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _check_and_extend_existing(email, item_code, expiry_days):
-	"""
-	Layer 2: finds an existing Active license and extends it.
-	Case A — same plan: extends expiry from max(today, current_expiry).
-	Case B — upgrade: updates product+plan, extends expiry.
-	Lifetime (expiry_days=None) always returns (None, None).
-	"""
 	if expiry_days is None:
 		return None, None
 
@@ -738,91 +618,108 @@ def _send_license_email(to_name, to_email, license_key, invoice_number,
 
 	html = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background-color:#0d1117;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;">
-        <tr>
-          <td style="background:linear-gradient(135deg,#1a233a 0%,#0d1117 100%);padding:36px 32px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#4078f2;">Hephzibah Technologies</div>
-            <div style="color:#94a3b8;font-size:14px;margin-top:6px;">MFT Platform — License Delivery</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px 32px 0 32px;">
-            <p style="margin:0;font-size:16px;color:#111827;">Dear <strong>{to_name}</strong>,</p>
-            <p style="margin:12px 0 0 0;font-size:15px;color:#374151;line-height:1.6;">{intro}</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-              <tr><td style="padding:20px 24px;background:#1a233a;">
-                <div style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">License Key</div>
-                <div style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:0.12em;margin-top:6px;font-family:'Courier New',monospace;">{license_key}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Invoice Number</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{invoice_number}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Product</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{item_name}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Plan</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{plan_label}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Amount Paid</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{amount_str}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Purchase Date</div>
-                <div style="color:#111827;font-size:15px;font-weight:600;">{str(purchase_date)}</div>
-              </td></tr>
-              <tr><td style="height:1px;background:#e2e8f0;"></td></tr>
-              <tr><td style="padding:16px 24px;">
-                <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Validity</div>
-                <div style="color:{validity_color};font-size:15px;font-weight:700;">{validity_label}</div>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 32px 32px 32px;text-align:center;">
-            <a href="{download_url}" style="display:inline-block;background:#4078f2;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;">
-              Access MFT Platform
-            </a>
-            <p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">
-              Use your license key above to activate the product after login.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-            <p style="margin:0;font-size:13px;color:#6b7280;">
-              Questions? Reply to this email or contact
-              <a href="mailto:support@hephzibahtech.com" style="color:#4078f2;text-decoration:none;">support@hephzibahtech.com</a>
-            </p>
-            <p style="margin:8px 0 0 0;font-size:12px;color:#9ca3af;">&copy; {year} Hephzibah Technologies. All rights reserved.</p>
-          </td>
-        </tr>
+        <tr><td style="background:linear-gradient(135deg,#1a233a 0%,#0d1117 100%);padding:36px 32px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#4078f2;">Hephzibah Technologies</div>
+          <div style="color:#94a3b8;font-size:14px;margin-top:6px;">MFT Platform — License Delivery</div>
+        </td></tr>
+        <tr><td style="padding:32px 32px 0 32px;">
+          <p style="margin:0;font-size:16px;color:#111827;">Dear <strong>{to_name}</strong>,</p>
+          <p style="margin:12px 0 0 0;font-size:15px;color:#374151;line-height:1.6;">{intro}</p>
+        </td></tr>
+        <tr><td style="padding:24px 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <tr><td style="padding:20px 24px;background:#1a233a;">
+              <div style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;">License Key</div>
+              <div style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:0.12em;margin-top:6px;font-family:'Courier New',monospace;">{license_key}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Invoice</div>
+              <div style="color:#111827;font-size:15px;font-weight:600;">{invoice_number}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Plan</div>
+              <div style="color:#111827;font-size:15px;font-weight:600;">{plan_label} — {item_name}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Amount Paid</div>
+              <div style="color:#111827;font-size:15px;font-weight:600;">{amount_str}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Validity</div>
+              <div style="color:{validity_color};font-size:15px;font-weight:700;">{validity_label}</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:0 32px 32px 32px;text-align:center;">
+          <a href="{download_url}" style="display:inline-block;background:#4078f2;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;">Access MFT Platform</a>
+        </td></tr>
+        <tr><td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;font-size:13px;color:#6b7280;">&copy; {year} Hephzibah Technologies. All rights reserved.</p>
+        </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
 </html>"""
 
+	frappe.sendmail(recipients=[to_email], subject=subject, message=html, now=False)
+
+
+def _send_renewal_request_email(to_name, to_email, license_key, invoice_number,
+                                 item_name, amount, current_expiry, plan, payment_url):
+	year       = datetime.datetime.now().year
+	amount_str = f"${float(amount or 0):.2f} USD"
+	plan_label = PLAN_LABEL.get(plan, "Subscription")
+	expiry_str = str(current_expiry) if current_expiry else "—"
+
+	html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0d1117;font-family:'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:20px;overflow:hidden;">
+        <tr><td style="background:#1a233a;padding:36px 32px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#4078f2;">Hephzibah Technologies</div>
+          <div style="color:#94a3b8;font-size:14px;margin-top:6px;">MFT Platform — License Renewal</div>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 12px;font-size:16px;color:#111827;">Dear <strong>{to_name}</strong>,</p>
+          <p style="margin:0;font-size:15px;color:#374151;">Your license expires on <strong>{expiry_str}</strong>. Renew to continue uninterrupted access.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Invoice</div>
+              <div style="color:#111827;font-size:15px;font-weight:600;">{invoice_number}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;border-bottom:1px solid #e2e8f0;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Plan / Amount</div>
+              <div style="color:#111827;font-size:15px;font-weight:600;">{plan_label} — {amount_str}</div>
+            </td></tr>
+            <tr><td style="padding:16px 24px;">
+              <div style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;">Expiry</div>
+              <div style="color:#dc2626;font-size:15px;font-weight:700;">{expiry_str}</div>
+            </td></tr>
+          </table>
+          <div style="text-align:center;margin-top:24px;">
+            <a href="{payment_url}" style="display:inline-block;background:#4078f2;color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:10px;">Renew Now →</a>
+            <p style="margin:12px 0 0;font-size:13px;color:#6b7280;">License key <strong>{license_key}</strong> stays the same after renewal.</p>
+          </div>
+        </td></tr>
+        <tr><td style="padding:20px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">&copy; {year} Hephzibah Technologies. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+
 	frappe.sendmail(
 		recipients=[to_email],
-		subject=subject,
+		subject="Your MFT License Renewal is Due — Hephzibah Technologies",
 		message=html,
 		now=False,
 	)

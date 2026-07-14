@@ -3,16 +3,26 @@
 
 
 import frappe
+from frappe.rate_limiter import rate_limit
 from frappe.utils import escape_html
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=10, seconds=3 * 60)
 def send_message(sender, message, subject="Website Query"):
 	from frappe.www.contact import send_message as website_send_message
 
 	website_send_message(sender, message, subject)
 
 	message = escape_html(message)
+
+	oppotunity_creation = frappe.get_single_value(
+		"CRM Settings", "enable_opportunity_creation_from_contact_us"
+	)
+
+	if not oppotunity_creation:
+		# Meant to silently fail instead of throwing error.
+		return
 
 	lead = customer = None
 	customer = frappe.db.sql(
@@ -26,17 +36,15 @@ def send_message(sender, message, subject="Website Query"):
 		lead = frappe.db.get_value("Lead", dict(email_id=sender))
 		if not lead:
 			new_lead = frappe.get_doc(
-				dict(doctype="Lead", email_id=sender, lead_name=sender.split("@")[0].title())
+				doctype="Lead", email_id=sender, lead_name=sender.split("@")[0].title()
 			).insert(ignore_permissions=True)
 
 	opportunity = frappe.get_doc(
-		dict(
-			doctype="Opportunity",
-			opportunity_from="Customer" if customer else "Lead",
-			status="Open",
-			title=subject,
-			contact_email=sender,
-		)
+		doctype="Opportunity",
+		opportunity_from="Customer" if customer else "Lead",
+		status="Open",
+		title=subject,
+		contact_email=sender,
 	)
 
 	if customer:

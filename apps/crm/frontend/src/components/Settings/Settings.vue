@@ -44,10 +44,10 @@
 </template>
 <script setup>
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucideNetwork from '~icons/lucide/network'
 import MonitorCogIcon from '~icons/lucide/monitor-cog'
 import SlidersIcon from '@/components/Icons/SlidersIcon.vue'
 import SparkleIcon from '@/components/Icons/SparkleIcon.vue'
-import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import ERPNextIcon from '@/components/Icons/ERPNextIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
@@ -56,6 +56,7 @@ import EmailTemplateIcon from '@/components/Icons/EmailTemplateIcon.vue'
 import SettingsIcon from '@/components/Icons/SettingsIcon.vue'
 import SettingsIcon2 from '@/components/Icons/SettingsIcon2.vue'
 import Users from '@/components/Settings/Users.vue'
+import Hierarchy from '@/components/Settings/Hierarchy/Hierarchy.vue'
 import InviteUserPage from '@/components/Settings/InviteUserPage.vue'
 import ProfilePage from '@/components/Settings/Profile/ProfilePage.vue'
 import PreferencesSettings from '@/components/Settings/PreferencesSettings.vue'
@@ -64,7 +65,6 @@ import ERPNextSettings from '@/components/Settings/ERPNextSettings.vue'
 import LeadSyncSourcePage from '@/components/Settings/LeadSyncing/LeadSyncSourcePage.vue'
 import DefaultsSettings from '@/components/Settings/DefaultsSettings.vue'
 import BrandSettings from '@/components/Settings/BrandSettings.vue'
-import CalendarSettings from '@/components/Settings/CalendarSettings.vue'
 import HomeActions from '@/components/Settings/HomeActions.vue'
 import GeneralSettings from '@/components/Settings/GeneralSettings.vue'
 import DashboardSettings from '@/components/Settings/DashboardSettings.vue'
@@ -74,11 +74,11 @@ import EmailConfig from '@/components/Settings/EmailConfig.vue'
 import SidebarLink from '@/components/SidebarLink.vue'
 import { usersStore } from '@/stores/users'
 import {
-  isWhatsappInstalled,
   showSettings,
   activeSettingsPage,
   disableSettingModalOutsideClick,
 } from '@/composables/settings'
+import { isWhatsappInstalled } from '@/composables/whatsapp'
 import { Dialog, Avatar } from 'frappe-ui'
 import { ref, markRaw, computed, watch, h } from 'vue'
 import AssignmentRulePage from './AssignmentRules/AssignmentRulePage.vue'
@@ -134,11 +134,6 @@ const tabs = computed(() => {
           icon: SparkleIcon,
           component: markRaw(BrandSettings),
         },
-        {
-          label: __('Calendar'),
-          icon: CalendarIcon,
-          component: markRaw(CalendarSettings),
-        },
       ],
       condition: () => isManager(),
     },
@@ -155,6 +150,12 @@ const tabs = computed(() => {
           label: __('Invite User'),
           icon: 'user-plus',
           component: markRaw(InviteUserPage),
+          condition: () => isManager(),
+        },
+        {
+          label: __('Sales Hierarchy'),
+          icon: LucideNetwork,
+          component: markRaw(Hierarchy),
           condition: () => isManager(),
         },
       ],

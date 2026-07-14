@@ -54,6 +54,9 @@ class JobOffer(Document):
 			fields=["name"],
 		)
 
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
+
 
 def update_job_applicant(status, job_applicant):
 	if status in ("Accepted", "Rejected"):
@@ -85,7 +88,7 @@ def get_staffing_plan_detail(designation, company, offer_date):
 
 
 @frappe.whitelist()
-def make_employee(source_name, target_doc=None):
+def make_employee(source_name: str, target_doc: str | Document | None = None):
 	def set_missing_values(source, target):
 		target.personal_email, target.first_name = frappe.db.get_value(
 			"Job Applicant", source.job_applicant, ["email_id", "applicant_name"]

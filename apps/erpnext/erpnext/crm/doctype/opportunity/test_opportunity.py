@@ -1,6 +1,5 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
@@ -10,11 +9,33 @@ from erpnext.crm.doctype.lead.lead import make_customer
 from erpnext.crm.doctype.lead.test_lead import make_lead
 from erpnext.crm.doctype.opportunity.opportunity import make_quotation
 from erpnext.crm.utils import get_linked_communication_list
+from erpnext.tests.utils import ERPNextTestSuite
 
-test_records = frappe.get_test_records("Opportunity")
 
+class TestOpportunity(ERPNextTestSuite):
+	@classmethod
+	def make_opportunities(cls):
+		records = [
+			{
+				"doctype": "Opportunity",
+				"name": "_Test Opportunity 1",
+				"opportunity_from": "Lead",
+				"enquiry_type": "Sales",
+				"party_name": cls.leads[0].name,
+				"company": cls.companies[0].name,
+				"transaction_date": "2013-12-12",
+				"items": [
+					{"item_name": "Test Item", "description": "Some description", "qty": 5, "rate": 100}
+				],
+			}
+		]
+		cls.opportunities = []
+		for x in records:
+			if not frappe.db.exists("Opportunity", {"name": x.get("name")}):
+				cls.opportunities.append(frappe.get_doc(x).insert())
+			else:
+				cls.opportunities.append(frappe.get_doc("Opportunity", {"party_name": x.get("party_name")}))
 
-class TestOpportunity(unittest.TestCase):
 	def test_opportunity_status(self):
 		doc = make_opportunity(with_items=0)
 		quotation = make_quotation(doc.name)
@@ -28,16 +49,14 @@ class TestOpportunity(unittest.TestCase):
 		self.assertEqual(doc.status, "Quotation")
 
 	def test_make_new_lead_if_required(self):
-		opp_doc = make_opportunity_from_lead()
+		opp_doc = make_opportunity_from_lead("_Test Company")
 
 		self.assertTrue(opp_doc.party_name)
 		self.assertEqual(opp_doc.opportunity_from, "Lead")
 		self.assertEqual(frappe.db.get_value("Lead", opp_doc.party_name, "email_id"), opp_doc.contact_email)
 
 		# create new customer and create new contact against 'new.opportunity@example.com'
-		customer = make_customer(opp_doc.party_name)
-		customer.customer_group = "Individual"
-		customer.insert(ignore_permissions=True)
+		customer = make_customer(opp_doc.party_name).insert(ignore_permissions=True)
 		contact = frappe.get_doc(
 			{
 				"doctype": "Contact",
@@ -74,7 +93,7 @@ class TestOpportunity(unittest.TestCase):
 		create_communication(opp_doc.doctype, opp_doc.name, opp_doc.contact_email)
 
 
-def make_opportunity_from_lead():
+def make_opportunity_from_lead(company):
 	new_lead_email_id = f"new{random_string(5)}@example.com"
 	args = {
 		"doctype": "Opportunity",
@@ -82,6 +101,7 @@ def make_opportunity_from_lead():
 		"opportunity_type": "Sales",
 		"with_items": 0,
 		"transaction_date": today(),
+		"company": company,
 	}
 	# new lead should be created against the new.opportunity@example.com
 	opp_doc = frappe.get_doc(args).insert(ignore_permissions=True)

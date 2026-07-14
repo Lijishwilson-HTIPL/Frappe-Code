@@ -160,7 +160,6 @@ import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
-import { showAddressModal, addressProps } from '@/composables/modals'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
 import { getMeta } from '@/stores/meta'
@@ -186,6 +185,8 @@ import {
   createResource,
   toast,
 } from 'frappe-ui'
+import { useDoctypeModal } from '@/composables/doctypeModal'
+import { useTelemetry } from 'frappe-ui/frappe'
 import { h, computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -198,6 +199,7 @@ const { getUser } = usersStore()
 const { $dialog } = globalStore()
 const { getDealStatus } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Organization')
+const { capture } = useTelemetry()
 
 const route = useRoute()
 const router = useRouter()
@@ -215,7 +217,7 @@ onMounted(async () => {
 })
 
 const breadcrumbs = computed(() => {
-  let items = [{ label: __('Accounts'), route: { name: 'Organizations' } }]
+  let items = [{ label: __('Organizations'), route: { name: 'Organizations' } }]
 
   if (route.query.view || route.query.viewType) {
     let view = getView(
@@ -315,10 +317,10 @@ function getParsedSections(_sections) {
           return {
             ...field,
             create: (value, close) => {
-              openAddressModal()
+              showAddressModal()
               close()
             },
-            edit: (address) => openAddressModal(address),
+            edit: (address) => showAddressModal(address),
           }
         } else {
           return field
@@ -339,7 +341,7 @@ const tabs = [
   },
   {
     name: 'Deals',
-    label: __('Opportunities'),
+    label: __('Deals'),
     icon: h(DealsIcon, { class: 'h-4 w-4' }),
     count: computed(() => deals.data?.length),
   },
@@ -459,7 +461,7 @@ function getContactRowObject(contact) {
 
 const dealColumns = [
   {
-    label: __('Account'),
+    label: __('Organization'),
     key: 'organization',
     width: '11rem',
   },
@@ -513,7 +515,7 @@ const contactColumns = [
     width: '12rem',
   },
   {
-    label: __('Account'),
+    label: __('Organization'),
     key: 'company_name',
     width: '12rem',
   },
@@ -524,11 +526,19 @@ const contactColumns = [
   },
 ]
 
-function openAddressModal(_address) {
-  showAddressModal.value = true
-  addressProps.value = {
+const { showModal } = useDoctypeModal()
+
+function showAddressModal(_address) {
+  showModal({
+    name: _address || null,
     doctype: 'Address',
-    address: _address,
-  }
+    callbacks: {
+      afterInsert: (d) => {
+        capture('address_created')
+        organization.doc.address = d.name
+        organization.save.submit()
+      },
+    },
+  })
 }
 </script>

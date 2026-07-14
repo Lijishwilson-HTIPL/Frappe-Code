@@ -2,6 +2,8 @@
 # For license information, please see license.txt
 
 
+import datetime
+
 import frappe
 from frappe import _
 from frappe.contacts.address_and_contact import (
@@ -9,8 +11,7 @@ from frappe.contacts.address_and_contact import (
 	load_address_and_contact,
 )
 from frappe.model.document import Document
-from frappe.utils import comma_and, get_link_to_form, validate_iban
-from frappe.utils.deprecations import deprecated
+from frappe.utils import comma_and, get_link_to_form
 
 
 class BankAccount(Document):
@@ -34,11 +35,13 @@ class BankAccount(Document):
 		iban: DF.Data | None
 		integration_id: DF.Data | None
 		is_company_account: DF.Check
+		is_credit_card: DF.Check
 		is_default: DF.Check
 		last_integration_date: DF.Date | None
 		mask: DF.Data | None
 		party: DF.DynamicLink | None
 		party_type: DF.Link | None
+		statement_password: DF.Password | None
 	# end: auto-generated types
 
 	def onload(self):
@@ -50,6 +53,9 @@ class BankAccount(Document):
 
 	def on_trash(self):
 		delete_contact_and_address("Bank Account", self.name)
+
+		# Delete all bank balances
+		frappe.db.delete("Bank Account Balance", filters={"bank_account": self.name})
 
 	def validate(self):
 		self.validate_is_company_account()
@@ -64,11 +70,6 @@ class BankAccount(Document):
 				frappe.throw(_("Company Account is mandatory"))
 
 			self.validate_account()
-
-	@deprecated
-	def validate_iban(self):
-		"""Kept for backward compatibility, will be removed in v16."""
-		validate_iban(self.iban, throw=True)
 
 	def validate_account(self):
 		if accounts := frappe.db.get_all(
@@ -96,15 +97,6 @@ class BankAccount(Document):
 				"is_default",
 				0,
 			)
-
-
-@frappe.whitelist()
-def make_bank_account(doctype, docname):
-	doc = frappe.new_doc("Bank Account")
-	doc.party_type = doctype
-	doc.party = docname
-
-	return doc
 
 
 def get_party_bank_account(party_type, party):
@@ -135,3 +127,82 @@ def get_bank_account_details(bank_account):
 	return frappe.get_cached_value(
 		"Bank Account", bank_account, ["account", "bank", "bank_account_no"], as_dict=1
 	)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_list(company: str, show_disabled: bool = False):
+	"""
+	Returns a list of bank accounts for a company - with the account currency
+
+	@param company: The company to get the bank accounts for
+	@param show_disabled: Whether to show disabled bank accounts
+	@return: A list of bank accounts
+	"""
+
+	filters = {"is_company_account": 1, "company": company}
+	if not show_disabled:
+		filters["disabled"] = 0
+
+	bank_accounts = frappe.get_list(
+		"Bank Account",
+		filters=filters,
+		order_by="is_default desc",
+		fields=[
+			"name",
+			"account",
+			"company",
+			"account_name",
+			"is_default",
+			"bank",
+			"account_type",
+			"account_subtype",
+			"bank_account_no",
+			"last_integration_date",
+			"is_credit_card",
+		],
+	)
+
+	for bank_account in bank_accounts:
+		bank_account.account_currency = frappe.get_cached_value(
+			"Account", bank_account.account, "account_currency"
+		)
+
+	return bank_accounts
+
+
+@frappe.whitelist(methods=["GET"])
+def get_closing_balance_as_per_statement(bank_account: str, date: str):
+	"""
+	Get the closing balance as per statement for a bank account and date
+	"""
+	latest_balance = frappe.get_list(
+		"Bank Account Balance",
+		filters={"bank_account": bank_account, "date": ["<=", date]},
+		fields=["balance", "date"],
+		order_by="date desc",
+		limit=1,
+	)
+
+	if latest_balance:
+		return {"balance": latest_balance[0].balance, "date": latest_balance[0].date}
+	return {"balance": 0, "date": None}
+
+
+@frappe.whitelist()
+def set_closing_balance_as_per_statement(bank_account: str, date: str | datetime.date, balance: float):
+	"""
+	Set the closing balance as per statement for a bank account and date
+	"""
+
+	existing = frappe.db.exists("Bank Account Balance", {"bank_account": bank_account, "date": date})
+
+	if existing:
+		doc = frappe.get_doc("Bank Account Balance", existing)
+		doc.balance = balance
+		doc.save()
+	else:
+		doc = frappe.new_doc("Bank Account Balance")
+		doc.bank_account = bank_account
+		doc.date = date
+		doc.balance = balance
+		doc.save()

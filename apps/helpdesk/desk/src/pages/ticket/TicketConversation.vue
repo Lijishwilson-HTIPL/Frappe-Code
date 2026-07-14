@@ -1,6 +1,6 @@
 <template>
   <div
-    class="mx-6 md:mx-10 md:my-2 flex items-center justify-between text-lg font-medium mb-4 !mt-8 md:h-8 md:text-xl md:font-semibold md:text-gray-800"
+    class="mx-6 md:mx-10 md:my-2 flex items-center justify-between text-lg font-medium mb-4 !mt-6 md:h-8 md:text-xl md:font-semibold md:text-ink-gray-8"
   >
     Activity
   </div>
@@ -16,7 +16,7 @@
         class="w-full activity grid grid-cols-[30px_minmax(auto,_1fr)] gap-2 sm:gap-4 h-full"
       >
         <div
-          class="relative flex justify-center after:absolute after:left-[50%] after:top-3 after:-z-10 after:border-l after:border-gray-200"
+          class="relative flex justify-center after:absolute after:left-[50%] after:top-3 after:-z-10 after:border-l after:border-outline-gray-modals"
           :class="[
             i != communications.length - 1 ? 'after:h-full' : 'after:h-5',
           ]"
@@ -43,10 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { dayjs } from "@/dayjs";
 import { isElementInViewport } from "@/utils";
 import { Avatar } from "frappe-ui";
-import { orderBy } from "lodash";
 import { computed, inject, nextTick, watch } from "vue";
 import { useRoute } from "vue-router";
 import TicketCommunication from "./TicketCommunication.vue";
@@ -63,7 +61,9 @@ const route = useRoute();
 const ticket = inject(ITicket);
 const communications = computed(() => {
   const _communications = ticket.data.communications || [];
-  return orderBy(_communications, (c) => dayjs(c.creation));
+  return _communications.sort(
+    (a, b) => new Date(a.creation) - new Date(b.creation)
+  );
 });
 
 function scroll(id: string) {

@@ -6,14 +6,20 @@ import frappe
 
 
 def get_context(context):
+	if frappe.session.user == "Guest":
+		raise frappe.PermissionError
+
 	project_user = frappe.db.get_value(
 		"Project User",
 		{"parent": frappe.form_dict.project, "user": frappe.session.user},
 		["user", "view_attachments", "hide_timesheets"],
 		as_dict=True,
 	)
-	if frappe.session.user != "Administrator" and (not project_user or frappe.session.user == "Guest"):
-		raise frappe.PermissionError
+
+	# Allow if: Administrator, in Project User table, or has role-based Project read access
+	if frappe.session.user != "Administrator" and not project_user:
+		if not frappe.has_permission("Project", "read", frappe.form_dict.project):
+			raise frappe.PermissionError
 
 	context.no_cache = 1
 	context.show_sidebar = True
@@ -64,21 +70,6 @@ def get_tasks(project, start=0, search=None, item_status=None):
 	return list(filter(lambda x: not x.parent_task, tasks))
 
 
-@frappe.whitelist()
-def get_task_html(project, start=0, item_status=None):
-	return frappe.render_template(
-		"erpnext/templates/includes/projects/project_tasks.html",
-		{
-			"doc": {
-				"name": project,
-				"project_name": project,
-				"tasks": get_tasks(project, start, item_status=item_status),
-			}
-		},
-		is_path=True,
-	)
-
-
 def get_timesheets(project, start=0, search=None):
 	filters = {"project": project}
 	if search:
@@ -102,15 +93,6 @@ def get_timesheets(project, start=0, search=None):
 		if len(info):
 			timesheet.update(info[0])
 	return timesheets
-
-
-@frappe.whitelist()
-def get_timesheet_html(project, start=0):
-	return frappe.render_template(
-		"erpnext/templates/includes/projects/project_timesheets.html",
-		{"doc": {"timesheets": get_timesheets(project, start)}},
-		is_path=True,
-	)
 
 
 def get_attachments(project):

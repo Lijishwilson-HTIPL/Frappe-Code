@@ -7,7 +7,6 @@
 import json
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, cstr, flt, nowdate, nowtime
 
 from erpnext.accounts.utils import get_stock_and_account_balance
@@ -25,17 +24,18 @@ from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import (
 from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
 from erpnext.stock.stock_ledger import get_previous_sle, update_entries_after
 from erpnext.stock.tests.test_utils import StockTestMixin
-from erpnext.stock.utils import get_incoming_rate, get_stock_value_on, get_valuation_method
+from erpnext.stock.utils import (
+	get_combine_datetime,
+	get_incoming_rate,
+	get_stock_value_on,
+	get_valuation_method,
+)
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestStockReconciliation(FrappeTestCase, StockTestMixin):
-	@classmethod
-	def setUpClass(cls):
-		create_batch_or_serial_no_items()
-		super().setUpClass()
+class TestStockReconciliation(ERPNextTestSuite, StockTestMixin):
+	def setUp(self):
 		frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
-
-	def tearDown(self):
 		frappe.local.future_sle = {}
 		frappe.flags.pop("dont_execute_stock_reposts", None)
 
@@ -45,7 +45,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 	def test_reco_for_moving_average(self):
 		self._test_reco_sle_gle("Moving Average")
 
-	@change_settings("Stock Settings", {"allow_negative_stock": 1})
+	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_negative_stock": 1})
 	def _test_reco_sle_gle(self, valuation_method):
 		item_code = self.make_item(properties={"valuation_method": valuation_method}).name
 
@@ -418,7 +418,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 		assertBalance(pr2, 11)
 		assertBalance(sr4, 6)  # check if future stock reco is unaffected
 
-	@change_settings("Stock Settings", {"allow_negative_stock": 0})
+	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_negative_stock": 0})
 	def test_backdated_stock_reco_future_negative_stock(self):
 		"""
 		Test if a backdated stock reco causes future negative stock and is blocked.
@@ -467,7 +467,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 		dn2.cancel()
 		pr1.cancel()
 
-	@change_settings("Stock Settings", {"allow_negative_stock": 0})
+	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_negative_stock": 0})
 	def test_backdated_stock_reco_cancellation_future_negative_stock(self):
 		"""
 		Test if a backdated stock reco cancellation that causes future negative stock is blocked.
@@ -520,8 +520,6 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 		"""
 		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
 
-		frappe.db.rollback()
-
 		# repost will make this test useless, qty should update in realtime without reposts
 		frappe.flags.dont_execute_stock_reposts = True
 
@@ -547,7 +545,6 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 		)
 
 		self.assertEqual(old_bin_qty + 1, new_bin_qty)
-		frappe.db.rollback()
 
 	def test_valid_batch(self):
 		create_batch_item_with_batch("Testing Batch Item 1", "001")
@@ -615,6 +612,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 					"doctype": "Serial No",
 					"item_code": item_code,
 					"serial_no": "SR-CREATED-SR-NO",
+					"company": "_Test Company",
 				}
 			).insert()
 
@@ -673,7 +671,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 		self.assertEqual(flt(sl_entry.actual_qty), 1.0)
 		self.assertEqual(flt(sl_entry.qty_after_transaction), 1.0)
 
-	@change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
+	@ERPNextTestSuite.change_settings("Stock Reposting Settings", {"item_based_reposting": 0})
 	def test_backdated_stock_reco_entry(self):
 		from erpnext.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
 
@@ -714,6 +712,13 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 			batch_no=batch_no,
 			qty=100,
 			rate=100,
+		)
+
+		stock_reco.reload()
+		stock_reco_sabb = stock_reco.items[0].serial_and_batch_bundle
+		posting_datetime = frappe.db.get_value("Serial and Batch Bundle", stock_reco_sabb, "posting_datetime")
+		self.assertEqual(
+			posting_datetime, get_combine_datetime(stock_reco.posting_date, stock_reco.posting_time)
 		)
 
 		sle = frappe.get_all(
@@ -1039,7 +1044,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 
 		sr.reload()
 		self.assertTrue(sr.items[0].serial_and_batch_bundle)
-		self.assertTrue(sr.items[0].current_serial_and_batch_bundle)
+		self.assertFalse(sr.items[0].current_serial_and_batch_bundle)
 
 	def test_not_reconcile_all_batch(self):
 		from erpnext.stock.doctype.batch.batch import get_batch_qty
@@ -1438,6 +1443,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 			qty=10,
 			rate=100,
 			use_serial_batch_fields=1,
+			purpose="Opening Stock",
 		)
 
 		sr.reload()
@@ -1580,6 +1586,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 			qty=10,
 			rate=80,
 			use_serial_batch_fields=1,
+			purpose="Opening Stock",
 		)
 
 		batch_no = get_batch_from_bundle(reco.items[0].serial_and_batch_bundle)
@@ -1664,6 +1671,7 @@ class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 			qty=10,
 			rate=100,
 			use_serial_batch_fields=1,
+			purpose="Opening Stock",
 		)
 
 		sr.reload()
@@ -1877,37 +1885,6 @@ def insert_existing_sle(warehouse, item_code="_Test Item"):
 	return se1, se2, se3
 
 
-def create_batch_or_serial_no_items():
-	create_warehouse(
-		"_Test Warehouse for Stock Reco1",
-		{"is_group": 0, "parent_warehouse": "_Test Warehouse Group - _TC"},
-	)
-
-	create_warehouse(
-		"_Test Warehouse for Stock Reco2",
-		{"is_group": 0, "parent_warehouse": "_Test Warehouse Group - _TC"},
-	)
-
-	serial_item_doc = create_item("Stock-Reco-Serial-Item-1", is_stock_item=1)
-	if not serial_item_doc.has_serial_no:
-		serial_item_doc.has_serial_no = 1
-		serial_item_doc.serial_no_series = "SRSI.####"
-		serial_item_doc.save(ignore_permissions=True)
-
-	serial_item_doc = create_item("Stock-Reco-Serial-Item-2", is_stock_item=1)
-	if not serial_item_doc.has_serial_no:
-		serial_item_doc.has_serial_no = 1
-		serial_item_doc.serial_no_series = "SRSII.####"
-		serial_item_doc.save(ignore_permissions=True)
-
-	batch_item_doc = create_item("Stock-Reco-batch-Item-1", is_stock_item=1)
-	if not batch_item_doc.has_batch_no:
-		batch_item_doc.has_batch_no = 1
-		batch_item_doc.create_new_batch = 1
-		serial_item_doc.batch_number_series = "BASR.#####"
-		batch_item_doc.save(ignore_permissions=True)
-
-
 def create_stock_reconciliation(**args):
 	args = frappe._dict(args)
 	sr = frappe.new_doc("Stock Reconciliation")
@@ -2002,6 +1979,3 @@ def set_valuation_method(item_code, valuation_method):
 			update_entries_after(
 				{"item_code": item_code, "warehouse": warehouse.name}, allow_negative_stock=1
 			)
-
-
-test_dependencies = ["Item", "Warehouse"]

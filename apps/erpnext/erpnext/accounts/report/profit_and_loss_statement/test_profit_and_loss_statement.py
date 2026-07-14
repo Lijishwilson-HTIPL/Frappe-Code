@@ -3,23 +3,20 @@
 
 import frappe
 from frappe.desk.query_report import export_query
-from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate, today
 
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.report.financial_statements import get_period_list
 from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import execute
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
+from erpnext.tests.utils import ERPNextTestSuite
 
 
-class TestProfitAndLossStatement(AccountsTestMixin, FrappeTestCase):
+class TestProfitAndLossStatement(ERPNextTestSuite, AccountsTestMixin):
 	def setUp(self):
 		self.create_company()
 		self.create_customer()
 		self.create_item()
-
-	def tearDown(self):
-		frappe.db.rollback()
 
 	def create_sales_invoice(self, qty=1, rate=150, no_payment_schedule=False, do_not_submit=False):
 		frappe.set_user("Administrator")
@@ -142,7 +139,7 @@ class TestProfitAndLossStatement(AccountsTestMixin, FrappeTestCase):
 			accumulated_values=False,
 		)
 		result = execute(filters)
-		columns = [result[0][2], result[0][3]]
+		columns = [result[0][4], result[0][5]]
 		expected = {
 			"account": income_acc,
 			columns[0].get("fieldname"): 450.0,
@@ -163,7 +160,7 @@ class TestProfitAndLossStatement(AccountsTestMixin, FrappeTestCase):
 			columns[1].get("fieldname"): 570.0,
 		}
 		result = execute(filters)
-		columns = [result[0][2], result[0][3]]
+		columns = [result[0][4], result[0][5]]
 		actual = [x for x in result[1] if x.get("account") == income_acc]
 		self.assertEqual(len(actual), 1)
 		actual = actual[0]

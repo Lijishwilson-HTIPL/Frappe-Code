@@ -35,7 +35,7 @@
         </template>
       </Dropdown>
       <Button
-        :label="__('Convert to Opportunity')"
+        :label="__('Convert to Deal')"
         variant="solid"
         @click="showConvertToDealModal = true"
       />
@@ -242,7 +242,6 @@ import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
-import EventIcon from '@/components/Icons/EventIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
@@ -273,7 +272,8 @@ import { globalStore } from '@/stores/global'
 import { statusesStore } from '@/stores/statuses'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
-import { whatsappEnabled, callEnabled } from '@/composables/settings'
+import { whatsappEnabled } from '@/composables/whatsapp'
+import { callEnabled } from '@/composables/telephony'
 import {
   createResource,
   FileUploader,
@@ -394,28 +394,10 @@ const title = computed(() => {
   return doc.value?.[t] || props.leadId
 })
 
-const STATUS_FLOW = ['New', 'Contacted', 'Nurture', 'Qualified', 'Converted']
-const EXIT_STATUSES = ['Unqualified', 'Junk']
-
 const statuses = computed(() => {
   let customStatuses = document.statuses?.length
     ? document.statuses
     : document._statuses || []
-
-  if (!customStatuses.length && doc.value?.status) {
-    const current = doc.value.status
-    const currentIndex = STATUS_FLOW.indexOf(current)
-    if (currentIndex !== -1) {
-      const prev = currentIndex > 0 ? STATUS_FLOW[currentIndex - 1] : null
-      const next = STATUS_FLOW[currentIndex + 1]
-      customStatuses = [
-        ...(prev ? [prev] : []),
-        ...(next ? [next] : []),
-        ...EXIT_STATUSES,
-      ]
-    }
-  }
-
   return statusOptions('lead', customStatuses, triggerStatusChange)
 })
 
@@ -442,13 +424,8 @@ const tabs = computed(() => {
     },
     {
       name: 'Data',
-      label: __('Lead Data'),
+      label: __('Data'),
       icon: DetailsIcon,
-    },
-    {
-      name: 'Events',
-      label: __('Events'),
-      icon: EventIcon,
     },
     {
       name: 'Calls',

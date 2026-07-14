@@ -15,7 +15,7 @@ def generate_otp(email):
 
 	otp = "".join(random.choices(string.digits, k=6))
 	cache_key = f"mft_otp_{email}"
-	frappe.cache().set_value(cache_key, otp, expires_in_sec=600)
+	frappe.cache.set_value(cache_key, otp, expires_in_sec=600)
 
 	frappe.sendmail(
 		recipients=[email],
@@ -41,7 +41,7 @@ def verify_otp(email, otp):
 	otp = otp.strip()
 
 	cache_key = f"mft_otp_{email}"
-	stored_otp = frappe.cache().get_value(cache_key)
+	stored_otp = frappe.cache.get_value(cache_key)
 
 	if not stored_otp:
 		frappe.throw("OTP has expired. Please generate a new one.")
@@ -49,7 +49,7 @@ def verify_otp(email, otp):
 	if stored_otp != otp:
 		frappe.throw("Invalid OTP. Please try again.")
 
-	frappe.cache().delete_value(cache_key)
+	frappe.cache.delete_value(cache_key)
 
 	doc = frappe.db.get_value(
 		"MFT License",

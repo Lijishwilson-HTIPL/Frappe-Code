@@ -25,8 +25,8 @@ class DocTypeLayout(Document):
 		document_type: DF.Link
 		fields: DF.Table[DocTypeLayoutField]
 		route: DF.Data
-
 	# end: auto-generated types
+
 	def validate(self):
 		if not self.route:
 			self.route = slug(self.name)

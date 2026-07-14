@@ -10,8 +10,8 @@ import json
 import poplib
 import re
 import ssl
-import time
 from contextlib import suppress
+from email.errors import HeaderParseError
 from email.header import decode_header
 from urllib.parse import unquote
 
@@ -162,7 +162,7 @@ class EmailServer:
 
 	def select_imap_folder(self, folder):
 		res = self.imap.select(f'"{folder}"')
-		return res[0] == "OK"  # The folder exsits TODO: handle other resoponses too
+		return res[0] == "OK"  # The folder exists TODO: handle other responses too
 
 	def logout(self):
 		try:
@@ -176,7 +176,7 @@ class EmailServer:
 		return
 
 	def get_messages(self, folder="INBOX"):
-		"""Returns new email messages."""
+		"""Return new email messages."""
 
 		self.latest_messages = []
 		self.seen_status = {}
@@ -205,7 +205,7 @@ class EmailServer:
 		if cint(self.settings.use_imap):
 			self.check_imap_uidvalidity(folder)
 
-			readonly = False if self.settings.email_sync_rule == "UNSEEN" else True
+			readonly = self.settings.email_sync_rule != "UNSEEN"
 
 			self.imap.select(folder, readonly=readonly)
 			_response, message = self.imap.uid("search", None, self.settings.email_sync_rule)
@@ -231,27 +231,32 @@ class EmailServer:
 
 		if not uid_validity or uid_validity != current_uid_validity:
 			# uidvalidity changed & all email uids are reindexed by server
-			Communication = frappe.qb.DocType("Communication")
-			frappe.qb.update(Communication).set(Communication.uid, -1).where(
-				Communication.communication_medium == "Email"
-			).where(Communication.email_account == self.settings.email_account).run()
+			frappe.db.set_value(
+				"Communication",
+				{"communication_medium": "Email", "email_account": self.settings.email_account},
+				"uid",
+				-1,
+				update_modified=False,
+			)
 
 			if self.settings.use_imap:
 				# Remove {"} quotes that are added to handle spaces in IMAP Folder names
 				if folder[0] == folder[-1] == '"':
 					folder = folder[1:-1]
-				# new update for the IMAP Folder DocType
-				IMAPFolder = frappe.qb.DocType("IMAP Folder")
-				frappe.qb.update(IMAPFolder).set(IMAPFolder.uidvalidity, current_uid_validity).set(
-					IMAPFolder.uidnext, uidnext
-				).where(IMAPFolder.parent == self.settings.email_account_name).where(
-					IMAPFolder.folder_name == folder
-				).run()
+
+				frappe.db.set_value(
+					"IMAP Folder",
+					{"parent": self.settings.email_account_name, "folder_name": folder},
+					{"uidvalidity": current_uid_validity, "uidnext": uidnext},
+					update_modified=False,
+				)
 			else:
-				EmailAccount = frappe.qb.DocType("Email Account")
-				frappe.qb.update(EmailAccount).set(EmailAccount.uidvalidity, current_uid_validity).set(
-					EmailAccount.uidnext, uidnext
-				).where(EmailAccount.name == self.settings.email_account_name).run()
+				frappe.db.set_value(
+					"Email Account",
+					self.settings.email_account_name,
+					{"uidvalidity": current_uid_validity, "uidnext": uidnext},
+					update_modified=False,
+				)
 
 			sync_count = 100 if uid_validity else int(self.settings.initial_sync_count)
 			from_uid = 1 if uidnext < (sync_count + 1) or (uidnext - sync_count) < 1 else uidnext - sync_count
@@ -263,10 +268,7 @@ class EmailServer:
 		pattern = rf"(?<={cmd} )[0-9]*"
 		match = re.search(pattern, response.decode("utf-8"), re.U | re.I)
 
-		if match:
-			return match.group(0)
-		else:
-			return None
+		return match[0] if match else None
 
 	def retrieve_message(self, uid, msg_num, folder) -> None:
 		try:
@@ -305,7 +307,7 @@ class EmailServer:
 
 		except Exception as e:
 			if self.has_login_limit_exceeded(e):
-				raise LoginLimitExceeded(e)
+				raise LoginLimitExceeded(e) from e
 
 			frappe.log_error("Unable to fetch email", self.make_error_msg(uid, msg_num))
 
@@ -333,20 +335,18 @@ class EmailServer:
 		with suppress(Exception):
 			if not cint(self.settings.use_imap):
 				self.pop.dele(msg_num)
-			else:
-				# mark as seen if email sync rule is UNSEEN (syncing only unseen mails)
-				if self.settings.email_sync_rule == "UNSEEN":
-					self.imap.uid("STORE", uid, "+FLAGS", "(\\SEEN)")
+			elif self.settings.email_sync_rule == "UNSEEN":
+				self.imap.uid("STORE", uid, "+FLAGS", "(\\SEEN)")
 
 	def is_temporary_system_problem(self, e):
 		messages = (
 			"-ERR [SYS/TEMP] Temporary system problem. Please try again later.",
 			"Connection timed out",
 		)
-		for message in messages:
-			if message in strip(cstr(e)) or message in strip(cstr(getattr(e, "strerror", ""))):
-				return True
-		return False
+		return any(
+			message in strip(cstr(e)) or message in strip(cstr(getattr(e, "strerror", "")))
+			for message in messages
+		)
 
 	def make_error_msg(self, uid, msg_num):
 		partial_mail = None
@@ -361,14 +361,16 @@ class EmailServer:
 			partial_mail = Email(headers)
 
 		if partial_mail:
-			return (
-				"\nDate: {date}\nFrom: {from_email}\nSubject: {subject}\n\n\nTraceback: \n{traceback}".format(
-					date=partial_mail.date,
-					from_email=partial_mail.from_email,
-					subject=partial_mail.subject,
-					traceback=traceback,
-				)
-			)
+			return f"""
+Date: {partial_mail.date}
+From: {partial_mail.from_email}
+Subject: {partial_mail.subject}
+
+
+Traceback:
+{traceback}
+"""
+
 		return traceback
 
 	def update_flag(self, folder, uid_list=None):
@@ -419,7 +421,7 @@ class Email:
 		if self.mail["Date"]:
 			try:
 				utc = email.utils.mktime_tz(email.utils.parsedate_tz(self.mail["Date"]))
-				utc_dt = datetime.datetime.utcfromtimestamp(utc)
+				utc_dt = datetime.datetime.fromtimestamp(utc, tz=datetime.UTC)
 				self.date = convert_utc_to_system_timezone(utc_dt).strftime("%Y-%m-%d %H:%M:%S")
 			except Exception:
 				self.date = now()
@@ -465,6 +467,7 @@ class Email:
 	def set_from(self):
 		# gmail mailing-list compatibility
 		# use X-Original-Sender if available, as gmail sometimes modifies the 'From'
+		self.from_real_name = None
 		_from_email = self.decode_email(self.mail.get("X-Original-From") or self.mail["From"])
 		_reply_to = self.decode_email(self.mail.get("Reply-To"))
 
@@ -488,15 +491,39 @@ class Email:
 		self.from_real_name = parse_addr(_from_email)[0] if "@" in _from_email else _from_email
 
 	@staticmethod
-	def decode_email(email):
+	def decode_email(email: bytes | str | None) -> str | None:
 		if not email:
 			return
+
+		raw_email = email if isinstance(email, str) else email.decode("utf-8", "replace")
+		email = frappe.as_unicode(email)
+		try:
+			parts = decode_header(email)
+		except HeaderParseError:
+			# Fallback: grab just the email addresses
+			emails = re.findall(r"(<.*?>)", email)
+			return ", ".join(emails)
+
 		decoded = ""
-		for part, encoding in decode_header(frappe.as_unicode(email).replace('"', " ").replace("'", " ")):
+		for part, encoding in parts:
 			if encoding:
 				decoded += part.decode(encoding, "replace")
 			else:
 				decoded += safe_decode(part)
+
+		# Reject malformed address headers where decoding synthesizes a bare addr-spec.
+		# Allow valid encoded display-name forms like "=?utf-8?...?= <user@example.com>".
+		if decoded and "@" in decoded and "@" not in raw_email:
+			decoded_addr_spec = parse_addr(decoded)[1]
+			if decoded_addr_spec and decoded.strip() == decoded_addr_spec:
+				frappe.log_error(
+					title=_("Malformed Address Header"),
+					message=_("Rejected malformed encoded address header with synthesized '@': {0}").format(
+						repr(raw_email)
+					),
+				)
+				return None
+
 		return decoded
 
 	def set_content_and_type(self):
@@ -550,12 +577,7 @@ class Email:
 			self.html_content += markdown(text_content)
 
 	def get_charset(self, part):
-		"""Detect charset."""
-		charset = part.get_content_charset()
-		if not charset:
-			charset = chardet.detect(safe_encode(cstr(part)))["encoding"]
-
-		return charset
+		return part.get_content_charset() or chardet.detect(safe_encode(cstr(part)))["encoding"]
 
 	def get_payload(self, part):
 		charset = self.get_charset(part)
@@ -569,36 +591,43 @@ class Email:
 			except Exception:
 				return part.get_payload()
 
-	def get_attachment(self, part):
+	def get_attachment(self, part) -> None:
 		# charset = self.get_charset(part)
 		fcontent = part.get_payload(decode=True)
 
-		if fcontent:
-			content_type = part.get_content_type()
-			fname = part.get_filename()
-			if fname:
-				try:
-					fname = fname.replace("\n", " ").replace("\r", "")
-					fname = cstr(decode_header(fname)[0][0])
-				except Exception:
-					fname = get_random_filename(content_type=content_type)
-			else:
-				fname = get_random_filename(content_type=content_type)
-			# Don't clobber existing filename
-			while fname in self.cid_map:
-				fname = get_random_filename(content_type=content_type)
+		if not fcontent:
+			return
 
-			self.attachments.append(
-				{
-					"content_type": content_type,
-					"fname": fname,
-					"fcontent": fcontent,
-				}
-			)
+		email_account = getattr(self, "email_account", None)
+		attachment_limit = cint(email_account.attachment_limit) if email_account else 0
+		if attachment_limit and len(fcontent) > attachment_limit * 1024 * 1024:
+			return  # skip attachments that are larger than the specified limit
 
-			cid = (cstr(part.get("Content-Id")) or "").strip("><")
-			if cid:
-				self.cid_map[fname] = cid
+		content_type = part.get_content_type()
+		fname = part.get_filename()
+		if fname:
+			try:
+				fname = fname.replace("\n", " ").replace("\r", "")
+				fname = cstr(decode_header(fname)[0][0])
+			except Exception:
+				fname = get_random_filename(content_type=content_type)
+		else:
+			fname = get_random_filename(content_type=content_type)
+		# Don't clobber existing filename
+		while fname in self.cid_map:
+			fname = get_random_filename(content_type=content_type)
+
+		self.attachments.append(
+			{
+				"content_type": content_type,
+				"fname": fname,
+				"fcontent": fcontent,
+			}
+		)
+
+		cid = (cstr(part.get("Content-Id")) or "").strip("><")
+		if cid:
+			self.cid_map[fname] = cid
 
 	def save_attachments_in_doc(self, doc):
 		"""Save email attachments in given document."""
@@ -646,11 +675,11 @@ class InboundMail(Email):
 	"""Class representation of incoming mail along with mail handlers."""
 
 	def __init__(self, content, email_account, uid=None, seen_status=None, append_to=None):
-		super().__init__(content)
 		self.email_account = email_account
 		self.uid = uid or -1
 		self.append_to = append_to
 		self.seen_status = seen_status or 0
+		super().__init__(content)
 
 		# System documents related to this mail
 		self._parent_email_queue = None
@@ -666,7 +695,7 @@ class InboundMail(Email):
 	def process(self):
 		"""Create communication record from email."""
 		if self.is_sender_same_as_receiver() and not self.is_reply():
-			if frappe.flags.in_test:
+			if frappe.in_test:
 				print("WARN: Cannot pull email. Sender same as recipient inbox")
 			raise SentEmailInInboxError
 
@@ -865,6 +894,10 @@ class InboundMail(Email):
 		record = self.get_doc(doctype, name, ignore_error=True) if name else None
 
 		if not record:
+			# Subject matching is only possible if the doctype declares a subject_field.
+			if not email_fields.subject_field:
+				return None
+
 			subject = self.clean_subject(self.subject)
 			filters = {
 				email_fields.subject_field: ("like", f"%{subject}%"),
@@ -872,7 +905,7 @@ class InboundMail(Email):
 			}
 
 			# Sender check is not needed incase mail is from system user.
-			if not (len(subject) > 10 and is_system_user(self.from_email)):
+			if email_fields.sender_field and not (len(subject) > 10 and is_system_user(self.from_email)):
 				filters[email_fields.sender_field] = self.from_email
 
 			name = frappe.db.get_value(self.email_account.append_to, filters=filters)
@@ -934,7 +967,7 @@ class InboundMail(Email):
 
 	@staticmethod
 	def get_email_fields(doctype):
-		"""Returns Email related fields of a doctype."""
+		"""Return Email related fields of a doctype."""
 		fields = frappe._dict()
 
 		email_fields = ["subject_field", "sender_field", "sender_name_field", "recipient_account_field"]
@@ -962,9 +995,9 @@ class InboundMail(Email):
 			"sent_or_received": "Received",
 			"sender_full_name": self.from_real_name,
 			"sender": self.from_email,
-			"recipients": self.mail.get("To"),
-			"cc": self.mail.get("CC"),
-			"bcc": self.mail.get("BCC"),
+			"recipients": self.decode_email(self.mail.get("To") or ""),
+			"cc": self.decode_email(self.mail.get("CC") or ""),
+			"bcc": self.decode_email(self.mail.get("BCC") or ""),
 			"email_account": self.email_account.name,
 			"communication_medium": "Email",
 			"uid": self.uid,

@@ -3,17 +3,13 @@
 # Author - Shivam Mishra <shivam@frappe.io>
 
 from functools import wraps
-from json import dumps, loads
+from json import JSONDecodeError, dumps, loads
 
 import frappe
 from frappe import DoesNotExistError, ValidationError, _, _dict
-from frappe.boot import get_allowed_pages, get_allowed_reports
-from frappe.cache_manager import (
-	build_domain_restriced_doctype_cache,
-	build_domain_restriced_page_cache,
-	build_table_count_cache,
-)
+from frappe.cache_manager import build_table_count_cache
 from frappe.core.doctype.custom_role.custom_role import get_custom_allowed_roles
+from frappe.desk.desk_views import DeskViews
 
 
 def handle_not_exist(fn):
@@ -28,7 +24,7 @@ def handle_not_exist(fn):
 	return wrapper
 
 
-class Workspace:
+class Workspace(DeskViews):
 	def __init__(self, page, minimal=False):
 		self.page_name = page.get("name")
 		self.page_title = page.get("title")
@@ -49,26 +45,19 @@ class Workspace:
 
 		self.can_read = self.get_cached("user_perm_can_read", self.get_can_read_items)
 
-		if not minimal:
-			self.allowed_pages = get_allowed_pages(cache=True)
-			self.allowed_reports = get_allowed_reports(cache=True)
+		self.allowed_pages = DeskViews.get_allowed_pages(cache=True)
+		self.allowed_reports = DeskViews.get_allowed_reports(cache=True)
 
+		if not minimal:
 			if self.doc.content:
 				self.onboarding_list = [
 					x["data"]["onboarding_name"] for x in loads(self.doc.content) if x["type"] == "onboarding"
 				]
-			self.onboardings = []
 
 			self.table_counts = get_table_with_counts()
-		self.restricted_doctypes = (
-			frappe.cache.get_value("domain_restricted_doctypes") or build_domain_restriced_doctype_cache()
-		)
-		self.restricted_pages = (
-			frappe.cache.get_value("domain_restricted_pages") or build_domain_restriced_page_cache()
-		)
 
 	def is_permitted(self):
-		"""Returns true if Has Role is not set or the user is allowed."""
+		"""Return true if `Has Role` is not set or the user is allowed."""
 		from frappe.utils import has_common
 
 		allowed = [d.role for d in self.doc.roles]
@@ -132,36 +121,11 @@ class Workspace:
 
 		return doc
 
-	def is_item_allowed(self, name, item_type):
-		if frappe.session.user == "Administrator":
-			return True
-
-		item_type = item_type.lower()
-
-		if item_type == "doctype":
-			return name in (self.can_read or []) and name in (self.restricted_doctypes or [])
-		if item_type == "page":
-			if not self.allowed_pages:
-				self.allowed_pages = get_allowed_pages(cache=True)
-			return name in self.allowed_pages and name in self.restricted_pages
-		if item_type == "report":
-			if not self.allowed_reports:
-				self.allowed_reports = get_allowed_reports(cache=True)
-			return name in self.allowed_reports
-		if item_type == "help":
-			return True
-		if item_type == "dashboard":
-			return True
-		if item_type == "url":
-			return True
-
-		return False
-
 	def build_workspace(self):
 		self.cards = {"items": self.get_links()}
 		self.charts = {"items": self.get_charts()}
 		self.shortcuts = {"items": self.get_shortcuts()}
-		self.onboardings = {"items": self.get_onboardings()}
+		self.onboardings = {"items": []}
 		self.quick_lists = {"items": self.get_quick_lists()}
 		self.number_cards = {"items": self.get_number_cards()}
 		self.custom_blocks = {"items": self.get_custom_blocks()}
@@ -320,37 +284,6 @@ class Workspace:
 		return items
 
 	@handle_not_exist
-	def get_onboardings(self):
-		if self.onboarding_list:
-			for onboarding in self.onboarding_list:
-				onboarding_doc = self.get_onboarding_doc(onboarding)
-				if onboarding_doc:
-					item = {
-						"label": _(onboarding),
-						"title": _(onboarding_doc.title),
-						"subtitle": _(onboarding_doc.subtitle),
-						"success": _(onboarding_doc.success_message),
-						"docs_url": onboarding_doc.documentation_url,
-						"items": self.get_onboarding_steps(onboarding_doc),
-					}
-					self.onboardings.append(item)
-		return self.onboardings
-
-	@handle_not_exist
-	def get_onboarding_steps(self, onboarding_doc):
-		steps = []
-		for doc in onboarding_doc.get_steps():
-			step = doc.as_dict().copy()
-			step.label = _(doc.title)
-			if step.action == "Create Entry":
-				step.is_submittable = frappe.db.get_value(
-					"DocType", step.reference_document, "is_submittable", cache=True
-				)
-			steps.append(step)
-
-		return steps
-
-	@handle_not_exist
 	def get_number_cards(self):
 		all_number_cards = []
 		if frappe.has_permission("Number Card", throw=False):
@@ -388,13 +321,12 @@ class Workspace:
 @frappe.whitelist()
 @frappe.read_only()
 def get_desktop_page(page):
-	"""Applies permissions, customizations and returns the configruration for a page
-	on desk.
+	"""Apply permissions, customizations and return the configuration for a page on desk.
 
 	Args:
 	        page (json): page data
 
-	Returns:
+	Return:
 	        dict: dictionary of cards, charts and shortcuts to be displayed on website
 	"""
 	try:
@@ -415,8 +347,11 @@ def get_desktop_page(page):
 
 
 @frappe.whitelist()
-def get_workspace_sidebar_items():
+def get_workspaces():
 	"""Get list of sidebar items for desk"""
+
+	from frappe.modules.utils import get_module_app
+
 	has_access = "Workspace Manager" in frappe.get_roles()
 
 	# don't get domain restricted pages
@@ -447,6 +382,11 @@ def get_workspace_sidebar_items():
 		"icon",
 		"indicator_color",
 		"is_hidden",
+		"app",
+		"type",
+		"link_type",
+		"link_to",
+		"external_link",
 	]
 	all_pages = frappe.get_all(
 		"Workspace", fields=fields, filters=filters, order_by=order_by, ignore_permissions=True
@@ -464,14 +404,29 @@ def get_workspace_sidebar_items():
 				elif page.for_user == frappe.session.user:
 					private_pages.append(page)
 				page["label"] = _(page.get("name"))
+
+			if not page["app"] and page["module"]:
+				page["app"] = frappe.db.get_value("Module Def", page["module"], "app_name") or get_module_app(
+					page["module"]
+				)
+			if page["link_type"] == "Report":
+				report_type, ref_doctype = frappe.db.get_value(
+					"Report", page["link_to"], ["report_type", "ref_doctype"]
+				)
+				page["report"] = {
+					"report_type": report_type,
+					"ref_doctype": ref_doctype,
+				}
+
 		except frappe.PermissionError:
 			pass
 	if private_pages:
 		pages.extend(private_pages)
 
 	if len(pages) == 0:
-		pages = [frappe.get_doc("Workspace", "Welcome Workspace").as_dict()]
-		pages[0]["label"] = _("Welcome Workspace")
+		welcome_workspace = next((x for x in all_pages if x["title"] == "Welcome Workspace"), None)
+		if welcome_workspace:
+			pages.append(welcome_workspace)
 
 	return {
 		"pages": pages,
@@ -515,7 +470,7 @@ def get_custom_doctype_list(module):
 
 
 def get_custom_report_list(module):
-	"""Returns list on new style reports for modules."""
+	"""Return list on new style reports for modules."""
 	reports = frappe.get_all(
 		"Report",
 		fields=["name", "ref_doctype", "report_type"],
@@ -541,7 +496,8 @@ def get_custom_report_list(module):
 
 
 def save_new_widget(doc, page, blocks, new_widgets):
-	if loads(new_widgets):
+	widgets = _dict()
+	if new_widgets:
 		widgets = _dict(loads(new_widgets))
 
 		if widgets.chart:
@@ -575,7 +531,7 @@ def save_new_widget(doc, page, blocks, new_widgets):
 		exception: {e}
 		"""
 		doc.log_error("Could not save customization", log)
-		return False
+		raise
 
 	return True
 
@@ -626,14 +582,14 @@ def new_widget(config, doctype, parentfield):
 
 
 def prepare_widget(config, doctype, parentfield):
-	"""Create widget child table entries with parent details
+	"""Create widget child table entries with parent details.
 
 	Args:
 	        config (dict): Dictionary containing widget config
 	        doctype (string): Doctype name of the child table
 	        parentfield (string): Parent field for the child table
 
-	Returns:
+	Return:
 	        TYPE: List of Document objects
 	"""
 	if not config:
@@ -661,7 +617,7 @@ def prepare_widget(config, doctype, parentfield):
 
 
 @frappe.whitelist()
-def update_onboarding_step(name, field, value):
+def update_onboarding_step(name: str | int, field: str, value: int | str):
 	"""Update status of onboaridng step
 
 	Args:
@@ -672,6 +628,64 @@ def update_onboarding_step(name, field, value):
 	"""
 	from frappe.utils.telemetry import capture
 
+	allowed_fields = ["is_skipped", "is_complete"]
+	if field not in allowed_fields:
+		return
 	frappe.db.set_value("Onboarding Step", name, field, value)
 
 	capture(frappe.scrub(name), app="frappe_onboarding", properties={field: value})
+
+
+@frappe.whitelist()
+def get_installed_apps():
+	return frappe.get_installed_apps()
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def get_onboarding_data(module: str):
+	"""Get onboarding data for a page
+
+	Args:
+	        page (string): page name
+
+	Return:
+	        dict: onboarding data
+	"""
+	if not frappe.get_system_settings("enable_onboarding"):
+		return []
+
+	onboardings = []
+	onboarding_doc = frappe.get_doc("Module Onboarding", module)
+	if onboarding_doc.is_complete:
+		return []
+
+	# Check if user is allowed
+	allowed_roles = set(onboarding_doc.get_allowed_roles())
+	user_roles = set(frappe.get_roles())
+	if not allowed_roles & user_roles:
+		return None
+
+	item = {
+		"label": _(module),
+		"title": _(onboarding_doc.title),
+		"items": [],
+	}
+
+	maps = get_onboarding_step_maps(onboarding_doc.name)
+	for step in maps:
+		steps = frappe.get_all("Onboarding Step", filters={"name": step}, order_by="idx", fields=["*"])
+
+		if steps:
+			item["items"].append(steps[0])
+
+	onboardings.append(item)
+
+	if all(step.get("is_complete") or step.get("is_skipped") for step in item["items"]):
+		return []
+
+	return onboardings
+
+
+def get_onboarding_step_maps(onboarding):
+	return frappe.get_all("Onboarding Step Map", filters={"parent": onboarding}, pluck="step", order_by="idx")

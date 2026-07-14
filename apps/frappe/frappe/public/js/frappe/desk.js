@@ -37,105 +37,33 @@ frappe.Application = class Application {
 		this.load_bootinfo();
 		this.load_user_permissions();
 		this.make_nav_bar();
+		this.make_sidebar();
 		this.set_favicon();
 		this.set_fullwidth_if_enabled();
 		this.add_browser_class();
-		this.setup_energy_point_listeners();
 		this.setup_copy_doc_listener();
 		this.setup_broadcast_listeners();
 
 		frappe.ui.keys.setup();
 
-		frappe.ui.keys.add_shortcut({
-			shortcut: "shift+ctrl+g",
-			description: __("Switch Theme"),
-			action: () => {
-				if (frappe.theme_switcher && frappe.theme_switcher.dialog.is_visible) {
-					frappe.theme_switcher.hide();
-				} else {
-					frappe.theme_switcher = new frappe.ui.ThemeSwitcher();
-					frappe.theme_switcher.show();
-				}
-			},
-		});
-
-		frappe.ui.add_system_theme_switch_listener();
-		const root = document.documentElement;
-
-		const observer = new MutationObserver(() => {
-			frappe.ui.set_theme();
-		});
-		observer.observe(root, {
-			attributes: true,
-			attributeFilter: ["data-theme-mode"],
-		});
-
-		frappe.ui.set_theme();
+		this.setup_theme();
 
 		// page container
 		this.make_page_container();
-		if (
-			!window.Cypress &&
-			frappe.boot.onboarding_tours &&
-			frappe.boot.user.onboarding_status != null
-		) {
-			let pending_tours = !frappe.boot.onboarding_tours.every(
-				(tour) => frappe.boot.user.onboarding_status[tour[0]]?.is_complete
-			);
-			if (pending_tours && frappe.boot.onboarding_tours.length > 0) {
-				frappe.require("onboarding_tours.bundle.js", () => {
-					frappe.utils.sleep(1000).then(() => {
-						frappe.ui.init_onboarding_tour();
-					});
-				});
-			}
-		}
+		this.setup_tours();
 		this.set_route();
 
 		// trigger app startup
 		$(document).trigger("startup");
-
 		$(document).trigger("app_ready");
 
-		if (frappe.boot.messages) {
-			frappe.msgprint(frappe.boot.messages);
-		}
-
-		if (frappe.user_roles.includes("System Manager")) {
-			// delayed following requests to make boot faster
-			setTimeout(() => {
-				this.show_change_log();
-				this.show_update_available();
-			}, 1000);
-		}
-
-		if (!frappe.boot.developer_mode) {
-			let console_security_message = __(
-				"Using this console may allow attackers to impersonate you and steal your information. Do not enter or paste code that you do not understand."
-			);
-			console.log(`%c${console_security_message}`, "font-size: large");
-		}
-
+		this.show_notices();
 		this.show_notes();
 
 		if (frappe.ui.startup_setup_dialog && !frappe.boot.setup_complete) {
 			frappe.ui.startup_setup_dialog.pre_show();
 			frappe.ui.startup_setup_dialog.show();
 		}
-
-		frappe.realtime.on("version-update", function () {
-			var dialog = frappe.msgprint({
-				message: __(
-					"The application has been updated to a new version, please refresh this page"
-				),
-				indicator: "green",
-				title: __("Version Updated"),
-			});
-			dialog.set_primary_action(__("Refresh"), function () {
-				location.reload(true);
-			});
-			dialog.get_close_btn().toggle(false);
-		});
 
 		// listen to build errors
 		this.setup_build_events();
@@ -158,6 +86,92 @@ frappe.Application = class Application {
 		});
 	}
 
+	make_sidebar() {
+		this.sidebar = new frappe.ui.Sidebar({});
+	}
+
+	setup_theme() {
+		frappe.ui.keys.add_shortcut({
+			shortcut: "shift+ctrl+g",
+			description: __("Switch theme"),
+			action: () => {
+				if (frappe.theme_switcher && frappe.theme_switcher.dialog.is_visible) {
+					frappe.theme_switcher.hide();
+				} else {
+					frappe.theme_switcher = new frappe.ui.ThemeSwitcher();
+					frappe.theme_switcher.show();
+				}
+			},
+		});
+
+		frappe.ui.add_system_theme_switch_listener();
+		const root = document.documentElement;
+
+		const observer = new MutationObserver(() => {
+			frappe.ui.set_theme();
+		});
+		observer.observe(root, {
+			attributes: true,
+			attributeFilter: ["data-theme-mode"],
+		});
+
+		frappe.ui.set_theme();
+	}
+
+	setup_tours() {
+		if (
+			!window.Cypress &&
+			frappe.boot.onboarding_tours &&
+			frappe.boot.user.onboarding_status != null
+		) {
+			let pending_tours = !frappe.boot.onboarding_tours.every(
+				(tour) => frappe.boot.user.onboarding_status[tour[0]]?.is_complete
+			);
+			if (pending_tours && frappe.boot.onboarding_tours.length > 0) {
+				frappe.require("onboarding_tours.bundle.js", () => {
+					frappe.utils.sleep(1000).then(() => {
+						frappe.ui.init_onboarding_tour();
+					});
+				});
+			}
+		}
+	}
+
+	show_notices() {
+		if (frappe.boot.messages) {
+			frappe.msgprint(frappe.boot.messages);
+		}
+
+		if (frappe.user_roles.includes("System Manager")) {
+			// delayed following requests to make boot faster
+			setTimeout(() => {
+				this.show_change_log();
+				this.show_update_available();
+			}, 1000);
+		}
+
+		if (!frappe.boot.developer_mode) {
+			let console_security_message = __(
+				"Using this console may allow attackers to impersonate you and steal your information. Do not enter or paste code that you do not understand."
+			);
+			console.log(`%c${console_security_message}`, "font-size: large");
+		}
+
+		frappe.realtime.on("version-update", function () {
+			var dialog = frappe.msgprint({
+				message: __(
+					"The application has been updated to a new version, please refresh this page"
+				),
+				indicator: "green",
+				title: __("Version Updated"),
+			});
+			dialog.set_primary_action(__("Refresh"), function () {
+				location.reload(true);
+			});
+			dialog.get_close_btn().toggle(false);
+		});
+	}
+
 	set_route() {
 		if (frappe.boot && localStorage.getItem("session_last_route")) {
 			frappe.set_route(localStorage.getItem("session_last_route"));
@@ -168,6 +182,7 @@ frappe.Application = class Application {
 		}
 		frappe.router.on("change", () => {
 			$(".tooltip").hide();
+			if (frappe.frappe_toolbar && frappe.is_mobile()) frappe.frappe_toolbar.show_app_logo();
 		});
 	}
 
@@ -272,11 +287,14 @@ frappe.Application = class Application {
 		} else {
 			this.set_as_guest();
 		}
+		frappe.ui.toolbar.fetch_session_defaults();
 	}
 
 	setup_workspaces() {
 		frappe.modules = {};
 		frappe.workspaces = {};
+		frappe.boot.allowed_workspaces = frappe.boot.workspaces.pages;
+
 		for (let page of frappe.boot.allowed_workspaces || []) {
 			frappe.modules[page.module] = page;
 			frappe.workspaces[frappe.router.slug(page.name)] = page;
@@ -441,7 +459,7 @@ frappe.Application = class Application {
 	}
 
 	show_update_available() {
-		if (!frappe.boot.has_app_updates) return;
+		if (!frappe.boot.has_app_updates || !frappe.boot.setup_complete) return;
 		frappe.xcall("frappe.utils.change_log.show_update_popup");
 	}
 
@@ -488,12 +506,6 @@ frappe.Application = class Application {
 		if (frappe.boot.developer_mode) {
 			frappe.require("build_events.bundle.js");
 		}
-	}
-
-	setup_energy_point_listeners() {
-		frappe.realtime.on("energy_point_alert", (message) => {
-			frappe.show_alert(message);
-		});
 	}
 
 	setup_copy_doc_listener() {

@@ -1,9 +1,14 @@
 const cookie = require("cookie");
-const request = require("superagent");
+const { get_conf, get_redis_subscriber } = require("../../node_utils");
 const { get_url } = require("../utils");
-
-const { get_conf } = require("../../node_utils");
 const conf = get_conf();
+const redisClient = get_redis_subscriber("redis_queue");
+
+async function getSecretFromRedis() {
+	if (!redisClient.isOpen) await redisClient.connect();
+	const val = await redisClient.get("socketio_auth_secret");
+	return val;
+}
 
 function authenticate_with_frappe(socket, next) {
 	let namespace = socket.nsp.name;
@@ -34,21 +39,46 @@ function authenticate_with_frappe(socket, next) {
 		next(new Error("No authentication method used. Use cookie or authorization header."));
 		return;
 	}
+	socket.sid = cookies.sid;
+	socket.authorization_header = authorization_header;
 
-	let auth_req = request.get(get_url(socket, "/api/method/frappe.realtime.get_user_info"));
-	if (authorization_header) {
-		auth_req = auth_req.set("Authorization", authorization_header);
-	} else if (cookies.sid) {
-		auth_req = auth_req.query({ sid: cookies.sid });
-	}
+	socket.frappe_request = async (path, args = {}, opts = {}) => {
+		let query_args = new URLSearchParams(args);
+		if (query_args.toString()) {
+			path = path + "?" + query_args.toString();
+		}
 
-	auth_req
-		.type("form")
-		.then((res) => {
-			socket.user = res.body.message.user;
-			socket.user_type = res.body.message.user_type;
-			socket.sid = cookies.sid;
-			socket.authorization_header = authorization_header;
+		let headers = {};
+		if (socket.authorization_header) {
+			headers["Authorization"] = socket.authorization_header;
+		} else if (socket.sid) {
+			headers["Cookie"] = `sid=${socket.sid}`;
+		}
+		const secret = await getSecretFromRedis();
+		if (secret) {
+			headers["X-Frappe-Socket-Secret"] = secret;
+		}
+		return fetch(get_url(socket, path), {
+			...opts,
+			headers,
+		});
+	};
+
+	socket
+		.frappe_request("/api/method/frappe.realtime.get_user_info")
+		.then((res) => res.json())
+		.then(async ({ message }) => {
+			if (socket.user !== "Guest" && !message.installed_apps) {
+				const retry_res = await socket.frappe_request(
+					"/api/method/frappe.realtime.get_user_info"
+				);
+				const retry_data = await retry_res.json();
+				message = retry_data.message;
+			}
+
+			socket.user = message.user;
+			socket.user_type = message.user_type;
+			socket.installed_apps = message.installed_apps || [];
 			next();
 		})
 		.catch((e) => {

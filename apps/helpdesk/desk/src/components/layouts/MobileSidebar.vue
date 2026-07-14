@@ -1,6 +1,6 @@
 <template>
   <TransitionRoot :show="sidebarOpened">
-    <Dialog as="div" @close="sidebarOpened = false" class="fixed inset-0 z-40">
+    <Dialog as="div" @close="sidebarOpened = false" class="fixed inset-0">
       <TransitionChild
         as="template"
         enter="transition ease-in-out duration-200 transform"
@@ -11,81 +11,75 @@
         leave-to="-translate-x-full"
       >
         <div
-          class="relative z-10 flex h-full w-[230px] flex-col border-r bg-gray-50 transition-all duration-300 ease-in-out"
+          class="relative z-10 flex h-full w-[230px] flex-col border-r bg-surface-menu-bar transition-all duration-300 ease-in-out"
         >
           <!-- user dropwdown -->
-          <div><UserMenu class="p-2 mb-2" :options="profileSettings" /></div>
-          <!-- notifications -->
-          <div class="overflow-y-auto px-2" v-if="!isCustomerPortal">
-            <div class="mb-3 flex flex-col gap-1">
-              <SidebarLink
-                class="relative"
-                label="Notifications"
-                :icon="LucideBell"
-                :on-click="() => (sidebarOpened = false)"
-                :is-expanded="true"
-                to="Notifications"
-              >
-                <template #right>
-                  <Badge
-                    v-if="notificationStore.unread"
-                    :label="notificationStore.unread"
-                    theme="gray"
-                    variant="subtle"
-                  />
-                </template>
-              </SidebarLink>
-              <SidebarLink
-                v-if="!isCustomerPortal"
-                class="relative"
-                label="Dashboard"
-                :icon="LucideLayoutDashboard"
-                :to="'Dashboard'"
-                :is-active="isActiveTab('Dashboard')"
-                :is-expanded="true"
-              />
-            </div>
+          <div class="p-1">
+            <UserMenu :options="profileSettings" />
           </div>
-
-          <div v-for="view in allViews" :key="view.label">
-            <div
-              v-if="!view.hideLabel && view.views?.length"
-              class="mx-2 my-2 h-1"
-            />
-            <Section
-              :label="view.label"
-              :hideLabel="view.hideLabel"
-              :opened="view.opened"
-            >
-              <template #header="{ opened, hide, toggle }">
-                <div
-                  v-if="!hide"
-                  class="flex cursor-pointer gap-1.5 px-1 text-base font-medium text-ink-gray-5 transition-all duration-300 ease-in-out"
-                  :class="'ml-2 mt-4 h-7 w-auto opacity-100'"
-                  @click="toggle()"
-                >
-                  <FeatherIcon
-                    name="chevron-right"
-                    class="h-4 text-ink-gray-9 transition-all duration-300 ease-in-out"
-                    :class="{ 'rotate-90': opened }"
-                  />
-                  <span>{{ view.label }}</span>
-                </div>
-              </template>
-              <nav class="flex flex-col ml-2 mr-1">
+          <div class="overflow-y-auto overflow-x-hidden">
+            <!-- notifications -->
+            <div v-if="!isCustomerPortal">
+              <div class="flex flex-col gap-1">
                 <SidebarLink
-                  v-for="link in view.views"
-                  :icon="link.icon"
-                  :label="link.label"
-                  :to="link.to"
-                  :key="link.label"
+                  class="relative"
+                  label="Notifications"
+                  :icon="LucideBell"
+                  :on-click="() => (sidebarOpened = false)"
                   :is-expanded="true"
-                  :is-active="isActiveTab(link.to)"
-                  class="my-0.5"
-                  :onClick="link.onClick"
-                />
-              </nav>
-            </Section>
+                  to="Notifications"
+                >
+                  <template #right>
+                    <Badge
+                      v-if="notificationStore.unread"
+                      :label="notificationStore.unread"
+                      theme="gray"
+                      variant="subtle"
+                    />
+                  </template>
+                </SidebarLink>
+              </div>
+            </div>
+
+            <div v-for="view in allViews" :key="view.label">
+              <div v-if="!view.hideLabel && view.views?.length" />
+              <div class="mx-2 my-1.5"></div>
+
+              <Section
+                :label="view.label"
+                :hideLabel="view.hideLabel"
+                :opened="view.opened"
+              >
+                <template #header="{ opened, hide, toggle }">
+                  <div
+                    v-if="!hide"
+                    class="flex cursor-pointer gap-1.5 px-2 text-base font-medium text-ink-gray-5 mx-2 transition-all duration-300 ease-in-out"
+                    :class="'py-[7px] h-7.5 w-auto opacity-100'"
+                    @click="toggle()"
+                  >
+                    <FeatherIcon
+                      name="chevron-right"
+                      class="h-4 text-ink-gray-9 transition-all duration-300 ease-in-out"
+                      :class="{ 'rotate-90': opened }"
+                    />
+                    <span>{{ view.label }}</span>
+                  </div>
+                </template>
+                <nav class="flex flex-col">
+                  <SidebarLink
+                    v-for="link in view.views"
+                    :icon="link.icon"
+                    :label="link.label"
+                    :to="link.to"
+                    :key="link.label"
+                    :is-expanded="true"
+                    :is-active="isActiveTab(link.to)"
+                    class="my-0.5"
+                    :onClick="link.onClick"
+                  />
+                </nav>
+              </Section>
+            </div>
           </div>
         </div>
       </TransitionChild>
@@ -98,7 +92,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <DialogOverlay class="fixed inset-0 bg-gray-600 bg-opacity-50" />
+        <DialogOverlay class="fixed inset-0 bg-black-overlay-500" />
       </TransitionChild>
     </Dialog>
   </TransitionRoot>
@@ -123,7 +117,9 @@ import { mobileSidebarOpened as sidebarOpened } from "@/composables/mobile";
 import { currentView, useView } from "@/composables/useView";
 
 import LucideBell from "~icons/lucide/bell";
-import LucideLayoutDashboard from "~icons/lucide/layout-dashboard";
+import LucideMoon from "~icons/lucide/moon";
+import LucideSun from "~icons/lucide/sun";
+import { useTheme } from "frappe-ui";
 
 import { useAuthStore } from "@/stores/auth";
 import { isCustomerPortal } from "@/utils";
@@ -135,6 +131,13 @@ import {
 import { useTelephonyStore } from "@/stores/telephony";
 import { storeToRefs } from "pinia";
 const { pinnedViews, publicViews } = useView();
+const { currentTheme, toggleTheme } = useTheme();
+
+const themeMenuItem = computed(() => ({
+  label: "Toggle theme",
+  icon: currentTheme.value === "dark" ? LucideSun : LucideMoon,
+  onClick: () => toggleTheme(),
+}));
 
 const notificationStore = useNotificationStore();
 const route = useRoute();
@@ -198,9 +201,10 @@ function parseViews(views) {
 }
 
 const customerPortalDropdown = computed(() => [
+  themeMenuItem.value,
   {
     label: "Log out",
-    icon: "log-out",
+    icon: "lucide-log-out",
     onClick: () => authStore.logout(),
   },
 ]);
@@ -211,25 +215,26 @@ const agentPortalDropdown = computed(() => [
   },
   {
     label: "Customer portal",
-    icon: "users",
+    icon: "lucide-users",
     onClick: () => {
       const path = router.resolve({ name: "TicketsCustomer" });
       window.open(path.href);
     },
   },
   {
-    icon: "life-buoy",
+    icon: "lucide-life-buoy",
     label: "Support",
     onClick: () => window.open("https://t.me/frappedesk"),
   },
   {
-    icon: "book-open",
+    icon: "lucide-book-open",
     label: "Docs",
     onClick: () => window.open("https://docs.frappe.io/helpdesk"),
   },
+  themeMenuItem.value,
   {
     label: "Log out",
-    icon: "log-out",
+    icon: "lucide-log-out",
     onClick: () => authStore.logout(),
   },
 ]);

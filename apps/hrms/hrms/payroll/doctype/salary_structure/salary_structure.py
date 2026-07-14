@@ -1,13 +1,14 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import datetime
 import re
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import cint, cstr, flt
+from frappe.utils import cint, cstr, flt, get_link_to_form
 
 import erpnext
 
@@ -24,11 +25,11 @@ class SalaryStructure(Document):
 	def validate(self):
 		self.set_missing_values()
 		self.validate_amount()
-		self.validate_max_benefits_with_flexi()
 		self.validate_component_based_on_tax_slab()
 		self.validate_payment_days_based_dependent_component()
 		self.validate_timesheet_component()
 		self.validate_formula_setup()
+		validate_max_benefit_for_flexible_benefit(self.employee_benefits, self.max_benefits)
 
 	def on_update(self):
 		self.reset_condition_and_formula_fields()
@@ -151,31 +152,6 @@ class SalaryStructure(Document):
 
 		self.db_update_all()
 
-	def validate_max_benefits_with_flexi(self):
-		have_a_flexi = False
-		if self.earnings:
-			flexi_amount = 0
-			for earning_component in self.earnings:
-				if earning_component.is_flexible_benefit == 1:
-					have_a_flexi = True
-					max_of_component = frappe.db.get_value(
-						"Salary Component", earning_component.salary_component, "max_benefit_amount"
-					)
-					flexi_amount += max_of_component
-
-			if have_a_flexi and flt(self.max_benefits) == 0:
-				frappe.throw(_("Max benefits should be greater than zero to dispense benefits"))
-			if have_a_flexi and flexi_amount and flt(self.max_benefits) > flexi_amount:
-				frappe.throw(
-					_(
-						"Total flexible benefit component amount {0} should not be less than max benefits {1}"
-					).format(flexi_amount, self.max_benefits)
-				)
-		if not have_a_flexi and flt(self.max_benefits) > 0:
-			frappe.throw(
-				_("Salary Structure should have flexible benefit component(s) to dispense benefit amount")
-			)
-
 	def get_employees(self, **kwargs):
 		conditions, values = [], []
 		for field, value in kwargs.items():
@@ -196,17 +172,17 @@ class SalaryStructure(Document):
 	@frappe.whitelist()
 	def assign_salary_structure(
 		self,
-		branch=None,
-		grade=None,
-		department=None,
-		designation=None,
-		employee=None,
-		payroll_payable_account=None,
-		from_date=None,
-		base=None,
-		variable=None,
-		income_tax_slab=None,
-	):
+		branch: str | None = None,
+		grade: str | None = None,
+		department: str | None = None,
+		designation: str | None = None,
+		employee: str | None = None,
+		payroll_payable_account: str | None = None,
+		from_date: str | None = None,
+		base: float | None = None,
+		variable: float | None = None,
+		income_tax_slab: str | None = None,
+	) -> None:
 		employees = self.get_employees(
 			company=self.company,
 			grade=grade,
@@ -357,22 +333,24 @@ def get_existing_assignments(employees, salary_structure, from_date):
 
 @frappe.whitelist()
 def make_salary_slip(
-	source_name,
-	target_doc=None,
-	employee=None,
-	posting_date=None,
-	as_print=False,
-	print_format=None,
-	for_preview=0,
-	ignore_permissions=False,
-):
+	source_name: str,
+	target_doc: str | Document | None = None,
+	employee: str | None = None,
+	posting_date: str | datetime.date | None = None,
+	as_print: bool = False,
+	print_format: str | None = None,
+	for_preview: int = 0,
+	lwp_days_corrected: float | None = None,
+) -> str | Document:
 	def postprocess(source, target):
 		if employee:
 			target.employee = employee
 			if posting_date:
 				target.posting_date = posting_date
 
-		target.run_method("process_salary_structure", for_preview=for_preview)
+		target.run_method(
+			"process_salary_structure", for_preview=for_preview, lwp_days_corrected=lwp_days_corrected
+		)
 
 	doc = get_mapped_doc(
 		"Salary Structure",
@@ -390,7 +368,6 @@ def make_salary_slip(
 		target_doc,
 		postprocess,
 		ignore_child_tables=True,
-		ignore_permissions=ignore_permissions,
 		cached=True,
 	)
 
@@ -402,7 +379,7 @@ def make_salary_slip(
 
 
 @frappe.whitelist()
-def get_employees(salary_structure):
+def get_employees(salary_structure: str) -> list[str]:
 	employees = frappe.get_list(
 		"Salary Structure Assignment",
 		filters={"salary_structure": salary_structure, "docstatus": 1},
@@ -420,7 +397,9 @@ def get_employees(salary_structure):
 
 
 @frappe.whitelist()
-def get_salary_component(doctype, txt, searchfield, start, page_len, filters):
+def get_salary_component(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
+) -> list:
 	sc = frappe.qb.DocType("Salary Component")
 	sca = frappe.qb.DocType("Salary Component Account")
 
@@ -447,3 +426,44 @@ def get_salary_component(doctype, txt, searchfield, start, page_len, filters):
 				accounts.append((component.name, component.account, component.company))
 
 	return accounts
+
+
+def validate_max_benefit_for_flexible_benefit(employee_benefits, max_benefits=None):
+	if not employee_benefits:
+		return
+
+	benefit_total = 0
+	benefit_components = []
+
+	for benefit in employee_benefits:
+		if benefit.salary_component in benefit_components:
+			frappe.throw(
+				_("Salary Component {0} cannot be selected more than once in Employee Benefits").format(
+					benefit.salary_component
+				)
+			)
+
+		benefit_total += benefit.amount
+		max_of_component = frappe.db.get_value(
+			"Salary Component", benefit.salary_component, "max_benefit_amount"
+		)
+		if max_of_component and max_of_component > 0 and benefit.amount > max_of_component:
+			frappe.throw(
+				_(
+					"Benefit amount {0} for Salary Component {1} should not be greater than maximum benefit amount {2} set in {3}"
+				).format(
+					benefit.amount,
+					benefit.salary_component,
+					max_of_component,
+					get_link_to_form("Salary Component", benefit.salary_component),
+				)
+			)
+		benefit_components.append(benefit.salary_component)
+
+	if max_benefits and benefit_total > max_benefits:
+		frappe.throw(
+			_("Total of all employee benefits cannot be greater that Max Benefits Amount {0}").format(
+				max_benefits
+			),
+			title=_("Invalid Benefit Amounts"),
+		)

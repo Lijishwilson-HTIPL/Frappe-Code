@@ -376,8 +376,13 @@ frappe.provide("frappe.views");
 		}
 
 		function bind_add_column() {
-			if (!self.board_perms.write) {
+			let doctype = self.cur_list.doctype;
+			let fieldname = self.cur_list.board.field_name;
+			const is_custom_field = frappe.meta.get_docfield(doctype, fieldname)?.is_custom_field;
+
+			if (!self.board_perms.write || !is_custom_field) {
 				// If no write access to board, editing board (by adding column) should be blocked
+				// If standard field then users can't add options
 				self.$kanban_board.find(".add-new-column").remove();
 				return;
 			}
@@ -584,8 +589,6 @@ frappe.provide("frappe.views");
 				group: "cards",
 				animation: 150,
 				dataIdAttr: "data-name",
-				forceFallback: true,
-				fallbackTolerance: 20,
 				onStart: function () {
 					wrapper.find(".kanban-card.add-card").fadeOut(200, function () {
 						wrapper.find(".kanban-cards").height("100vh");
@@ -594,7 +597,6 @@ frappe.provide("frappe.views");
 				onEnd: function (e) {
 					wrapper.find(".kanban-card.add-card").fadeIn(100);
 					wrapper.find(".kanban-cards").height("auto");
-					// update order
 					const args = {
 						name: decodeURIComponent($(e.item).attr("data-name")),
 						from_colname: $(e.from)
@@ -606,7 +608,6 @@ frappe.provide("frappe.views");
 					};
 					store.dispatch("update_order_for_single_card", args);
 				},
-				onAdd: function () {},
 			});
 		}
 
@@ -747,11 +748,26 @@ frappe.provide("frappe.views");
 		}
 
 		function get_tags_html(card) {
-			return card.tags
-				? `<div class="kanban-tags">
-					${cur_list.get_tags_html(card.tags, 3, true)}
-				</div>`
-				: "";
+			if (!card.tags) return "";
+			const tags_array = card.tags.split(",");
+			const limit = 3; // cap. at 3 tags
+			const visible_tags = tags_array.slice(0, limit).join(",");
+			const hidden_tags = tags_array.slice(limit).join(",");
+			const hidden_tags_html = cur_list.get_tags_html(hidden_tags, null, true);
+			const hidden_count = tags_array.length - limit;
+			let html = `<div class="kanban-tags">
+				${cur_list.get_tags_html(visible_tags, null, true)}`;
+
+			if (hidden_count > 0) {
+				html += `
+					<span class="tag-pill more-tags">
+						+${hidden_count}
+						<span class="hidden-tags">${hidden_tags_html}</span>
+					</span>`;
+			}
+
+			html += `</div>`;
+			return html;
 		}
 
 		function render_card_meta() {

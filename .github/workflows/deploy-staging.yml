@@ -20,19 +20,20 @@ jobs:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_PORT || 22 }}
+          port: 22
+          command_timeout: 20m
           script: |
             set -e
-            cd /home/deploy/frappe-crm
+            cd /home/hephzibahtech2/frappe-crm
 
-            echo "=== Pulling latest Docker config ==="
-            git pull origin stagging-deployment
+            echo "=== Rebuilding image from latest stagging-deployment ==="
+            docker compose build --no-cache frappe
 
-            echo "=== Rebuilding image ==="
+            echo "=== Restarting containers ==="
             docker compose down
-            docker compose up -d --build
+            docker compose up -d
 
-            echo "=== Waiting for site to be healthy ==="
+            echo "=== Waiting for frappe to be healthy (up to 5 min) ==="
             for i in $(seq 1 30); do
               if docker compose exec -T frappe curl -sf http://localhost:8000/api/method/ping > /dev/null 2>&1; then
                 echo "Site is up!"
@@ -42,10 +43,29 @@ jobs:
               sleep 10
             done
 
+            echo "=== Creating site if it does not exist ==="
+            if ! docker compose exec -T frappe bench --site mysite.local list-apps > /dev/null 2>&1; then
+              echo "Site not found — creating..."
+              docker compose exec -T frappe bench new-site mysite.local \
+                --db-root-password "${MYSQL_ROOT_PASSWORD:-root}" \
+                --admin-password "Admin@12345" \
+                --no-mariadb-socket
+              docker compose exec -T frappe bench --site mysite.local install-app erpnext
+              docker compose exec -T frappe bench --site mysite.local install-app crm
+              docker compose exec -T frappe bench --site mysite.local install-app hrms
+              docker compose exec -T frappe bench --site mysite.local install-app helpdesk
+              docker compose exec -T frappe bench --site mysite.local install-app telephony
+              docker compose exec -T frappe bench --site mysite.local install-app sbiqc_provisioning
+            fi
+
             echo "=== Running migrations ==="
             docker compose exec -T frappe bench --site mysite.local migrate
 
-            echo "=== Rebuilding assets ==="
-            docker compose exec -T frappe bench build --app frappe --app erpnext --app crm --app hrms --app helpdesk --app telephony || true
+            echo "=== Setting host_name so email links use the real GCP URL ==="
+            docker compose exec -T frappe bench --site mysite.local set-config host_name "http://34.172.62.72"
+
+            echo "=== Clearing cache ==="
+            docker compose exec -T frappe bench --site mysite.local clear-cache
+            docker compose exec -T frappe bench --site mysite.local clear-website-cache
 
             echo "=== Deployment complete ==="

@@ -1,9 +1,5 @@
 html {
 	height: 100%;
-	background: linear-gradient(135deg, #fff5e8 0%, #fef0e3 50%, #fff5e8 100%);
-	background-color: var(--bg-color);
-	background-size: 200% 200%;
-	animation: warm-gradient-shift 15s ease-in-out infinite;
 }
 
 body {
@@ -13,15 +9,14 @@ body {
 	color: $body-color;
 	display: flex;
 	flex-direction: column;
-	background: transparent;
 }
 
 kbd {
 	background-color: var(--control-bg);
 	font-family: var(--font-stack);
 	color: var(--text-light);
-	line-height: 1.2em;
-	letter-spacing: 0.02em;
+	line-height: 0.9em;
+	letter-spacing: 0.06em;
 	height: 20px;
 	padding: 4px 8px;
 }

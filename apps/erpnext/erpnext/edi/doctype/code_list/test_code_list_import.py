@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 
 import frappe
 import requests
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.edi.doctype.code_list import code_list_import
+from erpnext.tests.utils import ERPNextTestSuite
 
 SAMPLE_GENERICODE = b"""<?xml version="1.0" encoding="UTF-8"?>
 <CodeList>
@@ -49,7 +49,7 @@ SAMPLE_GENERICODE = b"""<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-class TestCodeListImport(FrappeTestCase):
+class TestCodeListImport(ERPNextTestSuite):
 	def test_import_genericode_rejects_remote_file_url(self):
 		self.set_upload_context(
 			file_name="trusted.xml",
@@ -98,7 +98,7 @@ class TestCodeListImport(FrappeTestCase):
 		)
 
 		file_doc = frappe.get_doc("File", import_result["file"])
-		self.assertEqual(code_list_import.read_file_bytes(file_doc), SAMPLE_GENERICODE)
+		self.assertEqual(file_doc.get_content(encodings=()), SAMPLE_GENERICODE)
 		self.assertFalse(file_doc.file_url.startswith("https://"))
 
 	def test_import_genericode_from_trusted_url_propagates_fetch_errors(self):
@@ -117,7 +117,7 @@ class TestCodeListImport(FrappeTestCase):
 		self.assert_import_response(import_result)
 
 		file_doc = frappe.get_doc("File", import_result["file"])
-		self.assertEqual(code_list_import.read_file_bytes(file_doc), SAMPLE_GENERICODE)
+		self.assertEqual(file_doc.get_content(encodings=()), SAMPLE_GENERICODE)
 
 	def test_process_genericode_import_reads_file_doc_content(self):
 		self.set_upload_context(content=SAMPLE_GENERICODE, file_name="uploaded_genericode.xml")

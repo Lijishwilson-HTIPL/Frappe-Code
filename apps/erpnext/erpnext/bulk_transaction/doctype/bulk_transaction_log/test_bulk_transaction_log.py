@@ -2,8 +2,10 @@
 # See license.txt
 
 # import frappe
-from frappe.tests.utils import FrappeTestCase
 
 
-class TestBulkTransactionLog(FrappeTestCase):
+from erpnext.tests.utils import ERPNextTestSuite
+
+
+class TestBulkTransactionLog(ERPNextTestSuite):
 	pass

@@ -2,13 +2,13 @@
 # License: MIT. See LICENSE
 
 import frappe
-from frappe.test_runner import make_test_records
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import make_test_records
 
 TEST_DOCTYPE = "Assignment Test"
 
 
-class TestAutoAssign(FrappeTestCase):
+class TestAutoAssign(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -112,6 +112,26 @@ class TestAutoAssign(FrappeTestCase):
 			self.assertEqual(
 				len(frappe.get_all("ToDo", dict(allocated_to=user, reference_type=TEST_DOCTYPE))), 10
 			)
+
+	def test_weighted_distribution(self):
+		self.assignment_rule.rule = "Weighted Distribution"
+		self.assignment_rule.weighted_users.clear()
+		self.assignment_rule.append("weighted_users", dict(user="test@example.com", weight=1))
+		self.assignment_rule.append("weighted_users", dict(user="test1@example.com", weight=2))
+		self.assignment_rule.save()
+
+		for _ in range(5):
+			_make_test_record(public=1)
+
+		# check if users are assigned based on weights (out of 5,
+		# test@example.com should have 2 assignments and test1@example.com should have 3 assignments )
+		self.assertEqual(
+			len(frappe.get_all("ToDo", dict(allocated_to="test@example.com", reference_type=TEST_DOCTYPE))), 2
+		)
+		self.assertEqual(
+			len(frappe.get_all("ToDo", dict(allocated_to="test1@example.com", reference_type=TEST_DOCTYPE))),
+			3,
+		)
 
 	def test_assingment_on_guest_submissions(self):
 		"""Sometimes documents are inserted as guest, check if assignment rules run on them. Use case: Web Forms"""
@@ -249,17 +269,15 @@ class TestAutoAssign(FrappeTestCase):
 		frappe.db.delete("Assignment Rule")
 
 		assignment_rule = frappe.get_doc(
-			dict(
-				name="Assignment with Due Date",
-				doctype="Assignment Rule",
-				document_type=TEST_DOCTYPE,
-				assign_condition="public == 0",
-				due_date_based_on="expiry_date",
-				assignment_days=self.days,
-				users=[
-					dict(user="test@example.com"),
-				],
-			)
+			name="Assignment with Due Date",
+			doctype="Assignment Rule",
+			document_type=TEST_DOCTYPE,
+			assign_condition="public == 0",
+			due_date_based_on="expiry_date",
+			assignment_days=self.days,
+			users=[
+				dict(user="test@example.com"),
+			],
 		).insert()
 
 		expiry_date = frappe.utils.add_days(frappe.utils.nowdate(), 2)
@@ -351,39 +369,35 @@ def get_assignment_rule(days, assign=None):
 		assign = ["public == 1", "notify_on_login == 1"]
 
 	assignment_rule = frappe.get_doc(
-		dict(
-			name=f"For {TEST_DOCTYPE} 1",
-			doctype="Assignment Rule",
-			priority=0,
-			document_type=TEST_DOCTYPE,
-			assign_condition=assign[0],
-			unassign_condition="public == 0 or notify_on_login == 1",
-			close_condition='"Closed" in content',
-			rule="Round Robin",
-			assignment_days=days[0],
-			users=[
-				dict(user="test@example.com"),
-				dict(user="test1@example.com"),
-				dict(user="test2@example.com"),
-			],
-		)
+		name=f"For {TEST_DOCTYPE} 1",
+		doctype="Assignment Rule",
+		priority=0,
+		document_type=TEST_DOCTYPE,
+		assign_condition=assign[0],
+		unassign_condition="public == 0 or notify_on_login == 1",
+		close_condition='"Closed" in content',
+		rule="Round Robin",
+		assignment_days=days[0],
+		users=[
+			dict(user="test@example.com"),
+			dict(user="test1@example.com"),
+			dict(user="test2@example.com"),
+		],
 	).insert()
 
 	frappe.delete_doc_if_exists("Assignment Rule", f"For {TEST_DOCTYPE} 2")
 
 	# 2nd rule
 	frappe.get_doc(
-		dict(
-			name=f"For {TEST_DOCTYPE} 2",
-			doctype="Assignment Rule",
-			priority=1,
-			document_type=TEST_DOCTYPE,
-			assign_condition=assign[1],
-			unassign_condition="notify_on_login == 0",
-			rule="Round Robin",
-			assignment_days=days[1],
-			users=[dict(user="test3@example.com")],
-		)
+		name=f"For {TEST_DOCTYPE} 2",
+		doctype="Assignment Rule",
+		priority=1,
+		document_type=TEST_DOCTYPE,
+		assign_condition=assign[1],
+		unassign_condition="notify_on_login == 0",
+		rule="Round Robin",
+		assignment_days=days[1],
+		users=[dict(user="test3@example.com")],
 	).insert()
 
 	return assignment_rule

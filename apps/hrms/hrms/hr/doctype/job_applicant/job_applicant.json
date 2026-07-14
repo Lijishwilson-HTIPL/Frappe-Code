@@ -14,18 +14,26 @@
   "applicant_name",
   "email_id",
   "phone_number",
-  "country",
   "column_break_3",
   "job_title",
   "designation",
+  "country",
+  "column_break_enue",
   "status",
   "recruitment_stage",
+  "applicant_rating",
+  "section_break_6",
+  "resume_link",
+  "resume_preview_html",
+  "open_resume_button",
+  "cover_letter",
+  "resume_attachment",
+  "notes",
   "source_and_rating_section",
   "source",
   "source_name",
-  "employee_referral",
   "column_break_13",
-  "applicant_rating",
+  "employee_referral",
   "career_inquiry_section",
   "role_applying_for",
   "years_of_experience",
@@ -34,10 +42,7 @@
   "portfolio_site",
   "how_did_you_hear",
   "other_source",
-  "section_break_6",
-  "cover_letter",
-  "resume_attachment",
-  "section_break_16",
+  "salary_expectation_tab",
   "currency",
   "column_break_18",
   "lower_range",
@@ -49,7 +54,7 @@
    "fieldname": "applicant_name",
    "fieldtype": "Data",
    "in_global_search": 1,
-   "label": "Applicant Name",
+   "label": "Full Name",
    "reqd": 1
   },
   {
@@ -66,17 +71,17 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Open\nReplied\nRejected\nHold\nAccepted",
+   "options": "Open\nReplied\nShortlisted\nRejected\nHold\nAccepted",
    "reqd": 1
   },
   {
-   "default": "Applied",
    "fieldname": "recruitment_stage",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Recruitment Stage",
-   "options": "Applied\nScreening\nAssessment\nInterview\nOffered\nOnboard"
+   "options": "Applied\nScreening\nAssessment\nInterview\nOffered\nOnboard",
+   "default": "Applied"
   },
   {
    "fieldname": "column_break_3",
@@ -117,7 +122,7 @@
   {
    "fieldname": "resume_attachment",
    "fieldtype": "Attach",
-   "label": "Resume Attachment"
+   "label": "Attachment"
   },
   {
    "fieldname": "notes",
@@ -140,18 +145,13 @@
   {
    "fieldname": "resume_link",
    "fieldtype": "Data",
-   "label": "Resume Link"
+   "label": "Link"
   },
   {
    "fieldname": "applicant_rating",
    "fieldtype": "Rating",
    "in_list_view": 1,
    "label": "Applicant Rating"
-  },
-  {
-   "fieldname": "section_break_16",
-   "fieldtype": "Section Break",
-   "label": "Salary Expectation"
   },
   {
    "fieldname": "lower_range",
@@ -192,10 +192,22 @@
   {
    "fieldname": "source_and_rating_section",
    "fieldtype": "Section Break",
-   "label": "Source and Rating"
+   "label": "Source"
   },
   {
    "fieldname": "column_break_13",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "job_title.designation",
+   "fetch_if_empty": 1,
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "Designation"
+  },
+  {
+   "fieldname": "column_break_enue",
    "fieldtype": "Column Break"
   },
   {
@@ -216,8 +228,7 @@
   {
    "fieldname": "linkedin_profile_url",
    "fieldtype": "Data",
-   "label": "LinkedIn Profile URL",
-   "options": "URL"
+   "label": "LinkedIn Profile URL"
   },
   {
    "fieldname": "col_break_career",
@@ -226,44 +237,63 @@
   {
    "fieldname": "portfolio_site",
    "fieldtype": "Data",
-   "label": "Portfolio / Personal Site",
-   "options": "URL"
+   "label": "Portfolio / Personal Site"
   },
   {
    "fieldname": "how_did_you_hear",
    "fieldtype": "Select",
    "label": "How Did You Hear About Us?",
-   "options": "\nGoogle Search\nLinkedIn\nSocial Media\nReferral\nConference / Event\nBlog / Article\nOther"
+   "options": "\nGoogle Search\nLinkedIn\nSocial Media\nReferral\nConference/Event\nBlog/Article\nOther"
   },
   {
-   "depends_on": "eval:doc.how_did_you_hear == 'Other'",
    "fieldname": "other_source",
    "fieldtype": "Small Text",
-   "label": "Please Specify"
+   "label": "Please Specify",
+   "depends_on": "eval: doc.how_did_you_hear == 'Other'"
   },
   {
-   "fetch_from": "job_title.designation",
-   "fetch_if_empty": 1,
-   "fieldname": "designation",
-   "fieldtype": "Link",
-   "label": "Designation",
-   "options": "Designation"
+   "fieldname": "salary_expectation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Salary Expectation"
+  },
+  {
+   "fieldname": "resume_preview_html",
+   "fieldtype": "HTML",
+   "hidden": 1,
+   "label": "Preview"
+  },
+  {
+   "fieldname": "open_resume_button",
+   "fieldtype": "Button",
+   "hidden": 1,
+   "label": "Open Resume in New Tab"
   }
  ],
  "icon": "fa fa-user",
  "idx": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-16 13:06:05.312255",
+ "modified": "2026-04-14 11:35:48.142348",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Job Applicant",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
    "email": 1,
    "print": 1,
    "read": 1,
@@ -271,14 +301,26 @@
    "role": "HR User",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "applicant_name, email_id, job_title, phone_number",
  "sender_field": "email_id",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "ASC",
  "states": [],
  "subject_field": "notes",
- "title_field": "applicant_name",
- "track_changes": 1
+ "title_field": "applicant_name"
 }

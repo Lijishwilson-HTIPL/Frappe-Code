@@ -1,38 +1,45 @@
 import LucideBookOpen from "~icons/lucide/book-open";
-import LucideCloudLightning from "~icons/lucide/cloud-lightning";
 import LucideContact2 from "~icons/lucide/contact-2";
 import LucideTicket from "~icons/lucide/ticket";
+import LucideLayoutDashboard from "~icons/lucide/layout-dashboard";
 import { OrganizationsIcon } from "../icons";
 import PhoneIcon from "../icons/PhoneIcon.vue";
+import LucideHome from "~icons/lucide/home";
+import { __ } from "@/translation";
 
 export const agentPortalSidebarOptions = [
   {
-    label: "Tickets",
+    label: __("Home"),
+    icon: LucideHome,
+    to: "Home",
+  },
+  {
+    label: __("Dashboard"),
+    icon: LucideLayoutDashboard,
+    to: "Dashboard"
+  },
+  {
+    label: __("Tickets"),
     icon: LucideTicket,
     to: "TicketsAgent",
   },
   {
-    label: "Knowledge Base",
+    label: __("Knowledge Base"),
     icon: LucideBookOpen,
     to: "AgentKnowledgeBase",
   },
   {
-    label: "Canned responses",
-    icon: LucideCloudLightning,
-    to: "CannedResponses",
-  },
-  {
-    label: "Customers",
+    label: __("Customers"),
     icon: OrganizationsIcon,
     to: "CustomerList",
   },
   {
-    label: "Contacts",
+    label: __("Contacts"),
     icon: LucideContact2,
     to: "ContactList",
   },
   {
-    label: "Call Logs",
+    label: __("Call Logs"),
     icon: PhoneIcon,
     to: "CallLogs",
   },
@@ -40,12 +47,12 @@ export const agentPortalSidebarOptions = [
 
 export const customerPortalSidebarOptions = [
   {
-    label: "Tickets",
+    label: __("Tickets"),
     icon: LucideTicket,
     to: "TicketsCustomer",
   },
   {
-    label: "Knowledge Base",
+    label: __("Knowledge Base"),
     icon: LucideBookOpen,
     to: "CustomerKnowledgeBase",
   },
