@@ -1,0 +1,388 @@
+{
+ "app": "quality_dms",
+ "charts": [
+  {
+   "chart_name": "Documents by Status",
+   "label": "Documents by Status"
+  },
+  {
+   "chart_name": "Training Compliance by Department",
+   "label": "Training Compliance by Department"
+  }
+ ],
+ "content": "[{\"id\": \"nc_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Key Metrics</b></span>\", \"col\": 12}}, {\"id\": \"nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Documents\", \"col\": 3}}, {\"id\": \"nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Published Documents\", \"col\": 3}}, {\"id\": \"nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Documents in Review\", \"col\": 3}}, {\"id\": \"nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Approval\", \"col\": 3}}, {\"id\": \"nc5\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Draft Documents\", \"col\": 3}}, {\"id\": \"nc6\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Obsolete Documents\", \"col\": 3}}, {\"id\": \"nc7\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Revision Requests\", \"col\": 3}}, {\"id\": \"nc8\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Revisions\", \"col\": 3}}, {\"id\": \"sp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ch_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Dashboard</b></span>\", \"col\": 12}}, {\"id\": \"ch1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Documents by Status\", \"col\": 6}}, {\"id\": \"ch2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Training Compliance by Department\", \"col\": 6}}, {\"id\": \"sp3\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"sc_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Quick Access</b></span>\", \"col\": 12}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Document Library\", \"col\": 4}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"My Training\", \"col\": 4}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Document Requests\", \"col\": 4}}, {\"id\": \"sc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Document Revisions\", \"col\": 4}}, {\"id\": \"sc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Training Matrix\", \"col\": 4}}, {\"id\": \"sc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Report\", \"col\": 4}}, {\"id\": \"sp0\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ql_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Work Queues</b></span>\", \"col\": 12}}, {\"id\": \"ql1\", \"type\": \"quick_list\", \"data\": {\"quick_list_name\": \"My Pending Trainings\", \"col\": 6}}, {\"id\": \"ql2\", \"type\": \"quick_list\", \"data\": {\"quick_list_name\": \"Pending Document Requests\", \"col\": 6}}, {\"id\": \"sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Browse</b></span>\", \"col\": 12}}, {\"id\": \"cd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Documents\", \"col\": 4}}, {\"id\": \"cd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Training\", \"col\": 4}}, {\"id\": \"cd3\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd4\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd5\", \"type\": \"card\", \"data\": {\"card_name\": \"Compliance & Logs\", \"col\": 4}}, {\"id\": \"cd6\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-07-08 13:06:26.892038",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "album",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "DMS",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Documents",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Library",
+   "link_count": 0,
+   "link_to": "Document Library",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Request",
+   "link_count": 0,
+   "link_to": "Document Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Revision",
+   "link_count": 0,
+   "link_to": "Document Revision",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Training",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Training Record",
+   "link_count": 0,
+   "link_to": "DMS Training Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Curriculum",
+   "link_count": 0,
+   "link_to": "DMS Curriculum",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Quiz",
+   "link_count": 0,
+   "link_to": "DMS Quiz",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Training Session",
+   "link_count": 0,
+   "link_to": "DMS Training Session",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Training Assignment Rule",
+   "link_count": 0,
+   "link_to": "DMS Training Assignment Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Approval Matrix",
+   "link_count": 0,
+   "link_to": "Approval Matrix",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Category",
+   "link_count": 0,
+   "link_to": "Document Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Document Type",
+   "link_count": 0,
+   "link_to": "Document Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Department",
+   "link_count": 0,
+   "link_to": "Department",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Master Document List",
+   "link_count": 0,
+   "link_to": "Master Document List",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Training Matrix Report",
+   "link_count": 0,
+   "link_to": "Training Matrix Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Training Compliance Report",
+   "link_count": 0,
+   "link_to": "Training Compliance Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Overdue Training Report",
+   "link_count": 0,
+   "link_to": "Overdue Training Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Audit Trail Report",
+   "link_count": 0,
+   "link_to": "Audit Trail Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance & Logs",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "DMS Audit Log",
+   "link_count": 0,
+   "link_to": "DMS Audit Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CFR Part 11 Signature Log",
+   "link_count": 0,
+   "link_to": "CFR Part 11 Signature Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Training Settings",
+   "link_count": 0,
+   "link_to": "Training Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-07-15 13:13:44.246817",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "DMS",
+ "number_cards": [
+  {
+   "label": "Total Documents",
+   "number_card_name": "Total Documents"
+  },
+  {
+   "label": "Published Documents",
+   "number_card_name": "Published Documents"
+  },
+  {
+   "label": "Documents in Review",
+   "number_card_name": "Documents in Review"
+  },
+  {
+   "label": "Pending Approval",
+   "number_card_name": "Pending Approval"
+  },
+  {
+   "label": "Draft Documents",
+   "number_card_name": "Draft Documents"
+  },
+  {
+   "label": "Obsolete Documents",
+   "number_card_name": "Obsolete Documents"
+  },
+  {
+   "label": "Pending Revision Requests",
+   "number_card_name": "Pending Revision Requests"
+  },
+  {
+   "label": "Total Revisions",
+   "number_card_name": "Total Revisions"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [
+  {
+   "document_type": "DMS Training Record",
+   "label": "My Pending Trainings"
+  },
+  {
+   "document_type": "Document Request",
+   "label": "Pending Document Requests"
+  }
+ ],
+ "roles": [
+  {
+   "role": "Employee"
+  },
+  {
+   "role": "Employee"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Published",
+   "label": "Document Library",
+   "link_to": "Document Library",
+   "stats_filter": "{\"status\":\"Published\"}",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "My Training",
+   "link_to": "DMS Training Record",
+   "stats_filter": "{\"status\":[\"in\",[\"Assigned\",\"In Progress\",\"Overdue\"]]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Pending",
+   "label": "Document Requests",
+   "link_to": "Document Request",
+   "stats_filter": "{\"status\":\"Pending\"}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Document Revisions",
+   "link_to": "Document Revision",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "label": "Training Matrix",
+   "link_to": "Training Matrix Report",
+   "report_ref_doctype": "DMS Training Record",
+   "type": "Report"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "Compliance Report",
+   "link_to": "Training Compliance Report",
+   "report_ref_doctype": "DMS Training Record",
+   "type": "Report"
+  }
+ ],
+ "title": "DMS",
+ "type": "Workspace"
+}

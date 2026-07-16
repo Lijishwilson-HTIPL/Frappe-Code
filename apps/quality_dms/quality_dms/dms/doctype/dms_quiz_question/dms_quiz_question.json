@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "creation": "2026-07-02 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "question_text",
+  "option_1",
+  "option_2",
+  "col_break_1",
+  "option_3",
+  "option_4",
+  "correct_option",
+  "marks"
+ ],
+ "fields": [
+  {
+   "fieldname": "question_text",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "fieldname": "option_1",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Option 1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "option_2",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Option 2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "option_3",
+   "fieldtype": "Data",
+   "label": "Option 3"
+  },
+  {
+   "fieldname": "option_4",
+   "fieldtype": "Data",
+   "label": "Option 4"
+  },
+  {
+   "default": "1",
+   "fieldname": "correct_option",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Correct Option",
+   "options": "1\n2\n3\n4",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "marks",
+   "fieldtype": "Float",
+   "label": "Marks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "DMS Quiz Question",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

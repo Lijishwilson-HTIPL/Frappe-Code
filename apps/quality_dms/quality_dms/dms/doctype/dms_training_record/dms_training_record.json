@@ -1,0 +1,399 @@
+{
+ "actions": [],
+ "autoname": "format:TRN-{YYYY}-{####}",
+ "creation": "2026-06-24 11:03:24.090402",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "document",
+  "document_title",
+  "version",
+  "document_file",
+  "department",
+  "category",
+  "training_quiz",
+  "col_break_1",
+  "status",
+  "due_date",
+  "assigned_by",
+  "assigned_date",
+  "curriculum",
+  "retraining_months",
+  "section_document_preview",
+  "document_preview",
+  "section_training_video",
+  "training_video_preview",
+  "section_progress",
+  "total_assigned",
+  "col_break_2",
+  "total_completed",
+  "col_break_3",
+  "completion_percentage",
+  "section_details",
+  "training_description",
+  "section_employees",
+  "employees",
+  "section_verification",
+  "verified_by",
+  "verified_date",
+  "col_break_4",
+  "verification_notes",
+  "section_dual_signoff",
+  "secondary_verified_by",
+  "secondary_verified_date",
+  "col_break_dual",
+  "secondary_verification_notes",
+  "section_effectiveness",
+  "effectiveness_rating",
+  "effectiveness_verified_by",
+  "effectiveness_verified_date",
+  "col_break_effectiveness",
+  "effectiveness_notes",
+  "section_closure",
+  "closed_by",
+  "closed_date",
+  "col_break_5",
+  "closure_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "document",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Document",
+   "options": "Document Library",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "document.title",
+   "fieldname": "document_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Title",
+   "read_only": 1
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Version",
+   "reqd": 1
+  },
+  {
+   "description": "Click to open and read the document this training is about.",
+   "fetch_from": "document.file",
+   "fieldname": "document_file",
+   "fieldtype": "Data",
+   "label": "Document File",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "document.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "document.category",
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Document Category",
+   "read_only": 1
+  },
+  {
+   "description": "Employees must score at or above this quiz's pass percentage before their row can be marked acknowledged/Completed. Set on the linked Document (Training Quiz field) — shown here read-only for visibility.",
+   "fetch_from": "document.training_quiz",
+   "fieldname": "training_quiz",
+   "fieldtype": "Link",
+   "label": "Training Quiz",
+   "options": "DMS Quiz",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nAssigned\nIn Progress\nCompleted\nOverdue\nVerified\nClosed\nCancelled",
+   "search_index": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "assigned_by",
+   "fieldtype": "Link",
+   "label": "Assigned By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "assigned_date",
+   "fieldtype": "Date",
+   "label": "Assigned Date",
+   "read_only": 1
+  },
+  {
+   "description": "Set automatically when this record was created via a curriculum assignment (e.g. onboarding).",
+   "fieldname": "curriculum",
+   "fieldtype": "Link",
+   "label": "Curriculum",
+   "options": "DMS Curriculum",
+   "read_only": 1
+  },
+  {
+   "description": "Months after completion before retraining is required. Blank = use the Training Settings default (or the matching Assignment Rule's override).",
+   "fieldname": "retraining_months",
+   "fieldtype": "Int",
+   "label": "Retraining Cycle (Months)"
+  },
+  {
+   "fieldname": "section_document_preview",
+   "fieldtype": "Section Break",
+   "label": "Document Preview",
+   "collapsible": 1,
+   "collapsible_depends_on": "document"
+  },
+  {
+   "fieldname": "document_preview",
+   "fieldtype": "HTML",
+   "label": "Document Preview"
+  },
+  {
+   "fieldname": "section_training_video",
+   "fieldtype": "Section Break",
+   "label": "Training Video",
+   "collapsible": 1,
+   "collapsible_depends_on": "document"
+  },
+  {
+   "fieldname": "training_video_preview",
+   "fieldtype": "HTML",
+   "label": "Training Video"
+  },
+  {
+   "fieldname": "section_progress",
+   "fieldtype": "Section Break",
+   "label": "Training Progress"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_assigned",
+   "fieldtype": "Int",
+   "label": "Total Assigned",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_completed",
+   "fieldtype": "Int",
+   "label": "Completed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "completion_percentage",
+   "fieldtype": "Percent",
+   "label": "Completion %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_details",
+   "fieldtype": "Section Break",
+   "label": "Training Details"
+  },
+  {
+   "fieldname": "training_description",
+   "fieldtype": "Text Editor",
+   "label": "Training Description / Instructions"
+  },
+  {
+   "fieldname": "section_employees",
+   "fieldtype": "Section Break",
+   "label": "Assigned Employees"
+  },
+  {
+   "fieldname": "employees",
+   "fieldtype": "Table",
+   "label": "Employees",
+   "options": "Document Acknowledgement"
+  },
+  {
+   "fieldname": "section_verification",
+   "fieldtype": "Section Break",
+   "label": "Verification"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verified_date",
+   "fieldtype": "Date",
+   "label": "Verified Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "verification_notes",
+   "fieldtype": "Text",
+   "label": "Verification Notes"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.secondary_verified_by || doc.category",
+   "fieldname": "section_dual_signoff",
+   "fieldtype": "Section Break",
+   "label": "Dual Sign-off (required when the document's Category demands it)"
+  },
+  {
+   "fieldname": "secondary_verified_by",
+   "fieldtype": "Link",
+   "label": "Secondary Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "secondary_verified_date",
+   "fieldtype": "Date",
+   "label": "Secondary Verified Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_dual",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "secondary_verification_notes",
+   "fieldtype": "Text",
+   "label": "Secondary Verification Notes"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.effectiveness_rating",
+   "depends_on": "eval:['Verified','Closed'].includes(doc.status)",
+   "fieldname": "section_effectiveness",
+   "fieldtype": "Section Break",
+   "label": "Training Effectiveness Check"
+  },
+  {
+   "description": "A follow-up check (typically weeks after training) confirming the employee is actually applying what they learned on the job — distinct from the document-read acknowledgement above.",
+   "fieldname": "effectiveness_rating",
+   "fieldtype": "Select",
+   "label": "Effectiveness Rating",
+   "options": "\nEffective\nPartially Effective\nNot Effective",
+   "read_only": 1
+  },
+  {
+   "fieldname": "effectiveness_verified_by",
+   "fieldtype": "Link",
+   "label": "Effectiveness Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "effectiveness_verified_date",
+   "fieldtype": "Date",
+   "label": "Effectiveness Verified Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_effectiveness",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "effectiveness_notes",
+   "fieldtype": "Text",
+   "label": "Effectiveness Notes"
+  },
+  {
+   "fieldname": "section_closure",
+   "fieldtype": "Section Break",
+   "label": "Closure"
+  },
+  {
+   "fieldname": "closed_by",
+   "fieldtype": "Link",
+   "label": "Closed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "closed_date",
+   "fieldtype": "Date",
+   "label": "Closed Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "closure_notes",
+   "fieldtype": "Text",
+   "label": "Closure Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-29 15:47:19.695984",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "DMS Training Record",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Employee"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

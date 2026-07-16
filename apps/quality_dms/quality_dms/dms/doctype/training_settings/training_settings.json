@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-07-02 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "default_pass_percentage",
+  "default_retraining_months",
+  "escalation_days"
+ ],
+ "fields": [
+  {
+   "default": "80",
+   "description": "Minimum assessment score (%) required for a training row to be marked Completed when a quiz is attached.",
+   "fieldname": "default_pass_percentage",
+   "fieldtype": "Float",
+   "label": "Default Pass Percentage"
+  },
+  {
+   "default": "12",
+   "description": "Months after completion before a training assignment expires and retraining is required.",
+   "fieldname": "default_retraining_months",
+   "fieldtype": "Int",
+   "label": "Default Retraining Cycle (Months)"
+  },
+  {
+   "default": "3",
+   "description": "Days past due date before overdue training is escalated to the employee's manager.",
+   "fieldname": "escalation_days",
+   "fieldtype": "Int",
+   "label": "Escalation After (Days Overdue)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "Training Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
