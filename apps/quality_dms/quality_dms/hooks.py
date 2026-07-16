@@ -143,6 +143,9 @@ has_permission = {
 # Hook on document methods and events
 
 doc_events = {
+	"File": {
+		"before_insert": "quality_dms.dms.virus_scan.scan_file_before_insert",
+	},
 	"Document Library": {
 		"on_update": "quality_dms.dms.api.log_audit_event",
 		"on_submit": "quality_dms.dms.api.log_audit_event",
