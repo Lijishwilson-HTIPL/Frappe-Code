@@ -149,6 +149,11 @@ def log_request_audit_event(doc, method):
 
 _INACTIVE_EMPLOYEE_STATUSES = frozenset({"Left", "Inactive", "Suspended"})
 
+# Roles with unrestricted access to the Document Library. Reviewers and
+# approvers must see every document — they cannot review/approve documents
+# the row-level Employee filter would hide from them.
+_DMS_UNRESTRICTED_ROLES = {"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"}
+
 
 def handle_employee_status_change(doc, method):
     """Excuse an Employee's open training assignments once they leave the
@@ -200,7 +205,7 @@ def get_permission_query_conditions(user):
     if user == "Administrator": return ""
 
     roles = frappe.get_roles(user)
-    if "System Manager" in roles:
+    if set(roles) & _DMS_UNRESTRICTED_ROLES:
         return ""
 
     conditions = []
@@ -245,7 +250,7 @@ def has_permission(doc, user=None, ptype="read"):
     if user == "Administrator": return True
 
     roles = frappe.get_roles(user)
-    if "System Manager" in roles:
+    if set(roles) & _DMS_UNRESTRICTED_ROLES:
         return True
 
     # A controller has_permission hook can only DENY; it must return a truthy
@@ -310,7 +315,9 @@ def _is_assigned_via_training(document, user):
 
 # Roles that may see the whole File list. Personal training certificates are
 # private to the employee they belong to.
-_FILE_UNRESTRICTED_ROLES = {"System Manager"}
+_FILE_UNRESTRICTED_ROLES = {"System Manager", "DMS Admin"}
+# Reviewers/approvers see every file except other employees' personal certificates.
+_FILE_REVIEW_ROLES = {"DMS Approver", "DMS Reviewer"}
 _CERT_SUFFIX = "-certificate.pdf"
 
 
@@ -328,6 +335,15 @@ def file_permission_query_conditions(user):
         return ""
 
     escaped_user = frappe.db.escape(user)
+
+    if roles & _FILE_REVIEW_ROLES:
+        # Everything except personal certificates that belong to someone else.
+        is_cert = "RIGHT(`tabFile`.file_name, 16) = '-certificate.pdf'"
+        emp_id = frappe.db.get_value("Employee", {"user_id": user}, "name")
+        if emp_id:
+            own_cert_frag = frappe.db.escape(f"-{emp_id}-certificate.pdf")
+            return f"(NOT {is_cert} OR INSTR(`tabFile`.file_name, {own_cert_frag}) > 0)"
+        return f"(NOT {is_cert})"
 
     assigned_doc_files = (
         "(`tabFile`.attached_to_doctype = 'Document Library' AND EXISTS ("
@@ -384,6 +400,9 @@ def file_has_permission(doc, user=None, ptype="read"):
         return True
 
     is_certificate = (doc.file_name or "").endswith(_CERT_SUFFIX)
+
+    if roles & _FILE_REVIEW_ROLES and not is_certificate:
+        return True
 
     if is_certificate:
         # personal training certificate: only the employee it names may read it

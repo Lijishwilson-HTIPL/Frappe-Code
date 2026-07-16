@@ -1134,7 +1134,7 @@ def get_permission_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & {"System Manager"}:
+    if roles & {"System Manager", "DMS Admin"}:
         return ""
 
     escaped_user = frappe.db.escape(user)
@@ -1166,7 +1166,7 @@ def has_permission(doc, user=None, ptype="read"):
         return True
 
     roles = set(frappe.get_roles(user))
-    if roles & {"System Manager"}:
+    if roles & {"System Manager", "DMS Admin"}:
         return True
 
     # Only restrict reads; writes are governed by DocPerm / controller checks.
