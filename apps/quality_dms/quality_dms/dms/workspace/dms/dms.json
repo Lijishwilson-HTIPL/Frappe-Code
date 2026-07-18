@@ -272,7 +272,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-15 13:13:44.246817",
+ "modified": "2026-07-18 17:54:16.363857",
  "modified_by": "Administrator",
  "module": "DMS",
  "name": "DMS",
@@ -327,7 +327,13 @@
    "role": "Employee"
   },
   {
-   "role": "Employee"
+   "role": "DMS Admin"
+  },
+  {
+   "role": "DMS Approver"
+  },
+  {
+   "role": "DMS Reviewer"
   }
  ],
  "sequence_id": 0.0,
