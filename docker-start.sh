@@ -9,9 +9,17 @@ set -e
 cd /home/frappe/frappe-bench
 
 echo "[docker-start] Waiting for database..."
-until bench --site "${FRAPPE_SITE_NAME:-mysite.local}" execute frappe.ping >/dev/null 2>&1; do
+SITE="${FRAPPE_SITE_NAME:-mysite.local}"
+until bench --site "$SITE" execute frappe.ping >/dev/null 2>&1; do
     sleep 3
 done
+
+# PDF generation (training certificates, print formats) runs wkhtmltopdf inside
+# this container. It fetches page assets over HTTP via get_url(); without a
+# reachable host_name that resolves to the internal web server, the fetch fails
+# and (with unpatched wkhtmltopdf) the whole PDF errors out. Point host_name at
+# the internal address the container can actually reach.
+bench --site "$SITE" set-config host_name "http://localhost:8000" >/dev/null 2>&1 || true
 
 # Rebuild frontend assets if the dist bundles are missing (lost on recreate).
 if [ -z "$(ls -A apps/frappe/frappe/public/dist/js 2>/dev/null)" ]; then
