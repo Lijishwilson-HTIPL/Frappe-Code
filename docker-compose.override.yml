@@ -6,4 +6,8 @@ services:
       - FRAPPE_SITE_URL=http://localhost:8088
     volumes:
       - ./docker-start.sh:/docker-start.sh:ro
+      # Mount the quality_dms app from the repo so committed code is always what
+      # runs. Without this, the app is baked into the image and every container
+      # recreate reverts local changes to the old baked-in version.
+      - ./apps/quality_dms:/home/frappe/frappe-bench/apps/quality_dms
     command: bash /docker-start.sh
