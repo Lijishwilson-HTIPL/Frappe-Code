@@ -76,6 +76,27 @@
    "report": 1,
    "role": "System Manager",
    "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Admin",
+   "share": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Approver"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Reviewer"
   }
  ],
  "row_format": "Dynamic",

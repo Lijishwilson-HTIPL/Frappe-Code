@@ -25,7 +25,7 @@
    "unique": 1
   },
   {
-   "description": "Optional — quizzes can be reused across documents in this category.",
+   "description": "Optional \u2014 quizzes can be reused across documents in this category.",
    "fieldname": "document_category",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -82,6 +82,30 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Approver"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Reviewer"
   }
  ],
  "row_format": "Dynamic",
