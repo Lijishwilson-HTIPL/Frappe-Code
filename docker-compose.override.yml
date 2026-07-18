@@ -4,4 +4,6 @@ services:
       - "8088:8000"
     environment:
       - FRAPPE_SITE_URL=http://localhost:8088
-    command: tail -f /dev/null
+    volumes:
+      - ./docker-start.sh:/docker-start.sh:ro
+    command: bash /docker-start.sh
