@@ -88,7 +88,13 @@ def _get_columns():
 
 
 def _get_data(filters):
-    conditions = ["da.acknowledged = 0", "tr.status IN ('Overdue', 'Assigned', 'In Progress')"]
+    # Exclude staged ("Suggested") candidates and "Excused" rows — neither is a
+    # real, outstanding assignment, so they must not appear as overdue.
+    conditions = [
+        "da.acknowledged = 0",
+        "da.status NOT IN ('Suggested', 'Excused')",
+        "tr.status IN ('Overdue', 'Assigned', 'In Progress')",
+    ]
     values = {}
     today_date = getdate(today())
 

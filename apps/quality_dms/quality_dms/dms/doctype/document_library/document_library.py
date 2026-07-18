@@ -164,15 +164,31 @@ class DocumentLibrary(Document):
 		training on the prior version must re-review the updated content —
 		auto-assign them to the new version's Training Record instead of
 		waiting for them to notice the change themselves."""
-		if not self.revision_of:
-			return
-
+		# In-place revision model (current): a revision reopens THIS same record
+		# and bumps the version, so prior-version Training Records share this
+		# document name but carry an earlier version. Find the most recent
+		# Training Record for this document other than the one just created.
 		prior_trn_name = frappe.db.get_value(
 			"DMS Training Record",
-			{"document": self.revision_of},
+			{
+				"document": self.name,
+				"version": ("!=", self.version),
+				"name": ("!=", trn.name),
+			},
 			"name",
 			order_by="creation desc",
 		)
+
+		# Legacy separate-record model: fall back to the revision_of lineage
+		# for older data where each version was its own Document Library record.
+		if not prior_trn_name and self.revision_of:
+			prior_trn_name = frappe.db.get_value(
+				"DMS Training Record",
+				{"document": self.revision_of},
+				"name",
+				order_by="creation desc",
+			)
+
 		if not prior_trn_name:
 			return
 

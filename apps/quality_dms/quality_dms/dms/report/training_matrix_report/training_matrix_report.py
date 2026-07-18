@@ -71,7 +71,11 @@ def _get_columns():
 
 
 def _get_data(filters):
-    conditions = ["1=1"]
+    # "Suggested" rows are only staged candidates (matched by an assignment rule
+    # but not yet actually assigned); "Excused" rows are a terminal non-completion
+    # (e.g. departed staff). Neither is a real assignment, so both are excluded to
+    # match _sync_progress and avoid deflating the compliance percentage.
+    conditions = ["1=1", "da.status NOT IN ('Suggested', 'Excused')"]
     values = {}
 
     if filters.get("department"):

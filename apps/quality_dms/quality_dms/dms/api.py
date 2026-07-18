@@ -3,6 +3,15 @@ from frappe.utils import now_datetime
 
 _ALLOWED_SIGN_DOCTYPES = {"Document Library", "DMS Training Record"}
 
+# Minimum permission needed to apply an electronic signature, per doctype.
+# Document Library approval signatures require write (a read-only user must not
+# be able to fabricate one); training self-acknowledgement is identity-gated by
+# the training controller, so read is sufficient there.
+_SIGN_REQUIRED_PTYPE = {
+    "Document Library": "write",
+    "DMS Training Record": "read",
+}
+
 
 def _require_document_read(document):
     """Guard shared by the whitelisted document endpoints: the document must
@@ -437,23 +446,37 @@ def verify_and_log_signature(doctype, docname, password, meaning, position=None)
     import json
     from frappe.utils.password import check_password
 
+    # Validate the target and the caller's authorization BEFORE the password
+    # path, so an unauthorized / non-existent-document request can't use this
+    # endpoint as a password or existence oracle.
     if doctype not in _ALLOWED_SIGN_DOCTYPES:
         frappe.throw(f"Electronic signatures are not supported for {doctype}.")
 
+    if not frappe.db.exists(doctype, docname):
+        frappe.throw(f"Document {docname} of type {doctype} not found.")
+
+    # A read-only user must not be able to fabricate an approval signature on a
+    # controlled document. Signing a Document Library requires write (reviewers/
+    # approvers/admins) — plain read is not enough. Training self-acknowledgement
+    # signs the DMS Training Record and is separately gated by the training
+    # controller (it verifies the caller owns the row), so read suffices there.
+    required_ptype = _SIGN_REQUIRED_PTYPE.get(doctype, "write")
+    if not frappe.has_permission(doctype, required_ptype, docname):
+        frappe.throw("Not permitted", frappe.PermissionError)
+
+    # Re-authenticate the signer last.
     try:
         check_password(frappe.session.user, password)
     except Exception:
         frappe.throw("Invalid password. Electronic signature verification failed.")
 
-    if not frappe.has_permission(doctype, "read", docname):
-        frappe.throw("Not permitted", frappe.PermissionError)
-
-    if not frappe.db.exists(doctype, docname):
-        frappe.throw(f"Document {docname} of type {doctype} not found.")
-
     doc = frappe.get_doc(doctype, docname)
 
-    exclude_fields = {"modified", "modified_by", "creation", "owner", "_user_tags", "_comments", "_liked_by", "docstatus", "idx"}
+    # docstatus is intentionally INCLUDED in the checksum so the signature binds
+    # the document's lifecycle state (Draft vs Submitted vs Cancelled) — a
+    # signature captured in Draft must not validate against the same doc later
+    # Submitted with otherwise-identical field values.
+    exclude_fields = {"modified", "modified_by", "creation", "owner", "_user_tags", "_comments", "_liked_by", "idx"}
     doc_dict = {k: v for k, v in doc.as_dict().items() if k not in exclude_fields}
     doc_json = json.dumps(doc_dict, sort_keys=True, default=str)
     checksum = hashlib.sha256(doc_json.encode('utf-8')).hexdigest()

@@ -53,7 +53,11 @@ class DMSTrainingRecord(Document):
             pass_pct = quiz.get_effective_pass_percentage()
             score = row.assessment_score or 0
 
-            if row.acknowledged and score < pass_pct:
+            # Proxy-completed rows (a manager completing on behalf of a departed
+            # or non-desk employee who never takes the quiz) are exempt from the
+            # pass-score gate — otherwise proxy completion would be impossible
+            # for any quiz-backed document.
+            if row.acknowledged and score < pass_pct and not row.get("proxy_completed_by"):
                 frappe.throw(
                     f"{row.employee_name or row.employee} cannot be marked as acknowledged: "
                     f"assessment score ({score}) is below the required pass percentage "
@@ -408,6 +412,10 @@ class DMSTrainingRecord(Document):
         sign_acknowledgement wraps this and blocks client scores on quiz docs."""
         if row.status == "Suggested":
             frappe.throw("This employee is only a suggested candidate and has not been assigned yet.")
+        # Never re-sign an already-acknowledged row: it would create a second
+        # CFR Part 11 signature-log entry and corrupt the tamper-evident history.
+        if row.acknowledged:
+            frappe.throw(f"{row.employee_name or row.employee} has already signed this acknowledgement.")
 
         user_id = frappe.db.get_value("Employee", row.employee, "user_id")
         is_manager = bool(set(frappe.get_roles(frappe.session.user)) & _MANAGER_ROLES)
@@ -452,7 +460,9 @@ class DMSTrainingRecord(Document):
         and, if the linked document has an active quiz, its questions. The server
         (not the browser) picks the row, so an employee never has to choose from
         other people's rows and can only ever sign their own."""
-        emp = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+        emp = frappe.db.get_value(
+            "Employee", {"user_id": frappe.session.user}, "name", order_by="creation asc"
+        )
         if not emp:
             frappe.throw(
                 "Your login is not linked to an Employee record, so you have no "
@@ -506,6 +516,10 @@ class DMSTrainingRecord(Document):
         recorded but nothing is signed — the employee cannot retake until a
         manager grants a retake (retake_allowed)."""
         row = self._row_for_current_user(row_name)
+
+        # Already completed — do not regrade, bump the attempt count, or re-sign.
+        if row.acknowledged:
+            frappe.throw("You have already completed and signed this training.")
 
         # A failed attempt locks the row: no re-attempt until a manager allows a
         # retake. The very first attempt (quiz_attempts == 0) is always allowed.
@@ -593,6 +607,19 @@ class DMSTrainingRecord(Document):
             frappe.throw(
                 f"Training record must be 'Completed' before it can be Verified. "
                 f"Current status: '{self.status}'."
+            )
+        # Segregation of duties: a verifier may not verify their own training row.
+        own_emp = frappe.db.get_value(
+            "Employee", {"user_id": frappe.session.user}, "name", order_by="creation asc"
+        )
+        if own_emp and any(r.employee == own_emp for r in self.employees):
+            frappe.throw("You cannot verify a training record that you are assigned to.")
+        # Do not silently overwrite an already-recorded primary verification —
+        # a second, different manager must use Countersign, not Verify.
+        if self.verified_by and self.verified_by != frappe.session.user:
+            frappe.throw(
+                f"This record's primary verification was already recorded by {self.verified_by}. "
+                f"A second manager should use 'Countersign Completion' instead."
             )
         self.verified_by = frappe.session.user
         self.verified_date = today()
@@ -684,7 +711,9 @@ class DMSTrainingRecord(Document):
     @frappe.whitelist()
     def get_my_certificate(self):
         """Return the logged-in employee's own certificate file URL (or None)."""
-        employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+        employee = frappe.db.get_value(
+            "Employee", {"user_id": frappe.session.user}, "name", order_by="creation asc"
+        )
         if not employee:
             return None
         row = next((r for r in self.employees if r.employee == employee), None)
@@ -1003,6 +1032,7 @@ def check_training_expiry():
 	}
 
 	affected_parents = set()
+	reset_rows_by_parent = {}
 	for row in expired_rows:
 		if parent_status.get(row.parent) == "Cancelled":
 			continue
@@ -1028,25 +1058,38 @@ def check_training_expiry():
 			update_modified=False,
 		)
 		affected_parents.add(row.parent)
+		reset_rows_by_parent.setdefault(row.parent, set()).add(row.name)
 
 	for parent in affected_parents:
 		try:
-			parent_status = frappe.db.get_value("DMS Training Record", parent, "status")
-			if parent_status == "Cancelled":
+			parent_status_now = frappe.db.get_value("DMS Training Record", parent, "status")
+			if parent_status_now == "Cancelled":
 				continue
 
 			doc = frappe.get_doc("DMS Training Record", parent)
-			completed = sum(1 for r in doc.employees if r.acknowledged)
+			# Recompute the parent aggregates from the freshly-reset rows so
+			# dashboards / compliance reports don't keep showing the record as
+			# fully complete after a row has been reopened for retraining.
+			assigned_rows = [r for r in doc.employees if r.status not in ("Suggested", "Excused")]
+			total = len(assigned_rows)
+			completed = sum(1 for r in assigned_rows if r.acknowledged)
 			frappe.db.set_value(
 				"DMS Training Record",
 				parent,
-				"status",
-				"In Progress" if completed > 0 else "Assigned",
+				{
+					"status": "In Progress" if completed > 0 else "Assigned",
+					"total_assigned": total,
+					"total_completed": completed,
+					"completion_percentage": round(completed / total * 100, 1) if total else 0.0,
+				},
 				update_modified=False,
 			)
 			doc.reload()
 			doc._log_audit("Reopened for retraining — one or more assignments expired")
-			doc._send_assignment_notifications()
+			# Notify ONLY the employees whose training actually expired this
+			# cycle — never the co-assignees whose training is still valid.
+			reset_names = reset_rows_by_parent.get(parent, set())
+			doc._notify_rows([r for r in doc.employees if r.name in reset_names])
 			if not frappe.flags.in_test:
 				frappe.db.commit()
 		except Exception:
@@ -1134,7 +1177,9 @@ def get_permission_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & {"System Manager", "DMS Admin"}:
+    # Approvers/reviewers publish documents (which auto-creates training
+    # records), so they need full visibility to manage the training rollout.
+    if roles & {"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"}:
         return ""
 
     escaped_user = frappe.db.escape(user)
@@ -1151,10 +1196,9 @@ def get_permission_query_conditions(user):
         f")"
     )
 
-    if "Employee" in roles:
-        return f"({assigned_condition} OR `tabDMS Training Record`.owner = {escaped_user})"
-
-    return assigned_condition
+    # Owners always see records they created (e.g. auto-created on publish),
+    # regardless of which roles they hold.
+    return f"({assigned_condition} OR `tabDMS Training Record`.owner = {escaped_user})"
 
 
 def has_permission(doc, user=None, ptype="read"):
@@ -1166,7 +1210,7 @@ def has_permission(doc, user=None, ptype="read"):
         return True
 
     roles = set(frappe.get_roles(user))
-    if roles & {"System Manager", "DMS Admin"}:
+    if roles & {"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"}:
         return True
 
     # Only restrict reads; writes are governed by DocPerm / controller checks.

@@ -70,7 +70,22 @@ def scan_file_before_insert(doc, method=None):
 	if doc.is_folder or (doc.file_url or "").startswith("http"):
 		return
 
-	content = _get_file_content(doc)
+	try:
+		content = _get_file_content(doc)
+	except _ContentUnreadable as e:
+		# Fail closed: if the bytes cannot be read they cannot be certified
+		# clean. Honor the block-on-error policy rather than saving unscanned.
+		_logger().error(f"virus_scan could not read content of {doc.file_name}: {e}")
+		if int(_conf("virus_scan_block_on_error", 1)):
+			frappe.throw(
+				_("File {0} could not be read for virus scanning and was blocked for safety.").format(
+					frappe.bold(doc.file_name)
+				),
+				title=_("Virus Scan Failed"),
+			)
+		return
+
+	# Genuinely empty file (0 bytes) — nothing to scan.
 	if not content:
 		return
 
@@ -129,21 +144,30 @@ def scan_file_before_insert(doc, method=None):
 	frappe.throw(message, title=_("Virus Scan Failed"))
 
 
+class _ContentUnreadable(Exception):
+	"""Raised when the uploaded file's bytes cannot be read at all (distinct
+	from a genuinely empty file), so the caller can fail closed."""
+
+
 def _get_file_content(doc):
-	"""Return uploaded bytes from the File doc (memory or disk)."""
+	"""Return uploaded bytes from the File doc (memory or disk).
+
+	Returns b"" for a genuinely empty file; raises _ContentUnreadable if the
+	content cannot be read (so scanning fails closed instead of open)."""
 	content = getattr(doc, "content", None)
-	if not content:
+	if content is None or content == "":
 		try:
 			content = doc.get_content()
-		except Exception:
-			return None
+		except Exception as e:
+			raise _ContentUnreadable(str(e))
 	if isinstance(content, str):
 		content = content.encode("utf-8", errors="ignore")
-	return content
+	return content or b""
 
 
 def _scan_bytes(content, file_name):
 	"""Run the best available engine. Returns (result, engine, threats, error)."""
+	clamd = None
 	try:
 		clamd = _get_clamd()
 		if clamd:
@@ -152,6 +176,12 @@ def _scan_bytes(content, file_name):
 		if int(_conf("virus_scan_block_on_error", 1)):
 			return ERROR, "clamav", [], str(e)
 		_logger().warning(f"virus_scan ClamAV error, falling back to pattern-match: {e}")
+
+	# ClamAV is unavailable/unreachable. If this deployment requires it, fail
+	# closed instead of silently downgrading to the weak pattern-match fallback
+	# (which only detects EICAR + executable magic bytes — real malware passes).
+	if clamd is None and int(_conf("virus_scan_require_clamav", 0)):
+		return ERROR, "clamav", [], "ClamAV engine required but unavailable/unreachable"
 
 	return _scan_with_pattern_match(content, file_name)
 

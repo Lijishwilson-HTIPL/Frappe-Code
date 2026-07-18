@@ -196,7 +196,13 @@ class DocumentRequest(Document):
 	def _validate_status_change_authorization(self):
 		"""Prevent Employee (and other non-approver roles) from self-approving,
 		and block resurrection of terminal requests."""
-		if self.is_new() or self._prev_status == self.status:
+		# NOTE: do NOT short-circuit on is_new(). A request inserted *directly*
+		# in a non-Pending status (e.g. status="Approved") must still pass the
+		# approver-role check below — otherwise a non-approver could self-approve
+		# simply by creating the request already Approved. For a genuinely new
+		# Pending request, _prev_status == self.status == "Pending" so we still
+		# return here without blocking normal creation.
+		if self._prev_status == self.status:
 			return
 
 		# Approved / Rejected are terminal — never allow transitioning back out
