@@ -12,7 +12,7 @@
  "is_standard": "Yes",
  "json": "{}",
  "letter_head": null,
- "modified": "2026-06-24 11:55:50.992723",
+ "modified": "2026-07-20 12:03:05.665284",
  "modified_by": "Administrator",
  "module": "DMS",
  "name": "Audit Trail Report",
@@ -21,6 +21,16 @@
  "ref_doctype": "DMS Audit Log",
  "report_name": "Audit Trail Report",
  "report_type": "Report Builder",
- "roles": [],
+ "roles": [
+  {
+   "role": "DMS Admin"
+  },
+  {
+   "role": "DMS Approver"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "timeout": 0
 }

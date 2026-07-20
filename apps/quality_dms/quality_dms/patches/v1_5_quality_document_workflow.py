@@ -3,8 +3,12 @@
 exists on every site (fresh installs and live), not just where a dev script
 was run by hand."""
 
-from quality_dms.dms.setup.workflow import setup_quality_document_workflow
+from quality_dms.dms.setup.workflow import (
+    setup_quality_document_workflow,
+    setup_document_request_workflow,
+)
 
 
 def execute():
     setup_quality_document_workflow()
+    setup_document_request_workflow()
