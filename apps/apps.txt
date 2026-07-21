@@ -4,3 +4,4 @@ hrms
 crm
 telephony
 helpdesk
+quality_dms

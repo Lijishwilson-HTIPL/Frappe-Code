@@ -73,8 +73,181 @@ frappe.ui.form.on("Project", {
 			frm.add_web_link("/projects?project=" + encodeURIComponent(frm.doc.name));
 
 			frm.trigger("show_dashboard");
+			frm.trigger("show_task_summary");
+			frm.trigger("show_task_defect_summary_tab");
 		}
 		frm.trigger("set_custom_buttons");
+	},
+
+	show_task_summary: function (frm) {
+		// Total / Completed / Pending task counts for this project, shown as
+		// a sidebar panel (next to Links/Assign/Tags) so users don't have to
+		// open the Connections tab or a separate report to see progress.
+		if (!frm.sidebar || !frm.sidebar.sidebar) return;
+
+		frm.sidebar.sidebar.find(".task-summary-sidebar-section").remove();
+
+		frappe.call({
+			method: "erpnext.projects.doctype.project.project.get_task_summary",
+			args: { project: frm.doc.name },
+			callback: function (r) {
+				if (!r.message) return;
+				const s = r.message;
+
+				const row = (label, value, css_class) => `
+					<div class="flex justify-between align-items-center" style="padding: 2px 0;">
+						<span class="text-muted">${__(label)}</span>
+						<span class="indicator-pill ${css_class}">${value}</span>
+					</div>`;
+
+				const html = `
+					<div class="sidebar-section task-summary-sidebar-section border-bottom">
+						<div class="form-sidebar-items">
+							<div class="form-sidebar-label">
+								${frappe.utils.icon("bullet-list", "sm")}
+								<span class="ellipsis">${__("Task Summary")}</span>
+							</div>
+						</div>
+						<div style="margin-top: 6px;">
+							${row("Total Tasks", s.total, "gray")}
+							${row("Completed", s.completed, "green")}
+							${row("Pending", s.pending, "orange")}
+							${s.cancelled ? row("Cancelled", s.cancelled, "red") : ""}
+						</div>
+					</div>`;
+
+				frm.sidebar.sidebar.find(".sidebar-meta-details").after(html);
+			},
+		});
+	},
+
+	show_task_defect_summary_tab: function (frm) {
+		// Full Task + Defect (Issue) summary report on the form's own "Summary"
+		// tab — same numbers as the sidebar panel, plus a per-status breakdown.
+		// Every number is clickable and opens the filtered Task / Defect list
+		// for exactly that slice (e.g. clicking "Completed" opens the list
+		// filtered to this project + completed statuses).
+		const $wrapper = frm.fields_dict.task_defect_summary_html?.$wrapper;
+		if (!$wrapper) return;
+
+		$wrapper.html(`<div class="text-muted" style="padding: 12px 0;">${__("Loading summary...")}</div>`);
+
+		// Status sets behind each aggregate bucket — mirrors the grouping
+		// done server-side in get_task_summary / get_defect_summary.
+		const STATUS_GROUPS = {
+			Task: {
+				completed: ["Completed"],
+				pending: ["Open", "Working", "Pending Review", "Overdue", "Hold"],
+				cancelled: ["Cancelled"],
+			},
+			Issue: {
+				completed: ["Resolved", "Closed"],
+				pending: ["Open", "Replied", "On Hold"],
+			},
+		};
+
+		// One individual card per stat — same visual language as the
+		// workspace's "Active Projects / Open Tasks" overview tiles, each
+		// tile clickable to open the matching filtered list.
+		const stat_card = (doctype, project, label, value, color, statuses) => `
+			<a class="summary-stat-card" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
+				project
+			)}" data-statuses='${statuses ? JSON.stringify(statuses) : ""}'
+				style="flex: 1; min-width: 150px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd);
+					border-radius: 10px; padding: 14px 16px; cursor: pointer; text-decoration: none !important;
+					box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.06)); transition: box-shadow 0.15s ease, transform 0.15s ease;">
+				<div class="text-muted" style="font-size: 12px; margin-bottom: 4px;">${__(label)}</div>
+				<div style="font-size: 26px; font-weight: 700; color: ${color};">${value}</div>
+			</a>`;
+
+		const status_rows = (doctype, project, by_status) =>
+			Object.keys(by_status)
+				.sort()
+				.map(
+					(status) => `
+						<a class="summary-stat-card flex justify-between" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
+							project
+						)}" data-statuses='${JSON.stringify([status])}' style="padding: 4px 0; font-size: 12px; cursor: pointer; text-decoration: none !important;">
+							<span class="text-muted">${__(status)}</span>
+							<span>${by_status[status]}</span>
+						</a>`
+				)
+				.join("");
+
+		const section = (title, icon, doctype, project, s, view_route) => `
+			<div>
+				<div class="flex justify-between align-items-center" style="margin-bottom: 10px;">
+					<div class="flex align-items-center" style="gap: 8px; font-weight: 650; font-size: 15px;">
+						${frappe.utils.icon(icon, "sm")} ${__(title)}
+					</div>
+					<a href="${view_route}" style="font-size: 12px;">${__("View All")}</a>
+				</div>
+				<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+					${stat_card(doctype, project, "Total", s.total, "var(--text-color, #1f272e)", null)}
+					${stat_card(
+						doctype,
+						project,
+						"Completed",
+						s.completed,
+						"var(--green-600, #2b8a3e)",
+						STATUS_GROUPS[doctype].completed
+					)}
+					${stat_card(
+						doctype,
+						project,
+						"Pending",
+						s.pending,
+						"var(--orange-600, #d9822b)",
+						STATUS_GROUPS[doctype].pending
+					)}
+				</div>
+				<div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd); border-radius: 10px; padding: 10px 16px;">
+					${status_rows(doctype, project, s.by_status) || `<span class="text-muted" style="font-size: 12px;">${__("No records yet")}</span>`}
+				</div>
+			</div>`;
+
+		Promise.all([
+			frappe.call({
+				method: "erpnext.projects.doctype.project.project.get_task_summary",
+				args: { project: frm.doc.name },
+			}),
+			frappe.call({
+				method: "erpnext.projects.doctype.project.project.get_defect_summary",
+				args: { project: frm.doc.name },
+			}),
+		]).then(([task_r, defect_r]) => {
+			const task_route = `/app/task?project=${encodeURIComponent(frm.doc.name)}`;
+			const defect_route = `/app/issue?project=${encodeURIComponent(frm.doc.name)}`;
+
+			$wrapper.html(`
+				<style>
+					.summary-stat-card:hover {
+						box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1)) !important;
+						transform: translateY(-1px);
+					}
+				</style>
+				<div style="display: flex; flex-direction: column; gap: 22px; margin-top: 8px;">
+					${section("Tasks", "bullet-list", "Task", frm.doc.name, task_r.message, task_route)}
+					${section("Defects", "alert-triangle", "Issue", frm.doc.name, defect_r.message, defect_route)}
+				</div>
+			`);
+
+			$wrapper.off("click", ".summary-stat-card").on("click", ".summary-stat-card", function () {
+				const $el = $(this);
+				const doctype = $el.attr("data-doctype");
+				const project = $el.attr("data-project");
+				const statuses_raw = $el.attr("data-statuses");
+
+				const filters = { project: project };
+				if (statuses_raw) {
+					const statuses = JSON.parse(statuses_raw);
+					filters.status = statuses.length === 1 ? statuses[0] : ["in", statuses];
+				}
+
+				frappe.route_options = filters;
+				frappe.set_route("List", doctype);
+			});
+		});
 	},
 
 	set_custom_buttons: function (frm) {

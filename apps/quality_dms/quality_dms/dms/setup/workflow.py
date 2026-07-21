@@ -45,14 +45,14 @@ ALLOW_EDIT = "Desk User"
 
 # (from_state, action, next_state, [allowed roles]) — one Workflow Transition row per role
 TRANSITIONS = [
-    ("Draft",            "Submit for Review", "Pending Review",   ["Employee", "System Manager"]),
-    ("Pending Review",   "Approve Review",    "Pending Approval", ["System Manager"]),
-    ("Pending Review",   "Request Changes",   "Rejected",         ["System Manager"]),
-    ("Pending Approval", "Publish Document",  "Published",        ["System Manager"]),
-    ("Pending Approval", "Reject Document",   "Rejected",         ["System Manager"]),
-    ("Rejected",         "Submit for Review", "Pending Review",   ["Employee", "System Manager"]),
-    ("Published",        "Mark as Obsolete",  "Obsolete",         ["System Manager"]),
-    ("Published",        "Archive",           "Archived",         ["System Manager"]),
+    ("Draft",            "Submit for Review", "Pending Review",   ["Employee", "DMS Admin"]),
+    ("Pending Review",   "Approve Review",    "Pending Approval", ["DMS Reviewer", "DMS Admin"]),
+    ("Pending Review",   "Request Changes",   "Rejected",         ["DMS Reviewer", "DMS Admin"]),
+    ("Pending Approval", "Publish Document",  "Published",        ["DMS Approver", "DMS Admin"]),
+    ("Pending Approval", "Reject Document",   "Rejected",         ["DMS Approver", "DMS Admin"]),
+    ("Rejected",         "Submit for Review", "Pending Review",   ["Employee", "DMS Admin"]),
+    ("Published",        "Mark as Obsolete",  "Obsolete",         ["DMS Admin"]),
+    ("Published",        "Archive",           "Archived",         ["DMS Admin"]),
 ]
 
 

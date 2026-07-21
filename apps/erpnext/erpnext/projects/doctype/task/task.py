@@ -136,10 +136,8 @@ class Task(NestedSet):
 					)
 
 	def validate_status(self):
-		if self.is_template and self.status != "Template":
-			self.status = "Template"
-		if self.status == "Template" and not self.is_template:
-			self.status = "Open"
+		# "Template" was removed from the Status select options; template
+		# tasks now just keep whatever real status is set (default "Open").
 		if self.status != self.get_db_value("status") and self.status == "Completed":
 			for d in self.depends_on:
 				if frappe.db.get_value("Task", d.task, "status") not in ("Completed", "Cancelled"):

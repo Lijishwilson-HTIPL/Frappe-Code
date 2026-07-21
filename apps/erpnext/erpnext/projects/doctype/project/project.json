@@ -8,6 +8,9 @@
  "document_type": "Setup",
  "engine": "InnoDB",
  "field_order": [
+  "summary_tab",
+  "task_defect_summary_html",
+  "details_tab",
   "naming_series",
   "project_name",
   "status",
@@ -69,6 +72,21 @@
   "connections_tab"
  ],
  "fields": [
+  {
+   "fieldname": "summary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "task_defect_summary_html",
+   "fieldtype": "HTML",
+   "label": "Task & Defect Summary"
+  },
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
   {
    "fieldname": "project_name",
    "fieldtype": "Data",
