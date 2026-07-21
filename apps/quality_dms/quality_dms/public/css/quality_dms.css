@@ -132,13 +132,51 @@ body.dms-theme .body-sidebar-bottom .text-muted {
 	color: var(--dms-on-navy-dim) !important;
 }
 
+/* ── Sidebar: distinct group headers, nested items tied to their group ── */
+/* Frappe marks every "Section Break" row with .section-item, regardless of
+   indent — use that to style group headers (Document Management, Training,
+   Reports, …) distinctly from the plain links inside them. */
+body.dms-theme .body-sidebar .sidebar-item-container.section-item {
+	margin-top: 16px;
+}
+body.dms-theme .body-sidebar > .sidebar-menu > .sidebar-item-container.section-item:first-child {
+	margin-top: 0;
+}
+body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item .sidebar-item-label {
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--dms-on-navy-dim);
+}
+body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item:hover .sidebar-item-label {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item .sidebar-item-icon {
+	background: rgba(255, 255, 255, 0.12);
+}
+/* nested links: left rail ties them visually back to their group header */
+body.dms-theme .body-sidebar .sidebar-child-item.nested-container {
+	margin-left: 15px;
+	padding-left: 8px;
+	border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+body.dms-theme .body-sidebar .sidebar-child-item.nested-container .sidebar-item-label {
+	font-weight: 500;
+}
+/* tighten the gap between a group header and its first child link */
+body.dms-theme .body-sidebar .sidebar-item-container.section-item .nested-container .sidebar-item-container:first-child {
+	margin-top: 2px;
+}
+
 /* ── Workspace headings & widgets ─────────────────────────────────────── */
 body.dms-theme .workspace-title,
 body.dms-theme .ce-header,
 body.dms-theme h4.ce-header,
 body.dms-theme .codex-editor h4 {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 22px;
+	font-weight: 750;
 }
 [data-theme="dark"] body.dms-theme .workspace-title,
 [data-theme="dark"] body.dms-theme .ce-header,
@@ -198,6 +236,13 @@ body.dms-theme .widget.number-widget-box .number {
 	font-size: 28px;
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
+	/* Number Card colors are set per-card via inline style (see
+	   number_card_widget.js render_number()); override with !important so
+	   every count reads in the same navy regardless of its configured color. */
+	color: var(--dms-navy) !important;
+}
+[data-theme="dark"] body.dms-theme .widget.number-widget-box .number {
+	color: var(--dms-on-navy) !important;
 }
 
 /* Work Queues quick-list boxes: sky header strip and themed footer button */
@@ -212,7 +257,8 @@ body.dms-theme .widget.quick-list-widget-box .widget-head {
 }
 body.dms-theme .widget.quick-list-widget-box .widget-head .widget-title {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 16px;
+	font-weight: 700;
 }
 [data-theme="dark"] body.dms-theme .widget.quick-list-widget-box .widget-head {
 	background: var(--dms-sky-2);
@@ -245,7 +291,8 @@ body.dms-theme .widget.quick-list-widget-box .btn-xs {
 /* Browse link boxes: navy group titles, tinted rows on hover */
 body.dms-theme .widget.links-widget-box .widget-head .widget-title {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 16px;
+	font-weight: 700;
 }
 [data-theme="dark"] body.dms-theme .widget.links-widget-box .widget-head .widget-title {
 	color: var(--dms-on-navy);
@@ -265,7 +312,8 @@ body.dms-theme .widget.links-widget-box .link-item:hover {
 /* Chart boxes: match card language */
 body.dms-theme .widget.chart-widget-box .widget-head .widget-title {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 16px;
+	font-weight: 700;
 }
 [data-theme="dark"] body.dms-theme .widget.chart-widget-box .widget-head .widget-title {
 	color: var(--dms-on-navy);
@@ -315,7 +363,8 @@ body.dms-theme .page-head {
 }
 body.dms-theme .page-head .title-text {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 24px;
+	font-weight: 750;
 }
 [data-theme="dark"] body.dms-theme .page-head .title-text {
 	color: var(--dms-on-navy);
@@ -380,7 +429,8 @@ body.dms-theme .form-section {
 body.dms-theme .form-section .section-head,
 body.dms-theme .form-section .form-section-heading {
 	color: var(--dms-navy);
-	font-weight: 650;
+	font-size: 15px;
+	font-weight: 700;
 }
 [data-theme="dark"] body.dms-theme .form-section .section-head,
 [data-theme="dark"] body.dms-theme .form-section .form-section-heading {
@@ -724,32 +774,6 @@ body.dms-theme .form-section .section-head {
 }
 [data-theme="dark"] body.dms-theme .form-section .section-head {
 	border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-/* ── Number cards: icon medallion + trend accent ──────────────────────── */
-body.dms-theme .widget.number-widget-box {
-	position: relative;
-	overflow: hidden;
-}
-body.dms-theme .widget.number-widget-box::after {
-	content: "";
-	position: absolute;
-	right: -18px;
-	top: -18px;
-	width: 64px;
-	height: 64px;
-	border-radius: 50%;
-	background: var(--dms-sky);
-	z-index: 0;
-}
-[data-theme="dark"] body.dms-theme .widget.number-widget-box::after {
-	background: var(--dms-sky-2);
-}
-body.dms-theme .widget.number-widget-box .widget-title,
-body.dms-theme .widget.number-widget-box .number,
-body.dms-theme .widget.number-widget-box .widget-body {
-	position: relative;
-	z-index: 1;
 }
 
 /* ── Kanban board: cards match the corporate card language ────────────── */
