@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # System dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,12 +7,12 @@ RUN apt-get update && apt-get install -y \
     redis-tools \
     wkhtmltopdf \
     libssl-dev libffi-dev \
-    libmariadb-dev gcc g++ \
+    libmariadb-dev gcc g++ pkg-config \
     xvfb xfonts-75dpi xfonts-base \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node 20
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# Install Node 24
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g yarn
 
@@ -26,10 +26,15 @@ USER frappe
 
 # Clone Frappe-Code — single repo, all apps included (no submodules)
 RUN git clone \
-    --branch stagging-deployment \
+    --branch version-migration \
     --depth 1 \
     https://github.com/Lijishwilson-HTIPL/Frappe-Code.git \
     frappe-bench
+
+# Local-only addition: quality_dms isn't in the Frappe-Code repo yet, so it's
+# copied in from the build context rather than cloned. Remove this COPY (and
+# the pip install/build lines below) if quality_dms gets added upstream later.
+COPY --chown=frappe:frappe apps/quality_dms /home/frappe/frappe-bench/apps/quality_dms
 
 WORKDIR /home/frappe/frappe-bench
 
@@ -41,7 +46,8 @@ RUN bench setup env && \
     env/bin/pip install -e apps/hrms && \
     env/bin/pip install -e apps/helpdesk && \
     env/bin/pip install -e apps/telephony && \
-    env/bin/pip install -e apps/sbiqc_provisioning
+    env/bin/pip install -e apps/sbiqc_provisioning && \
+    env/bin/pip install -e apps/quality_dms
 
 # Install frontend dependencies for all apps
 RUN cd apps/frappe   && yarn install --frozen-lockfile && cd ../.. && \
@@ -51,11 +57,15 @@ RUN cd apps/frappe   && yarn install --frozen-lockfile && cd ../.. && \
     cd apps/helpdesk && yarn install --frozen-lockfile 2>/dev/null || true && cd ../..
 
 # Build frontend assets — compiles Vue/JS bundles for CRM, Helpdesk, etc.
-RUN bench build --app frappe --app erpnext --app crm --app hrms --app helpdesk --app telephony || true
+RUN bench build --app frappe --app erpnext --app crm --app hrms --app helpdesk --app telephony --app quality_dms || true
 
 # Regenerate Procfile with correct container paths; strip local redis entries
 # (Redis runs in separate containers — no redis-server binary needed here)
 RUN echo y | bench setup procfile && sed -i '/^redis_/d' Procfile
+
+# bench was created via git clone (not `bench init`), so the logs dir honcho/bench
+# start writes to does not exist — create it or `bench start` crash-loops.
+RUN mkdir -p logs sites/assets
 
 EXPOSE 8000 9000
 

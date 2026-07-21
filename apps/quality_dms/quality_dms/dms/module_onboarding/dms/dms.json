@@ -1,0 +1,43 @@
+{
+ "allow_roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Employee"
+  }
+ ],
+ "creation": "2026-07-06 20:15:00.000000",
+ "docstatus": 0,
+ "doctype": "Module Onboarding",
+ "idx": 0,
+ "is_complete": 0,
+ "modified": "2026-07-06 20:15:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "DMS",
+ "owner": "Administrator",
+ "steps": [
+  {
+   "step": "Create Document Category"
+  },
+  {
+   "step": "Create Document Type"
+  },
+  {
+   "step": "Set Up Approval Matrix"
+  },
+  {
+   "step": "Add Your First Document"
+  },
+  {
+   "step": "Configure Training Settings"
+  },
+  {
+   "step": "View Master Document List"
+  }
+ ],
+ "subtitle": "Documents, Approvals, Training and Compliance.",
+ "success_message": "The DMS module is all set up!",
+ "title": "Let's set up your Document Management System."
+}

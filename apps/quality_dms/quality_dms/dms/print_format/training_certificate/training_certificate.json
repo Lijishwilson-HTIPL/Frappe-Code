@@ -1,0 +1,21 @@
+{
+ "align_labels_right": 0,
+ "creation": "2026-07-02 00:00:00.000000",
+ "css": ".training-cert { border: 2px solid #333; padding: 30px; font-family: 'Georgia', serif; } .training-cert h1 { text-align: center; letter-spacing: 2px; } .training-cert table { width: 100%; border-collapse: collapse; margin-top: 20px; } .training-cert table, .training-cert th, .training-cert td { border: 1px solid #999; padding: 6px 10px; font-size: 12px; }",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "DMS Training Record",
+ "doctype": "Print Format",
+ "font": "Default",
+ "html": "<div class=\"training-cert\">\n  <h1>Certificate of Training Completion</h1>\n  {% if doc.employees|length == 1 %}\n  {% set row = doc.employees[0] %}\n  <p style=\"text-align:center;\">This certifies that</p>\n  <h2 style=\"text-align:center; margin: 6px 0;\">{{ row.employee_name or row.employee }}</h2>\n  <p style=\"text-align:center;\">has successfully completed training on</p>\n  <h2 style=\"text-align:center;\">{{ doc.document_title }} (Version {{ doc.version }})</h2>\n  <table style=\"margin-top: 24px;\">\n    <tbody>\n      <tr><td><strong>Employee Name</strong></td><td>{{ row.employee_name or \"\" }}</td></tr>\n      <tr><td><strong>Employee ID</strong></td><td>{{ row.employee }}</td></tr>\n      <tr><td><strong>Completion Date</strong></td><td>{{ row.completion_date or \"\" }}</td></tr>\n      {% if doc.training_quiz %}<tr><td><strong>Assessment</strong></td><td>{{ doc.training_quiz }}</td></tr>\n      <tr><td><strong>Score</strong></td><td>{{ row.assessment_score or \"\" }}%</td></tr>{% endif %}\n      <tr><td><strong>E-Signature</strong></td><td>{{ \"Signed electronically\" if row.e_signature else \"\" }}</td></tr>\n      <tr><td><strong>Training Record</strong></td><td>{{ doc.name }}</td></tr>\n      <tr><td><strong>Department</strong></td><td>{{ doc.department or \"\" }}</td></tr>\n      <tr><td><strong>Verified By</strong></td><td>{{ doc.verified_by or \"\" }} on {{ doc.verified_date or \"\" }}</td></tr>\n    </tbody>\n  </table>\n  {% else %}\n  <p style=\"text-align:center;\">This certifies that the employees listed below have completed training on:</p>\n  <h2 style=\"text-align:center;\">{{ doc.document_title }} (Version {{ doc.version }})</h2>\n  <p><strong>Training Record:</strong> {{ doc.name }}<br>\n     <strong>Department:</strong> {{ doc.department or \"\" }}<br>\n     <strong>Verified By:</strong> {{ doc.verified_by or \"\" }} on {{ doc.verified_date or \"\" }}<br>\n     {% if doc.training_quiz %}<strong>Assessment:</strong> {{ doc.training_quiz }}<br>{% endif %}\n  </p>\n  <table>\n    <thead>\n      <tr>\n        <th>Employee</th>\n        <th>Completion Date</th>\n        {% if doc.training_quiz %}<th>Score</th>{% endif %}\n        <th>Signature</th>\n      </tr>\n    </thead>\n    <tbody>\n      {% for row in doc.employees %}\n      <tr>\n        <td>{{ row.employee_name or row.employee }}</td>\n        <td>{{ row.completion_date or \"\" }}</td>\n        {% if doc.training_quiz %}<td>{{ row.assessment_score or \"\" }}</td>{% endif %}\n        <td>{{ \"Signed\" if row.e_signature else \"\" }}</td>\n      </tr>\n      {% endfor %}\n    </tbody>\n  </table>\n  {% endif %}\n  <p style=\"margin-top:40px; font-size: 11px; color: #555;\">Issued from Quality DMS — Training Record {{ doc.name }}, generated on {{ frappe.utils.now() }}.</p>\n</div>",
+ "line_breaks": 0,
+ "module": "DMS",
+ "name": "Training Certificate",
+ "owner": "Administrator",
+ "print_format_builder": 0,
+ "print_format_type": "Jinja",
+ "raw_printing": 0,
+ "show_section_headings": 0,
+ "standard": "Yes",
+ "modified": "2026-07-08 14:30:00.000000"
+}
