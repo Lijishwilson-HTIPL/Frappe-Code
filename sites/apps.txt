@@ -3,6 +3,7 @@ telephony
 crm
 helpdesk
 hrms
+crm_unify
 erpnext
 sbiqc_provisioning
-crm_unify
+quality_dms
