@@ -1,0 +1,22 @@
+{
+ "app": "quality_dms",
+ "bg_color": "gray",
+ "creation": "2026-06-25 10:45:31.729015",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "archive",
+ "icon_type": "Link",
+ "idx": 10,
+ "label": "DMS",
+ "link_to": "DMS",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-06-25 10:45:31.729015",
+ "modified_by": "Administrator",
+ "name": "DMS",
+ "owner": "Administrator",
+ "parent_icon": "ERPNext",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}

@@ -1,0 +1,21 @@
+{
+ "action": "Create Entry",
+ "action_label": "Create Document Category",
+ "creation": "2026-07-06 20:15:00.000000",
+ "description": "Document Categories help you classify controlled documents (e.g. SOPs, Policies, Work Instructions) so they are easy to organise and filter.",
+ "docstatus": 0,
+ "doctype": "Onboarding Step",
+ "idx": 1,
+ "is_complete": 0,
+ "is_single": 0,
+ "is_skipped": 0,
+ "modified": "2026-07-06 20:15:00.000000",
+ "modified_by": "Administrator",
+ "name": "Create Document Category",
+ "owner": "Administrator",
+ "reference_document": "Document Category",
+ "show_form_tour": 0,
+ "show_full_form": 0,
+ "title": "Create Document Category",
+ "validate_action": 1
+}

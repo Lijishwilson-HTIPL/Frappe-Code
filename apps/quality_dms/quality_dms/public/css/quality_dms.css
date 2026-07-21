@@ -1,0 +1,838 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Quality DMS theme — blue re-skin for Frappe v16 (Espresso desk UI).
+   Scoped: every rule requires body.dms-theme, which quality_dms.js adds only
+   on DMS routes (DMS workspace, quality_dms doctypes, DMS reports). Other
+   apps' pages are untouched. CSS only; no logic/workflow changes.
+   Palette: dark blue #1e3a5f · mid blue #2f6fb2 · light blue #e8f2fc
+   Revert: restore quality_dms.css.bak over this file and bench clear-cache.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Fix workspace grid: equalize outer and inner card gaps (pre-existing, global) */
+[data-page-route="Workspaces"] .codex-editor .codex-editor__redactor {
+	margin: 0 -8px;
+}
+
+/* ── Palette + Espresso token overrides (body-level beats bundle :root) ── */
+body.dms-theme {
+	--dms-navy: #1e3a5f;
+	--dms-navy-2: #16304f;
+	--dms-blue: #2f6fb2;
+	--dms-blue-hover: #275f99;
+	--dms-sky: #e8f2fc;
+	--dms-sky-2: #d5e8fa;
+	--dms-on-navy: #e9f1fa;
+	--dms-on-navy-dim: #b7cbe2;
+
+	/* primary buttons: navy instead of near-black */
+	--btn-primary: var(--dms-navy);
+	--checkbox-color: var(--dms-blue);
+
+	/* blue-tinted hover / selected surfaces instead of grey */
+	--surface-gray-1: #f2f7fc;
+	--surface-gray-2: #e8f2fc;
+	--surface-gray-3: #d5e8fa;
+	--sidebar-hover-color: rgba(255, 255, 255, 0.12);
+	--sidebar-active-color: rgba(255, 255, 255, 0.2);
+	--sidebar-border-color: var(--dms-navy-2);
+	--divider-color: rgba(255, 255, 255, 0.15);
+
+	/* links & blue accents */
+	--ink-blue-2: var(--dms-blue);
+	--ink-blue-3: var(--dms-blue);
+	--blue-500: var(--dms-blue);
+	--blue-600: var(--dms-blue-hover);
+
+	/* the left menu bar goes dark blue */
+	--surface-menu-bar: var(--dms-navy);
+	--surface-selected: rgba(255, 255, 255, 0.2);
+
+	/* page canvas: light blue so white cards stand out */
+	--bg-color: #e3eefa;
+	--fg-color: #ffffff;
+	--card-bg: #ffffff;
+	--fg-hover-color: var(--dms-sky);
+	--highlight-color: var(--dms-sky);
+	--subtle-accent: var(--dms-sky);
+}
+
+[data-theme="dark"] body.dms-theme {
+	--dms-navy: #101f33;
+	--dms-navy-2: #0b1729;
+	--dms-blue: #4c86c2;
+	--dms-blue-hover: #5f97d1;
+	--dms-sky: #1c344f;
+	--dms-sky-2: #234061;
+	--dms-on-navy: #dfeaf6;
+	--dms-on-navy-dim: #93a9c4;
+
+	--btn-primary: var(--dms-blue);
+	--surface-gray-1: #16222f;
+	--surface-gray-2: #1c344f;
+	--surface-gray-3: #234061;
+	--sidebar-hover-color: rgba(255, 255, 255, 0.08);
+	--sidebar-active-color: rgba(255, 255, 255, 0.14);
+	--sidebar-border-color: var(--dms-navy-2);
+	--divider-color: rgba(255, 255, 255, 0.12);
+	--surface-menu-bar: var(--dms-navy);
+	--surface-selected: rgba(255, 255, 255, 0.14);
+	--ink-blue-2: var(--dms-blue);
+	--ink-blue-3: var(--dms-blue-hover);
+
+	--bg-color: #0e1926;
+	--fg-color: #182533;
+	--card-bg: #182533;
+	--fg-hover-color: var(--dms-sky);
+	--highlight-color: var(--dms-sky);
+	--subtle-accent: var(--dms-sky);
+}
+
+/* ── Sidebar: light text/icons on the dark blue bar ───────────────────── */
+body.dms-theme .body-sidebar-container,
+body.dms-theme .body-sidebar {
+	--ink-gray-5: var(--dms-on-navy-dim);
+	--ink-gray-6: var(--dms-on-navy-dim);
+	--ink-gray-7: var(--dms-on-navy);
+	--ink-gray-8: var(--dms-on-navy);
+	--ink-gray-9: #ffffff;
+	--gray-300: rgba(255, 255, 255, 0.18);
+	--gray-600: var(--dms-on-navy-dim);
+	--gray-700: var(--dms-on-navy);
+	--gray-800: var(--dms-on-navy);
+	--gray-900: #ffffff;
+	--icon-stroke: var(--dms-on-navy);
+}
+body.dms-theme .body-sidebar .standard-sidebar-item .item-anchor,
+body.dms-theme .body-sidebar .sidebar-item-label,
+body.dms-theme .body-sidebar .sidebar-item-icon svg {
+	color: var(--dms-on-navy);
+	--icon-stroke: var(--dms-on-navy);
+}
+body.dms-theme .body-sidebar .standard-sidebar-item.active-sidebar,
+body.dms-theme .body-sidebar .standard-sidebar-item.selected {
+	background: var(--sidebar-active-color);
+	border-radius: 8px;
+}
+body.dms-theme .body-sidebar input,
+body.dms-theme .body-sidebar .search-input,
+body.dms-theme .body-sidebar .form-control {
+	background: rgba(255, 255, 255, 0.12);
+	color: var(--dms-on-navy);
+	border: none;
+}
+body.dms-theme .body-sidebar input::placeholder {
+	color: var(--dms-on-navy-dim);
+}
+body.dms-theme .body-sidebar-bottom,
+body.dms-theme .body-sidebar-bottom * {
+	color: var(--dms-on-navy) !important;
+	--icon-stroke: var(--dms-on-navy);
+}
+body.dms-theme .body-sidebar-bottom .small,
+body.dms-theme .body-sidebar-bottom .text-muted {
+	color: var(--dms-on-navy-dim) !important;
+}
+
+/* ── Workspace headings & widgets ─────────────────────────────────────── */
+body.dms-theme .workspace-title,
+body.dms-theme .ce-header,
+body.dms-theme h4.ce-header,
+body.dms-theme .codex-editor h4 {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .workspace-title,
+[data-theme="dark"] body.dms-theme .ce-header,
+[data-theme="dark"] body.dms-theme h4.ce-header,
+[data-theme="dark"] body.dms-theme .codex-editor h4 {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .widget {
+	background: var(--card-bg);
+	border: 1px solid rgba(30, 58, 95, 0.08);
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(30, 58, 95, 0.05), 0 3px 10px rgba(30, 58, 95, 0.06);
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+body.dms-theme .widget:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(30, 58, 95, 0.08), 0 8px 18px rgba(30, 58, 95, 0.1);
+}
+[data-theme="dark"] body.dms-theme .widget {
+	border-color: rgba(255, 255, 255, 0.06);
+}
+/* Quick Access shortcut tiles: blue left accent, lift + tint on hover */
+body.dms-theme .widget.shortcut-widget-box {
+	border-left: 3px solid var(--dms-blue);
+	border-radius: 10px;
+	padding: 14px 16px;
+}
+body.dms-theme .widget.shortcut-widget-box:hover {
+	background: var(--dms-sky);
+	border-color: var(--dms-blue);
+}
+body.dms-theme .widget.shortcut-widget-box .widget-title {
+	font-weight: 600;
+	color: var(--dms-navy);
+}
+[data-theme="dark"] body.dms-theme .widget.shortcut-widget-box .widget-title {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .widget.shortcut-widget-box .indicator-pill {
+	background: var(--dms-sky-2);
+	color: var(--dms-navy);
+}
+[data-theme="dark"] body.dms-theme .widget.shortcut-widget-box .indicator-pill {
+	color: var(--dms-on-navy);
+}
+
+/* Key Metrics number cards: blue top accent, big navy figures */
+body.dms-theme .widget.number-widget-box {
+	border-top: 3px solid var(--dms-blue);
+	padding: 16px 18px;
+}
+body.dms-theme .widget.number-widget-box .widget-title {
+	color: var(--ink-gray-6, #5b6b7c);
+	font-weight: 600;
+}
+body.dms-theme .widget.number-widget-box .number {
+	font-size: 28px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Work Queues quick-list boxes: sky header strip and themed footer button */
+body.dms-theme .widget.quick-list-widget-box {
+	padding: 0;
+	overflow: hidden;
+}
+body.dms-theme .widget.quick-list-widget-box .widget-head {
+	background: var(--dms-sky);
+	padding: 12px 16px;
+	margin: 0;
+}
+body.dms-theme .widget.quick-list-widget-box .widget-head .widget-title {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .widget.quick-list-widget-box .widget-head {
+	background: var(--dms-sky-2);
+}
+[data-theme="dark"] body.dms-theme .widget.quick-list-widget-box .widget-head .widget-title {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .widget.quick-list-widget-box .widget-body,
+body.dms-theme .widget.quick-list-widget-box .quick-list-item {
+	padding-left: 12px;
+	padding-right: 12px;
+}
+body.dms-theme .widget.quick-list-widget-box .quick-list-item:hover {
+	background: var(--dms-sky);
+	border-radius: 8px;
+}
+body.dms-theme .widget.quick-list-widget-box .widget-footer .see-all,
+body.dms-theme .widget.quick-list-widget-box .btn-xs {
+	background: var(--dms-sky);
+	color: var(--dms-navy);
+	border-radius: 8px;
+	font-weight: 600;
+}
+[data-theme="dark"] body.dms-theme .widget.quick-list-widget-box .widget-footer .see-all,
+[data-theme="dark"] body.dms-theme .widget.quick-list-widget-box .btn-xs {
+	background: var(--dms-sky-2);
+	color: var(--dms-on-navy);
+}
+
+/* Browse link boxes: navy group titles, tinted rows on hover */
+body.dms-theme .widget.links-widget-box .widget-head .widget-title {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .widget.links-widget-box .widget-head .widget-title {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .widget.links-widget-box .link-item {
+	border-radius: 8px;
+	padding: 4px 8px;
+}
+body.dms-theme .widget.links-widget-box .link-item:hover {
+	background: var(--dms-sky);
+	text-decoration: none;
+}
+[data-theme="dark"] body.dms-theme .widget.links-widget-box .link-item:hover {
+	background: var(--dms-sky-2);
+}
+
+/* Chart boxes: match card language */
+body.dms-theme .widget.chart-widget-box .widget-head .widget-title {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .widget.chart-widget-box .widget-head .widget-title {
+	color: var(--dms-on-navy);
+}
+
+/* ── Page shell: card-on-blue on every DMS page ───────────────────────── */
+/* the page background — force it on every container that can paint over it */
+body.dms-theme,
+body.dms-theme #body,
+body.dms-theme .main-section,
+body.dms-theme .page-container,
+body.dms-theme .content.page-container,
+body.dms-theme .layout-main,
+body.dms-theme .workspace-wrapper,
+body.dms-theme .desk-container {
+	background-color: var(--bg-color) !important;
+}
+/* workspace pages: keep the main section transparent so the blue canvas
+   shows through and the individual widgets read as white cards */
+body.dms-theme[data-route^="Workspaces"] .layout-main-section,
+body.dms-theme .workspace .layout-main-section,
+body.dms-theme [data-page-route="Workspaces"] .layout-main-section {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+body.dms-theme .layout-main-section,
+body.dms-theme .layout-main-section.frappe-card {
+	background: var(--card-bg);
+	border: 1px solid rgba(30, 58, 95, 0.08);
+	border-radius: 12px;
+	box-shadow: 0 1px 2px rgba(30, 58, 95, 0.05), 0 4px 16px rgba(30, 58, 95, 0.07);
+	padding: 8px 12px;
+}
+/* keep space around the card so the blue canvas is visible */
+body.dms-theme .layout-main-section-wrapper {
+	margin: 4px 16px 24px;
+}
+[data-theme="dark"] body.dms-theme .layout-main-section,
+[data-theme="dark"] body.dms-theme .layout-main-section.frappe-card {
+	border-color: rgba(255, 255, 255, 0.06);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+body.dms-theme .page-head {
+	background: var(--bg-color);
+	border-bottom: none;
+}
+body.dms-theme .page-head .title-text {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .page-head .title-text {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .layout-side-section .sidebar-menu,
+body.dms-theme .layout-side-section .list-sidebar,
+body.dms-theme .form-sidebar {
+	background: var(--card-bg);
+	border: 1px solid rgba(30, 58, 95, 0.08);
+	border-radius: 12px;
+	padding: 12px;
+}
+[data-theme="dark"] body.dms-theme .layout-side-section .sidebar-menu,
+[data-theme="dark"] body.dms-theme .layout-side-section .list-sidebar,
+[data-theme="dark"] body.dms-theme .form-sidebar {
+	border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+body.dms-theme .btn.btn-primary {
+	border-radius: 8px;
+}
+body.dms-theme .btn.btn-primary:hover,
+body.dms-theme .btn.btn-primary:active {
+	background-color: var(--dms-blue) !important;
+}
+
+/* ── List pages ───────────────────────────────────────────────────────── */
+body.dms-theme .frappe-list .list-row-head {
+	background: var(--dms-sky);
+	border-radius: 8px 8px 0 0;
+}
+[data-theme="dark"] body.dms-theme .frappe-list .list-row-head {
+	background: var(--dms-sky-2);
+}
+body.dms-theme .list-row-container {
+	border-bottom: 1px solid rgba(30, 58, 95, 0.06);
+}
+body.dms-theme .list-row-container:hover {
+	background: var(--dms-sky);
+}
+[data-theme="dark"] body.dms-theme .list-row-container:hover {
+	background: rgba(76, 134, 194, 0.12);
+}
+body.dms-theme .list-subject a {
+	color: var(--dms-blue);
+	font-weight: 500;
+}
+body.dms-theme .indicator-pill {
+	border-radius: 999px;
+	font-weight: 600;
+}
+body.dms-theme .filter-selector .btn,
+body.dms-theme .list-paging-area .btn-group .btn {
+	border-radius: 8px;
+}
+
+/* ── Form pages ───────────────────────────────────────────────────────── */
+body.dms-theme .form-section {
+	border-radius: 10px;
+}
+body.dms-theme .form-section .section-head,
+body.dms-theme .form-section .form-section-heading {
+	color: var(--dms-navy);
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme .form-section .section-head,
+[data-theme="dark"] body.dms-theme .form-section .form-section-heading {
+	color: var(--dms-on-navy);
+}
+body.dms-theme .form-control,
+body.dms-theme .frappe-control input,
+body.dms-theme select.form-control {
+	border-radius: 8px;
+}
+body.dms-theme .form-control:focus {
+	border-color: var(--dms-blue);
+	box-shadow: 0 0 0 2px rgba(47, 111, 178, 0.18);
+}
+body.dms-theme .form-tabs-list .nav-link.active {
+	color: var(--dms-blue);
+	border-bottom-color: var(--dms-blue) !important;
+}
+body.dms-theme .form-footer .comment-box {
+	border-radius: 10px;
+}
+
+/* ── Report / datatable pages ─────────────────────────────────────────── */
+body.dms-theme .datatable .dt-header,
+body.dms-theme .datatable .dt-header .dt-cell {
+	background: var(--dms-sky);
+	font-weight: 600;
+}
+[data-theme="dark"] body.dms-theme .datatable .dt-header,
+[data-theme="dark"] body.dms-theme .datatable .dt-header .dt-cell {
+	background: var(--dms-sky-2);
+}
+body.dms-theme .datatable .dt-row:hover .dt-cell {
+	background: var(--dms-sky);
+}
+[data-theme="dark"] body.dms-theme .datatable .dt-row:hover .dt-cell {
+	background: rgba(76, 134, 194, 0.12);
+}
+
+/* ── Dialogs (incl. e-signature) — only while on a DMS page ───────────── */
+body.dms-theme .modal-content {
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 10px 40px rgba(20, 40, 70, 0.28);
+}
+body.dms-theme .modal-header {
+	border-top: 4px solid var(--dms-blue);
+}
+body.dms-theme .modal-header .modal-title {
+	font-weight: 650;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Corporate polish pass — typography, button hierarchy, chrome consistency.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Typography rhythm ────────────────────────────────────────────────── */
+body.dms-theme {
+	-webkit-font-smoothing: antialiased;
+}
+body.dms-theme .page-title .title-text,
+body.dms-theme .form-section .section-head,
+body.dms-theme .widget-head .widget-title,
+body.dms-theme .workspace-title {
+	letter-spacing: -0.01em;
+}
+body.dms-theme .list-row-head .list-row-col,
+body.dms-theme .datatable .dt-header .dt-cell,
+body.dms-theme .form-column > label,
+body.dms-theme label.control-label {
+	text-transform: uppercase;
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	font-weight: 600;
+	color: var(--ink-gray-6, #64748b);
+}
+[data-theme="dark"] body.dms-theme .list-row-head .list-row-col,
+[data-theme="dark"] body.dms-theme .datatable .dt-header .dt-cell,
+[data-theme="dark"] body.dms-theme .form-column > label,
+[data-theme="dark"] body.dms-theme label.control-label {
+	color: var(--dms-on-navy-dim);
+}
+body.dms-theme .breadcrumb-container,
+body.dms-theme #navbar-breadcrumbs {
+	font-weight: 500;
+}
+
+/* ── Button hierarchy: consistent radius, weight, motion ──────────────── */
+body.dms-theme .btn {
+	border-radius: 8px;
+	font-weight: 600;
+	letter-spacing: 0.005em;
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		box-shadow 0.15s ease, transform 0.1s ease;
+}
+body.dms-theme .btn.btn-primary {
+	box-shadow: 0 1px 2px rgba(20, 40, 70, 0.18);
+}
+body.dms-theme .btn.btn-primary:hover {
+	box-shadow: 0 2px 6px rgba(20, 40, 70, 0.22);
+	transform: translateY(-1px);
+}
+body.dms-theme .btn.btn-primary:active {
+	transform: translateY(0);
+	box-shadow: 0 1px 2px rgba(20, 40, 70, 0.18);
+}
+body.dms-theme .btn.btn-default,
+body.dms-theme .btn.btn-secondary {
+	border: 1px solid rgba(30, 58, 95, 0.16);
+	background: var(--card-bg);
+}
+body.dms-theme .btn.btn-default:hover,
+body.dms-theme .btn.btn-secondary:hover {
+	background: var(--dms-sky);
+	border-color: var(--dms-blue);
+	color: var(--dms-navy);
+}
+[data-theme="dark"] body.dms-theme .btn.btn-default,
+[data-theme="dark"] body.dms-theme .btn.btn-secondary {
+	border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme="dark"] body.dms-theme .btn.btn-default:hover,
+[data-theme="dark"] body.dms-theme .btn.btn-secondary:hover {
+	color: var(--dms-on-navy);
+}
+/* icon-only / xs buttons stay understated */
+body.dms-theme .btn-xs,
+body.dms-theme .btn-icon {
+	border-radius: 6px;
+}
+/* the page's primary action button (top-right "+ Add …") gets slightly
+   more presence to read as the one clear call-to-action per page */
+body.dms-theme .page-actions .btn-primary,
+body.dms-theme .page-head .primary-action {
+	padding: 6px 16px;
+}
+
+/* ── Dropdowns / menus ────────────────────────────────────────────────── */
+body.dms-theme .dropdown-menu {
+	border-radius: 10px;
+	border: 1px solid rgba(30, 58, 95, 0.1);
+	box-shadow: 0 8px 24px rgba(20, 40, 70, 0.16);
+	padding: 6px;
+}
+body.dms-theme .dropdown-menu > li > a,
+body.dms-theme .dropdown-menu .dropdown-item {
+	border-radius: 6px;
+}
+body.dms-theme .dropdown-menu > li > a:hover,
+body.dms-theme .dropdown-menu .dropdown-item:hover {
+	background: var(--dms-sky);
+}
+[data-theme="dark"] body.dms-theme .dropdown-menu {
+	border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"] body.dms-theme .dropdown-menu > li > a:hover,
+[data-theme="dark"] body.dms-theme .dropdown-menu .dropdown-item:hover {
+	background: var(--dms-sky-2);
+}
+
+/* ── Tags / multiselect pills / awesomplete ───────────────────────────── */
+body.dms-theme .awesomplete > ul {
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(20, 40, 70, 0.16);
+}
+body.dms-theme .awesomplete > ul > li[aria-selected="true"],
+body.dms-theme .awesomplete > ul > li:hover {
+	background: var(--dms-sky);
+}
+body.dms-theme .multiselect-item,
+body.dms-theme .tag-pill,
+body.dms-theme .badge {
+	border-radius: 999px;
+}
+body.dms-theme .badge.badge-primary,
+body.dms-theme .filter-selector .btn.active {
+	background: var(--dms-blue);
+}
+
+/* ── Comments / activity timeline ─────────────────────────────────────── */
+body.dms-theme .comment-box .frappe-timestamp,
+body.dms-theme .timeline-item {
+	border-radius: 8px;
+}
+body.dms-theme .timeline-item:hover {
+	background: var(--dms-sky);
+}
+[data-theme="dark"] body.dms-theme .timeline-item:hover {
+	background: rgba(76, 134, 194, 0.1);
+}
+
+/* ── Tooltips ─────────────────────────────────────────────────────────── */
+body.dms-theme .tooltip-inner {
+	background: var(--dms-navy);
+	border-radius: 6px;
+	font-weight: 500;
+}
+[data-theme="dark"] body.dms-theme .tooltip-inner {
+	background: var(--dms-navy-2);
+}
+
+/* ── Scrollbars: slim, blue-tinted thumb ───────────────────────────────── */
+body.dms-theme ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+body.dms-theme ::-webkit-scrollbar-thumb {
+	background: rgba(47, 111, 178, 0.35);
+	border-radius: 999px;
+}
+body.dms-theme ::-webkit-scrollbar-thumb:hover {
+	background: rgba(47, 111, 178, 0.55);
+}
+body.dms-theme ::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+/* ── Focus ring consistency (accessibility) ───────────────────────────── */
+body.dms-theme a:focus-visible,
+body.dms-theme .btn:focus-visible,
+body.dms-theme .list-row-container:focus-visible {
+	outline: 2px solid var(--dms-blue);
+	outline-offset: 2px;
+}
+
+/* ── Report / query-report toolbar ────────────────────────────────────── */
+body.dms-theme .report-wrapper .page-form,
+body.dms-theme .report-summary {
+	border-radius: 10px;
+}
+body.dms-theme .report-summary .summary-value {
+	color: var(--dms-navy);
+	font-weight: 700;
+}
+[data-theme="dark"] body.dms-theme .report-summary .summary-value {
+	color: var(--dms-on-navy);
+}
+
+/* ── Standard indicator dot colors stay semantic; just round + weight ──── */
+body.dms-theme .indicator,
+body.dms-theme .indicator-pill,
+body.dms-theme .list-row-indicator {
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Enhancement pass 2 — depth, accents, richer chrome across every view.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Primary buttons: subtle gradient for extra depth ─────────────────── */
+body.dms-theme .btn.btn-primary {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.06));
+	background-color: var(--dms-navy);
+}
+body.dms-theme .btn.btn-primary:hover {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.04));
+}
+
+/* ── Sidebar: icons sit in soft rounded chips, active item gets a left rail ── */
+body.dms-theme .body-sidebar .standard-sidebar-item .sidebar-item-icon {
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 7px;
+	padding: 3px;
+}
+body.dms-theme .body-sidebar .standard-sidebar-item.active-sidebar,
+body.dms-theme .body-sidebar .standard-sidebar-item.selected {
+	position: relative;
+}
+body.dms-theme .body-sidebar .standard-sidebar-item.active-sidebar::before,
+body.dms-theme .body-sidebar .standard-sidebar-item.selected::before {
+	content: "";
+	position: absolute;
+	left: -8px;
+	top: 4px;
+	bottom: 4px;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: #ffffff;
+}
+body.dms-theme .body-sidebar .standard-sidebar-item.active-sidebar .sidebar-item-icon,
+body.dms-theme .body-sidebar .standard-sidebar-item.selected .sidebar-item-icon {
+	background: rgba(255, 255, 255, 0.18);
+}
+
+/* ── List rows: left accent rail colored by status pill next to it ────── */
+body.dms-theme .list-row-container {
+	position: relative;
+	transition: background-color 0.12s ease;
+}
+body.dms-theme .list-row-container:has(.indicator-pill.green)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.blue)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.orange)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.yellow)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.red)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.gray)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.grey)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.darkgrey)::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 6px;
+	bottom: 6px;
+	width: 3px;
+	border-radius: 3px;
+}
+body.dms-theme .list-row-container:has(.indicator-pill.green)::before {
+	background: #1d7f4e;
+}
+body.dms-theme .list-row-container:has(.indicator-pill.blue)::before {
+	background: var(--dms-blue);
+}
+body.dms-theme .list-row-container:has(.indicator-pill.orange)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.yellow)::before {
+	background: #b5740a;
+}
+body.dms-theme .list-row-container:has(.indicator-pill.red)::before {
+	background: #b3362c;
+}
+body.dms-theme .list-row-container:has(.indicator-pill.gray)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.grey)::before,
+body.dms-theme .list-row-container:has(.indicator-pill.darkgrey)::before {
+	background: #8a97a6;
+}
+
+/* ── Form section cards: real card separation with header rail ───────── */
+body.dms-theme .form-section.card-section {
+	background: var(--card-bg);
+	border: 1px solid rgba(30, 58, 95, 0.08);
+	box-shadow: 0 1px 2px rgba(30, 58, 95, 0.04);
+	margin-bottom: 14px;
+	padding: 4px 0;
+}
+[data-theme="dark"] body.dms-theme .form-section.card-section {
+	border-color: rgba(255, 255, 255, 0.06);
+}
+body.dms-theme .form-section .section-head {
+	border-bottom: 1px solid rgba(30, 58, 95, 0.08);
+	padding-bottom: 8px;
+	margin-bottom: 10px;
+}
+[data-theme="dark"] body.dms-theme .form-section .section-head {
+	border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Number cards: icon medallion + trend accent ──────────────────────── */
+body.dms-theme .widget.number-widget-box {
+	position: relative;
+	overflow: hidden;
+}
+body.dms-theme .widget.number-widget-box::after {
+	content: "";
+	position: absolute;
+	right: -18px;
+	top: -18px;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	background: var(--dms-sky);
+	z-index: 0;
+}
+[data-theme="dark"] body.dms-theme .widget.number-widget-box::after {
+	background: var(--dms-sky-2);
+}
+body.dms-theme .widget.number-widget-box .widget-title,
+body.dms-theme .widget.number-widget-box .number,
+body.dms-theme .widget.number-widget-box .widget-body {
+	position: relative;
+	z-index: 1;
+}
+
+/* ── Kanban board: cards match the corporate card language ────────────── */
+body.dms-theme .kanban-column-header {
+	background: var(--dms-sky);
+	border-radius: 8px 8px 0 0;
+	font-weight: 650;
+	color: var(--dms-navy);
+}
+[data-theme="dark"] body.dms-theme .kanban-column-header {
+	background: var(--dms-sky-2);
+	color: var(--dms-on-navy);
+}
+body.dms-theme .kanban-card {
+	border-radius: 10px;
+	border: 1px solid rgba(30, 58, 95, 0.08);
+	box-shadow: 0 1px 2px rgba(30, 58, 95, 0.05);
+}
+body.dms-theme .kanban-card:hover {
+	box-shadow: 0 4px 12px rgba(30, 58, 95, 0.12);
+	transform: translateY(-1px);
+}
+
+/* ── Calendar view: blue event blocks, tinted today marker ────────────── */
+body.dms-theme .fc-event {
+	background: var(--dms-blue) !important;
+	border-color: var(--dms-blue-hover) !important;
+	border-radius: 6px;
+}
+body.dms-theme .fc-day-today {
+	background: var(--dms-sky) !important;
+}
+
+/* ── Empty states: tint the placeholder icon ──────────────────────────── */
+body.dms-theme .msg-box svg,
+body.dms-theme .list-view-no-data svg,
+body.dms-theme .no-result svg {
+	color: var(--dms-blue);
+	opacity: 0.55;
+}
+
+/* ── Breadcrumb: current page reads as a soft pill ────────────────────── */
+body.dms-theme #navbar-breadcrumbs .strong,
+body.dms-theme .breadcrumb-container .strong {
+	background: var(--dms-sky);
+	color: var(--dms-navy);
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-weight: 650;
+}
+[data-theme="dark"] body.dms-theme #navbar-breadcrumbs .strong,
+[data-theme="dark"] body.dms-theme .breadcrumb-container .strong {
+	background: var(--dms-sky-2);
+	color: var(--dms-on-navy);
+}
+
+/* ── Page head: thin blue accent rule under the title/toolbar row ─────── */
+body.dms-theme .page-head {
+	position: relative;
+}
+body.dms-theme .page-head::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 2px;
+	background: linear-gradient(90deg, var(--dms-blue) 0%, transparent 70%);
+	opacity: 0.35;
+}
+
+/* ── Avatars: subtle ring so they read as intentional, not default ────── */
+body.dms-theme .avatar,
+body.dms-theme .avatar-frame {
+	box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px rgba(47, 111, 178, 0.35);
+}
+
+/* ── Progress bars (onboarding, bulk actions) in brand blue ───────────── */
+body.dms-theme .progress-bar {
+	background-color: var(--dms-blue);
+}
+body.dms-theme .progress {
+	background-color: var(--dms-sky);
+	border-radius: 999px;
+	overflow: hidden;
+}

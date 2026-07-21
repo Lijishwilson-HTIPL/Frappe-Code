@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "autoincrement",
+ "creation": "2026-06-24 11:03:23.979248",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "department",
+  "status",
+  "due_date",
+  "acknowledged",
+  "acknowledged_on",
+  "completion_date",
+  "assessment_score",
+  "quiz_passed",
+  "quiz_attempts",
+  "retake_allowed",
+  "expires_on",
+  "escalated",
+  "proxy_completed_by",
+  "proxy_reason",
+  "e_signature",
+  "certificate_file"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Suggested\nPending\nIn Progress\nCompleted\nFailed\nOverdue\nExcused"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "acknowledged",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Acknowledged"
+  },
+  {
+   "fieldname": "acknowledged_on",
+   "fieldtype": "Datetime",
+   "label": "Acknowledged On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completion_date",
+   "fieldtype": "Date",
+   "label": "Completion Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "assessment_score",
+   "fieldtype": "Float",
+   "label": "Assessment Score",
+   "description": "Score out of 100 (optional)"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.assessment_score",
+   "fieldname": "quiz_passed",
+   "fieldtype": "Check",
+   "label": "Quiz Passed",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Number of quiz attempts the employee has submitted (pass or fail).",
+   "fieldname": "quiz_attempts",
+   "fieldtype": "Int",
+   "label": "Quiz Attempts",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Set by a manager/admin to let the employee retake the quiz after a failed attempt. Consumed automatically once the employee submits their next attempt.",
+   "fieldname": "retake_allowed",
+   "fieldtype": "Check",
+   "label": "Retake Allowed",
+   "read_only": 1
+  },
+  {
+   "description": "Auto-computed on completion — completion_date + the applicable retraining cycle (months). When passed, the daily retraining scheduler reopens this row.",
+   "fieldname": "expires_on",
+   "fieldtype": "Date",
+   "label": "Expires On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Set once an overdue escalation email has been sent to this employee's manager, so it only fires once per row.",
+   "fieldname": "escalated",
+   "fieldtype": "Check",
+   "label": "Escalated to Manager",
+   "read_only": 1
+  },
+  {
+   "description": "Set when a manager completed this row on the employee's behalf (e.g. departed employee with no system access) instead of the employee self-signing.",
+   "fieldname": "proxy_completed_by",
+   "fieldtype": "Link",
+   "label": "Proxy Completed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "proxy_reason",
+   "fieldtype": "Small Text",
+   "label": "Proxy Completion Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "e_signature",
+   "fieldtype": "Signature",
+   "label": "E-Signature"
+  },
+  {
+   "fieldname": "certificate_file",
+   "fieldtype": "Data",
+   "label": "Certificate",
+   "read_only": 1,
+   "in_list_view": 0
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-08 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "Document Acknowledgement",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
