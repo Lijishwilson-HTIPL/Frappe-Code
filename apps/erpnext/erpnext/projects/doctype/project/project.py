@@ -709,6 +709,56 @@ def create_kanban_board_if_not_exists(project):
 
 
 @frappe.whitelist()
+def get_task_summary(project):
+	"""Task status breakdown for a project — shown in the Project form sidebar."""
+	task = qb.DocType("Task")
+	rows = (
+		qb.from_(task)
+		.select(task.status, Count(task.name).as_("count"))
+		.where(task.project == project)
+		.groupby(task.status)
+		.run(as_dict=True)
+	)
+	counts = frappe._dict({row.status: row.count for row in rows})
+	completed = counts.get("Completed", 0)
+	cancelled = counts.get("Cancelled", 0)
+	total = sum(counts.values())
+	pending = total - completed - cancelled
+	return {
+		"total": total,
+		"completed": completed,
+		"pending": pending,
+		"cancelled": cancelled,
+		"by_status": counts,
+	}
+
+
+@frappe.whitelist()
+def get_defect_summary(project):
+	"""Defect (Issue) status breakdown for a project — shown on the Project
+	form's Summary tab alongside the task summary. "Defect" is Issue shown
+	under that label in the Projects workspace sidebar."""
+	issue = qb.DocType("Issue")
+	rows = (
+		qb.from_(issue)
+		.select(issue.status, Count(issue.name).as_("count"))
+		.where(issue.project == project)
+		.groupby(issue.status)
+		.run(as_dict=True)
+	)
+	counts = frappe._dict({row.status: row.count for row in rows})
+	completed = counts.get("Resolved", 0) + counts.get("Closed", 0)
+	total = sum(counts.values())
+	pending = total - completed
+	return {
+		"total": total,
+		"completed": completed,
+		"pending": pending,
+		"by_status": counts,
+	}
+
+
+@frappe.whitelist()
 def set_project_status(project, status):
 	"""
 	set status for project and all related tasks

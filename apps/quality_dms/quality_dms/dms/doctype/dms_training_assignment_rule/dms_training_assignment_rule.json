@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:TAR-{####}",
+ "creation": "2026-07-02 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "active",
+  "col_break_1",
+  "retraining_months",
+  "section_match",
+  "document_category",
+  "document_type",
+  "col_break_2",
+  "department",
+  "role",
+  "section_onboarding",
+  "curriculum"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Overrides the Training Settings default retraining cycle for records created by this rule.",
+   "fieldname": "retraining_months",
+   "fieldtype": "Int",
+   "label": "Retraining Cycle (Months)"
+  },
+  {
+   "fieldname": "section_match",
+   "fieldtype": "Section Break",
+   "label": "Match Conditions (blank = match all)"
+  },
+  {
+   "fieldname": "document_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Document Category",
+   "options": "Document Category"
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "options": "Document Type"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Target Employees belonging to this Department. Leave blank to target every department.",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Department",
+   "options": "Department"
+  },
+  {
+   "description": "Target Employees whose linked User holds this Role. Leave blank to skip the role filter.",
+   "fieldname": "role",
+   "fieldtype": "Link",
+   "label": "Target Role",
+   "options": "Role"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_onboarding",
+   "fieldtype": "Section Break",
+   "label": "New Hire Onboarding"
+  },
+  {
+   "description": "When set, this curriculum's documents are auto-assigned to every new Employee matching this rule's Department/Role filters (see Employee.after_insert hook). Independent of the Document Category/Type match above, which only applies to document-publish auto-assignment.",
+   "fieldname": "curriculum",
+   "fieldtype": "Link",
+   "label": "Onboarding Curriculum",
+   "options": "DMS Curriculum"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "DMS Training Assignment Rule",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

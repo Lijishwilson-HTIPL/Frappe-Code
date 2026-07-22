@@ -1,0 +1,267 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:DOC-{YYYY}-{####}",
+ "creation": "2026-06-24 11:03:23.790176",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "document_number",
+  "type",
+  "project",
+  "title",
+  "department",
+  "category",
+  "version",
+  "status",
+  "workflow_state",
+  "file",
+  "training_video",
+  "training_video_url",
+  "file_doc",
+  "effective_date",
+  "review_date",
+  "training_quiz",
+  "revision_of",
+  "originated_from_request",
+  "section_checkout",
+  "checked_out_by",
+  "checked_out_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_number",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Document Number",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Link",
+   "label": "Type",
+   "options": "Document Type"
+  },
+  {
+   "depends_on": "eval:doc.type == 'Project'",
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "DMS Project"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Department",
+   "options": "Department",
+   "reqd": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Category",
+   "options": "Document Category",
+   "reqd": 1
+  },
+  {
+   "default": "1.0",
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "label": "Version",
+   "read_only": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nReview\nApproved\nPublished\nObsolete\nArchived\nRejected"
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "Document File"
+  },
+  {
+   "fieldname": "training_video",
+   "fieldtype": "Attach",
+   "label": "Training Video",
+   "description": "Optional video that plays inside each training record for this document."
+  },
+  {
+   "fieldname": "training_video_url",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Training Video URL",
+   "description": "Optional YouTube/Vimeo link — plays embedded in the training record. Use this OR the uploaded file above."
+  },
+  {
+   "fieldname": "file_doc",
+   "fieldtype": "Link",
+   "label": "File Record",
+   "options": "File",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date"
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Next Review Date"
+  },
+  {
+   "description": "Optional quiz employees must pass (see Training Settings for the default pass mark) before their training on this document can be marked Completed.",
+   "fieldname": "training_quiz",
+   "fieldtype": "Link",
+   "label": "Training Quiz",
+   "options": "DMS Quiz"
+  },
+  {
+   "fieldname": "revision_of",
+   "fieldtype": "Link",
+   "label": "Revision Of",
+   "no_copy": 1,
+   "options": "Document Library",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "originated_from_request",
+   "fieldtype": "Link",
+   "label": "Originated From Request",
+   "no_copy": 1,
+   "options": "Document Request",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workflow State",
+   "options": "Workflow State",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.checked_out_by",
+   "fieldname": "section_checkout",
+   "fieldtype": "Section Break",
+   "label": "Check-Out Status"
+  },
+  {
+   "fieldname": "checked_out_by",
+   "fieldtype": "Link",
+   "label": "Checked Out By",
+   "no_copy": 1,
+   "options": "User",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "checked_out_on",
+   "fieldtype": "Datetime",
+   "label": "Checked Out On",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-29 12:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "DMS",
+ "name": "Document Library",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "create": 0,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Employee"
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Admin",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Approver",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "DMS Reviewer",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_views": 1
+}

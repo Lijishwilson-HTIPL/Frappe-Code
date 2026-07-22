@@ -167,7 +167,7 @@
                 @click="toggleWizardApp(app)"
               >
                 <span class="check">{{ wizardData.apps.includes(app) ? '✓' : '○' }}</span>
-                {{ app }}
+                {{ appLabel(app) }}
               </div>
             </div>
           </template>
@@ -406,7 +406,7 @@
           <template v-if="installedApps.size > 0">
             <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">Already installed</p>
             <div v-for="a in [...installedApps]" :key="'ins-'+a" class="sbiqc-app-card locked selected" style="margin-bottom:6px;">
-              <span class="check">✓</span>{{ a }}
+              <span class="check">✓</span>{{ appLabel(a) }}
             </div>
           </template>
           <template v-if="availableApps.length > 0">
@@ -419,7 +419,7 @@
               style="margin-bottom:6px;"
               @click="toggleAddApp(a)"
             >
-              <span class="check">{{ selectedAddApps.includes(a) ? '✓' : '○' }}</span>{{ a }}
+              <span class="check">{{ selectedAddApps.includes(a) ? '✓' : '○' }}</span>{{ appLabel(a) }}
             </div>
           </template>
           <p v-if="availableApps.length === 0" style="color:var(--text-muted);font-size:12px;margin-top:8px;">All available apps are already installed.</p>
@@ -460,6 +460,11 @@ const wizardActive  = ref(false);
 const wizardStep    = ref(1);
 const allApps       = ref([]);
 const wizardData    = ref({ subdomain: "", client_name: "", admin_email: "", plan: "Standard", currency: "INR", timezone: "Asia/Kolkata", apps: ["erpnext"] });
+
+const APP_LABELS = { erpnext: "SBIQC", quality_dms: "DMS" };
+function appLabel(app) {
+  return APP_LABELS[app] || app;
+}
 
 // Panels
 const healthLoading  = ref(false);
@@ -562,7 +567,7 @@ const wizardConfirmRows = computed(() => {
     ["Plan", d.plan],
     ["Currency", d.currency],
     ["Timezone", d.timezone],
-    ["Apps", d.apps.join(", ")],
+    ["Apps", d.apps.map(appLabel).join(", ")],
   ];
 });
 

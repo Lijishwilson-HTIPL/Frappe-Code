@@ -279,6 +279,8 @@ def get_bench_health():
 		apps_file = os.path.join(bench_path, "sites", "apps.txt")
 		with open(apps_file) as f:
 			apps = [l.strip() for l in f if l.strip()]
+		app_labels = {"erpnext": "SBIQC", "quality_dms": "DMS"}
+		apps = [app_labels.get(a, a) for a in apps]
 		checks.append({"name": "Bench Apps", "status": "ok", "detail": ", ".join(apps)})
 	except Exception as e:
 		checks.append({"name": "Bench Apps", "status": "error", "detail": str(e)})
