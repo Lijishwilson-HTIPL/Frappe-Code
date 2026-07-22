@@ -1,4 +1,9 @@
 /* globals frappe, __ */
+var SBIQC_APP_LABELS = { erpnext: "SBIQC", quality_dms: "DMS" };
+function sbiqc_app_label(app) {
+    return SBIQC_APP_LABELS[app] || app;
+}
+
 frappe.pages["sbiqc-provisioning"].on_page_load = function (wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
@@ -474,7 +479,7 @@ class SBIQCProvisioning {
         h += '<div class="sbiqc-report-section"><div class="sbiqc-report-title">' + __("Top Apps Installed") + '</div>';
         (data.top_apps || []).forEach(function (a) {
             h += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:12px;">';
-            h += '<span>' + frappe.utils.escape_html(a.app_name) + '</span><span style="color:var(--primary);font-weight:700;">' + a.count + '</span></div>';
+            h += '<span>' + frappe.utils.escape_html(sbiqc_app_label(a.app_name)) + '</span><span style="color:var(--primary);font-weight:700;">' + a.count + '</span></div>';
         });
         h += '</div>';
         $p.html(h);
@@ -607,7 +612,7 @@ class SBIQCProvisioning {
             var is_locked   = (app === "erpnext");
             var is_selected = (d.apps.indexOf(app) !== -1);
             var cls = "sbiqc-app-card" + (is_selected ? " selected" : "") + (is_locked ? " locked" : "");
-            h += '<div class="' + cls + '" data-app="' + app + '"><span class="check">' + (is_selected ? "✓" : "○") + '</span>' + frappe.utils.escape_html(app) + '</div>';
+            h += '<div class="' + cls + '" data-app="' + app + '"><span class="check">' + (is_selected ? "✓" : "○") + '</span>' + frappe.utils.escape_html(sbiqc_app_label(app)) + '</div>';
         }
         h += '</div>';
         return h;
@@ -622,7 +627,7 @@ class SBIQCProvisioning {
             [__("Plan"), d.plan],
             [__("Currency"), d.currency],
             [__("Timezone"), d.timezone],
-            [__("Apps"), d.apps.join(", ")],
+            [__("Apps"), d.apps.map(sbiqc_app_label).join(", ")],
         ];
         rows.forEach(function (r) {
             h += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color);font-size:12px;">';
@@ -735,14 +740,14 @@ class SBIQCProvisioning {
         if (installed.size) {
             h += '<p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">' + __("Already installed") + '</p>';
             installed.forEach(function (a) {
-                h += '<div class="sbiqc-app-card locked selected" style="margin-bottom:6px;"><span class="check">✓</span>' + frappe.utils.escape_html(a) + '</div>';
+                h += '<div class="sbiqc-app-card locked selected" style="margin-bottom:6px;"><span class="check">✓</span>' + frappe.utils.escape_html(sbiqc_app_label(a)) + '</div>';
             });
         }
         var available = all_apps.filter(function (a) { return !installed.has(a); });
         if (available.length) {
             h += '<p style="font-size:11px;color:var(--text-muted);margin:12px 0 8px;font-weight:600;">' + __("Available to install") + '</p>';
             available.forEach(function (a) {
-                h += '<div class="sbiqc-app-card sbiqc-addapp-toggle" data-app="' + a + '" style="margin-bottom:6px;"><span class="check">○</span>' + frappe.utils.escape_html(a) + '</div>';
+                h += '<div class="sbiqc-app-card sbiqc-addapp-toggle" data-app="' + a + '" style="margin-bottom:6px;"><span class="check">○</span>' + frappe.utils.escape_html(sbiqc_app_label(a)) + '</div>';
             });
         }
         if (!available.length) {

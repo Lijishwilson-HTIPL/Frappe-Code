@@ -11,6 +11,7 @@
       "fieldtype": "Select",
       "in_list_view": 1,
       "label": "App Name",
+      "options": "erpnext\nhrms\nhelpdesk\ncrm\ncrm_unify\ntelephony\nquality_dms",
       "reqd": 1
     }
   ],

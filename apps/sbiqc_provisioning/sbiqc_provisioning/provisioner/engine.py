@@ -194,7 +194,7 @@ def _send_welcome_email(tenant):
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1f2937;">
   <div style="background:#6366f1;padding:28px 32px;border-radius:8px 8px 0 0;">
     <h1 style="color:#fff;font-size:22px;margin:0;">Welcome to SBIQ, {tenant.client_name}!</h1>
-    <p style="color:#e0e7ff;margin:8px 0 0;font-size:14px;">Your Frappe ERP instance is live and ready to use.</p>
+    <p style="color:#e0e7ff;margin:8px 0 0;font-size:14px;">Your SBIQ instance is live and ready to use.</p>
   </div>
   <div style="background:#f9fafb;padding:28px 32px;border:1px solid #e5e7eb;border-top:0;">
     <h2 style="font-size:16px;color:#374151;margin:0 0 16px;">Your login details</h2>
@@ -224,7 +224,7 @@ def _send_welcome_email(tenant):
       <li>Invite your team members from <em>Settings &rarr; Users</em></li>
     </ol>
     <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
-      Powered by <strong>SBIQ</strong> &middot; Frappe v15<br/>
+      Powered by <strong>SBIQ</strong><br/>
       This email was sent automatically after your instance was provisioned.
     </div>
   </div>
@@ -242,6 +242,67 @@ def _send_welcome_email(tenant):
 	except Exception:
 		frappe.logger().warning(
 			f"Welcome email failed for tenant {tenant.name}: {frappe.get_traceback()}"
+		)
+
+
+def _send_app_update_email(tenant, apps_added):
+	"""Notify the tenant admin that new apps were installed on their instance.
+	Email failure never raises — the app install is already complete at this point.
+	"""
+	if not getattr(tenant, "admin_email", None) or not apps_added:
+		return
+
+	try:
+		is_production = frappe.conf.get("is_production", False)
+		port = "" if is_production else ":8000"
+		site_url = f"http://{tenant.site_name}{port}"
+
+		app_labels = {"erpnext": "SBIQC", "quality_dms": "DMS"}
+		display_apps = [app_labels.get(a, a) for a in apps_added]
+		apps_list_html = "".join(f"<li>{a}</li>" for a in display_apps)
+
+		subject = f"New apps added to your SBIQ instance — {tenant.client_name}"
+
+		message = f"""
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1f2937;">
+  <div style="background:#6366f1;padding:28px 32px;border-radius:8px 8px 0 0;">
+    <h1 style="color:#fff;font-size:22px;margin:0;">Your SBIQ instance was updated</h1>
+    <p style="color:#e0e7ff;margin:8px 0 0;font-size:14px;">New apps have been installed and are ready to use.</p>
+  </div>
+  <div style="background:#f9fafb;padding:28px 32px;border:1px solid #e5e7eb;border-top:0;">
+    <h2 style="font-size:16px;color:#374151;margin:0 0 16px;">Apps added</h2>
+    <ul style="font-size:14px;color:#374151;line-height:1.8;padding-left:18px;margin:0 0 20px;">
+      {apps_list_html}
+    </ul>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr>
+        <td style="padding:8px 0;color:#6b7280;width:140px;">Site URL</td>
+        <td style="padding:8px 0;"><a href="{site_url}" style="color:#6366f1;font-weight:600;">{site_url}</a></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#6b7280;">Client</td>
+        <td style="padding:8px 0;font-weight:600;">{tenant.client_name}</td>
+      </tr>
+    </table>
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
+      Powered by <strong>SBIQ</strong><br/>
+      This email was sent automatically after your instance was updated.
+    </div>
+  </div>
+</div>
+"""
+
+		frappe.sendmail(
+			recipients=[tenant.admin_email],
+			subject=subject,
+			message=message,
+			now=True,
+		)
+		frappe.logger().info(f"App update email sent to {tenant.admin_email} for tenant {tenant.name}")
+
+	except Exception:
+		frappe.logger().warning(
+			f"App update email failed for tenant {tenant.name}: {frappe.get_traceback()}"
 		)
 
 
@@ -338,10 +399,9 @@ def _setup_local_routing(site_name):
 		content = f.read()
 
 	if hosts_entry not in content:
-		sudo_password = frappe.conf.get("sudo_password", "")
 		result = subprocess.run(
-			["sudo", "-S", "bash", "-c", f"echo '{hosts_entry}' >> /etc/hosts"],
-			input=(sudo_password + "\n").encode(),
+			["sudo", "-n", "tee", "-a", "/etc/hosts"],
+			input=(hosts_entry + "\n").encode(),
 			shell=False,
 			capture_output=True,
 			text=False,
@@ -441,11 +501,15 @@ def provision_update(tenant_name, apps_to_add):
 			if app not in existing_apps:
 				tenant.append("apps_to_install", {"app_name": app})
 		if to_install:
+			tenant.flags.ignore_validate_update_after_submit = True
 			tenant.save(ignore_permissions=True)  # background worker has no session user context
 		frappe.db.commit()
 
 		_update_status(tenant, "Active")
 		complete_log(log_name)
+
+		if to_install:
+			_send_app_update_email(tenant, to_install)
 
 	except Exception:
 		tb = traceback.format_exc()
