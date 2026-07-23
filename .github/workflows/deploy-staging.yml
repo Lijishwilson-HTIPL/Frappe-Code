@@ -43,10 +43,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: https://github.com/frappe/frappe_docker.git#main:images/layered
+          file: Containerfile
           build-args: |
             FRAPPE_BRANCH=version-16
-          secrets: |
-            apps_json=${{ toJson(github.workspace) }}/apps-public.json
+          secret-files: |
+            apps_json=${{ github.workspace }}/apps-public.json
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:public-apps
           cache-from: type=gha,scope=base
