@@ -7,8 +7,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository }}-base
-  APP_IMAGE_NAME: ${{ github.repository }}
+  # GHCR tags must be lowercase; github.repository preserves the repo's actual
+  # casing ("hephzibahtechnologies/Frappe-Code"), which fails the build.
+  BASE_IMAGE_NAME: hephzibahtechnologies/frappe-code-base
+  APP_IMAGE_NAME: hephzibahtechnologies/frappe-code
 
 jobs:
   build-base:
