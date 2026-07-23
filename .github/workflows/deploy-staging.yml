@@ -42,7 +42,7 @@ jobs:
       - name: Build & push base image
         uses: docker/build-push-action@v6
         with:
-          context: https://github.com/frappe/frappe_docker.git#version-16:images/layered
+          context: https://github.com/frappe/frappe_docker.git#main:images/layered
           build-args: |
             FRAPPE_BRANCH=version-16
           secrets: |
