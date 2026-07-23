@@ -3,12 +3,30 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 from frappe.utils import today, now_datetime
 
 _DMS_ROLES = {"Employee", "System Manager"}
 
 
 class DocumentLibrary(Document):
+
+	def autoname(self):
+		# Number new documents as {PREFIX}-#### using the prefix configured on the
+		# selected Document Type (e.g. SOP-0001, WI-0004, TD-0012). Each prefix keeps
+		# its own independent counter via Frappe's Series table, so numbers never
+		# collide or reset across types.
+		#
+		# If the document has no type, or its type has no prefix configured, we leave
+		# self.name unset so Frappe falls back to the legacy JSON autoname
+		# (format:DOC-{YYYY}-{####}) — existing documents and any untyped drafts keep
+		# working unchanged.
+		if not self.type:
+			return
+		prefix = frappe.db.get_value("Document Type", self.type, "prefix")
+		if not prefix:
+			return
+		self.name = make_autoname(f"{prefix}-.####")
 
 	def before_insert(self):
 		if not self.version:

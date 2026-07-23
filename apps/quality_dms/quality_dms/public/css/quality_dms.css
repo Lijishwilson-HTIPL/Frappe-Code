@@ -137,17 +137,33 @@ body.dms-theme .body-sidebar-bottom .text-muted {
    indent — use that to style group headers (Document Management, Training,
    Reports, …) distinctly from the plain links inside them. */
 body.dms-theme .body-sidebar .sidebar-item-container.section-item {
-	margin-top: 16px;
+	margin-top: 4px;
 }
 body.dms-theme .body-sidebar > .sidebar-menu > .sidebar-item-container.section-item:first-child {
 	margin-top: 0;
 }
+/* Group headers stay one line: uppercase + letter-spacing made the earlier
+   version wider than the sidebar column, forcing an ugly wrap. Normal case
+   (matching the label text as written) plus bold weight and a muted color is
+   enough to read as a section header without needing the extra width. */
+body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item .item-anchor {
+	align-items: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
 body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item .sidebar-item-label {
 	font-size: 12px;
 	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	text-transform: none;
+	letter-spacing: 0;
 	color: var(--dms-on-navy-dim);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: normal;
 }
 body.dms-theme .body-sidebar .sidebar-item-container.section-item > .standard-sidebar-item:hover .sidebar-item-label {
 	color: var(--dms-on-navy);
