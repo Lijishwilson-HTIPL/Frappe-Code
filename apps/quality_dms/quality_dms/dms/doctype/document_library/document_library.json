@@ -121,6 +121,7 @@
    "default": "1.0",
    "fieldname": "version",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Version",
    "read_only": 1
   },
@@ -128,6 +129,7 @@
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Draft\nReview\nApproved\nPublished\nObsolete\nArchived\nRejected"
   },
@@ -160,11 +162,13 @@
   {
    "fieldname": "effective_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Effective Date"
   },
   {
    "fieldname": "review_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Next Review Date"
   },
   {
@@ -195,7 +199,6 @@
   {
    "fieldname": "workflow_state",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Workflow State",
    "options": "Workflow State",
    "print_hide": 1,
