@@ -31,6 +31,20 @@ frappe.listview_settings['Document Library'] = {
 	},
 
 	onload(listview) {
+		// Always open the full, unfiltered document register.
+		// Frappe otherwise restores each user's last-used filter (saved in
+		// __UserSettings), which made the list open pre-filtered (e.g. stuck on
+		// workflow_state=Draft). We discard that restored filter on a direct open.
+		// A Key Metrics number-card drill-down passes frappe.route_options (applied
+		// later in ListView.before_refresh), so those targeted views still work; and
+		// users can still filter freely during the session — only the *remembered*
+		// filter is ignored at open time.
+		const arrived_via_card =
+			frappe.route_options && Object.keys(frappe.route_options).length > 0;
+		if (!arrived_via_card) {
+			listview.filters = [];
+		}
+
 		// Compact "Status" quick-filter dropdown in the list toolbar.
 		const quick = ["Published", "Review", "Approved", "Draft", "Obsolete", "Archived"];
 		quick.forEach((s) => {

@@ -1,8 +1,10 @@
 {
  "chart_name": "Training Compliance by Department",
  "chart_type": "Group By",
+ "color": "#1e3a5f",
  "creation": "2026-07-02 00:00:00.000000",
  "currency": "INR",
+ "custom_options": "{\"colors\": [\"#1e3a5f\"]}",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "DMS Training Record",
