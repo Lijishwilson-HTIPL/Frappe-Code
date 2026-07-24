@@ -10,17 +10,20 @@
  "field_order": [
   "document",
   "version",
+  "document_number",
   "change_log",
   "file",
   "file_doc",
-  "revision_date"
+  "revision_date",
+  "effective_date",
+  "approval_status"
  ],
  "fields": [
   {
    "fieldname": "document",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Document",
+   "label": "Document (Permanent ID)",
    "options": "Document Library",
    "reqd": 1
   },
@@ -32,9 +35,17 @@
    "reqd": 1
   },
   {
+   "description": "Version-specific document number assigned when this version was published, e.g. SOP-2026-0001. Unique per release; the permanent Document ID stays on the parent document.",
+   "fieldname": "document_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Number",
+   "read_only": 1
+  },
+  {
    "fieldname": "change_log",
    "fieldtype": "Text Editor",
-   "label": "Change Log",
+   "label": "Change Log / Revision Reason",
    "reqd": 1
   },
   {
@@ -54,6 +65,18 @@
    "fieldname": "revision_date",
    "fieldtype": "Date",
    "label": "Revision Date"
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_status",
+   "fieldtype": "Data",
+   "label": "Approval Status",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

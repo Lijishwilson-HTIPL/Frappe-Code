@@ -32,19 +32,19 @@ class DocumentLibrary(Document):
 		if not self.version:
 			self.version = "1.0"
 
-		# A revision inherits its predecessor's Document Number so the same
-		# document keeps one identity across every version (only the internal
-		# record name and the version field change).
+		# `document_number` now holds the CURRENT PUBLISHED version's version-specific
+		# number (e.g. SOP-2026-0001), assigned on publish — NOT the permanent ID.
+		# The permanent Document ID is the record's own `name` (e.g. SOP-0001), set by
+		# autoname() and locked by allow_rename=0. A brand-new draft has no published
+		# version yet, so it carries no document number until first publish.
+		#
+		# For the legacy separate-record revision model, a revision draft inherits its
+		# predecessor's current number so the "current effective" number still shows
+		# until this new version is published (which then mints a fresh number).
 		if self.revision_of and not self.document_number:
 			self.document_number = frappe.db.get_value(
 				"Document Library", self.revision_of, "document_number"
 			)
-
-	def after_insert(self):
-		# Brand-new documents (no revision_of) don't get a Document Number
-		# until the autoname-assigned name exists — seed it from that name.
-		if not self.document_number:
-			self.db_set("document_number", self.name, update_modified=False)
 
 	def validate(self):
 		self._check_checkout_before_file_change()
@@ -111,7 +111,19 @@ class DocumentLibrary(Document):
 		except Exception:
 			frappe.log_error(frappe.get_traceback(), "DMS: Failed to log obsolescence audit")
 
+	def _generate_document_number(self):
+		"""Mint a fresh version-specific Document Number on publish, e.g. SOP-2026-0001.
+		Format is {PREFIX}-{YYYY}-{####}; the counter is per-prefix, per-year, shared
+		across every published version of that document type (so gaps are expected and
+		correct). Falls back to DOC-{YYYY}-{####} when the type has no configured prefix.
+		This is distinct from the permanent Document ID (the record's `name`, {PREFIX}-####)."""
+		prefix = frappe.db.get_value("Document Type", self.type, "prefix") if self.type else None
+		prefix = prefix or "DOC"
+		return make_autoname(f"{prefix}-.YYYY.-.####")
+
 	def create_revision_record(self):
+		# One Document Revision (= one "released version") per version — this guard also
+		# guarantees each version's Document Number is minted exactly once.
 		if frappe.db.exists("Document Revision", {"document": self.name, "version": self.version}):
 			return
 
@@ -128,16 +140,28 @@ class DocumentLibrary(Document):
 		else:
 			change_log = "Document revised and republished."
 
+		# Mint this version's unique Document Number and record it both on the version
+		# snapshot (permanent history) and as the parent's Current Document Number.
+		version_number = self._generate_document_number()
+		effective = self.effective_date or today()
+
 		rev = frappe.get_doc({
 			"doctype": "Document Revision",
 			"document": self.name,
 			"version": self.version,
+			"document_number": version_number,
 			"change_log": change_log,
 			"file": self.file,
 			"file_doc": self.file_doc,
 			"revision_date": today(),
+			"effective_date": effective,
+			"approval_status": "Published",
 		})
 		rev.insert(ignore_permissions=True)
+
+		# Point the permanent document at its latest version's number. db_set (not save)
+		# so this write doesn't re-trigger validation/submit hooks on an already-submitted doc.
+		self.db_set("document_number", version_number, update_modified=False)
 
 	def _create_training_record(self):
 		"""Auto-create a DMS Training Record in Draft state when this document is Published."""
@@ -351,7 +375,7 @@ class DocumentLibrary(Document):
 				"Document Library",
 				filters={"name": ["in", family_names]},
 				fields=[
-					"name", "title", "version", "status",
+					"name", "title", "version", "status", "document_number",
 					"file", "file_doc", "creation", "owner",
 				],
 				order_by="creation asc",
@@ -366,7 +390,7 @@ class DocumentLibrary(Document):
 		revisions = frappe.get_all(
 			"Document Revision",
 			filters={"document": self.name},
-			fields=["version", "file", "file_doc", "revision_date"],
+			fields=["version", "document_number", "file", "file_doc", "revision_date"],
 			order_by="revision_date asc",
 		)
 		for r in revisions:
@@ -376,6 +400,7 @@ class DocumentLibrary(Document):
 				"name": self.name,
 				"title": self.title,
 				"version": r["version"],
+				"document_number": r["document_number"],
 				"status": "Archived" if r["version"] != self.version else self.status,
 				"file": r["file"],
 				"file_doc": r["file_doc"],
@@ -389,6 +414,7 @@ class DocumentLibrary(Document):
 			"name": self.name,
 			"title": self.title,
 			"version": self.version,
+			"document_number": self.document_number,
 			"status": self.status,
 			"file": self.file,
 			"file_doc": self.file_doc,
@@ -430,11 +456,13 @@ class DocumentLibrary(Document):
 
 	@frappe.whitelist()
 	def get_file_history(self):
-		"""Return revision history with file links for the UI File History panel."""
+		"""Return revision history with file links + per-version document numbers for
+		the UI File History / Version History panel."""
 		revisions = frappe.get_all(
 			"Document Revision",
 			filters={"document": self.name},
-			fields=["name", "version", "revision_date", "change_log", "file", "file_doc"],
+			fields=["name", "version", "document_number", "revision_date", "effective_date",
+				"approval_status", "change_log", "file", "file_doc"],
 			order_by="revision_date asc",
 		)
 		return revisions

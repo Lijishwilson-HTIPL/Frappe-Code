@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "allow_rename": 1,
+ "allow_rename": 0,
  "autoname": "format:DOC-{YYYY}-{####}",
  "creation": "2026-06-24 11:03:23.790176",
  "doctype": "DocType",
@@ -70,11 +70,12 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "The version-specific number of the current published version (e.g. SOP-2026-0001). Changes each time a new version is published. The permanent Document ID is the record's own ID (name), which never changes.",
    "fieldname": "document_number",
    "fieldtype": "Data",
    "in_global_search": 1,
    "in_list_view": 1,
-   "label": "Document Number",
+   "label": "Current Document Number",
    "no_copy": 1,
    "read_only": 1,
    "search_index": 1
