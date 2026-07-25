@@ -163,15 +163,7 @@ frappe.ui.form.on("Project", {
 		const status_rows = (doctype, project, by_status) =>
 			Object.keys(by_status)
 				.sort()
-				.map(
-					(status) => `
-						<a class="summary-stat-card flex justify-between" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
-							project
-						)}" data-statuses='${JSON.stringify([status])}' style="padding: 4px 0; font-size: 12px; cursor: pointer; text-decoration: none !important;">
-							<span class="text-muted">${__(status)}</span>
-							<span>${by_status[status]}</span>
-						</a>`
-				)
+				.map((status) => stat_card(doctype, project, status, by_status[status], "var(--text-color, #1f272e)", [status]))
 				.join("");
 
 		const section = (title, icon, doctype, project, s, view_route) => `
@@ -189,7 +181,7 @@ frappe.ui.form.on("Project", {
 						project,
 						"Completed",
 						s.completed,
-						"var(--green-600, #2b8a3e)",
+						"var(--text-color, #1f272e)",
 						STATUS_GROUPS[doctype].completed
 					)}
 					${stat_card(
@@ -197,11 +189,11 @@ frappe.ui.form.on("Project", {
 						project,
 						"Pending",
 						s.pending,
-						"var(--orange-600, #d9822b)",
+						"var(--text-color, #1f272e)",
 						STATUS_GROUPS[doctype].pending
 					)}
 				</div>
-				<div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd); border-radius: 10px; padding: 10px 16px;">
+				<div style="display: flex; gap: 12px; flex-wrap: wrap;">
 					${status_rows(doctype, project, s.by_status) || `<span class="text-muted" style="font-size: 12px;">${__("No records yet")}</span>`}
 				</div>
 			</div>`;

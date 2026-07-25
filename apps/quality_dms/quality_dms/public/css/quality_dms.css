@@ -465,6 +465,18 @@ body.dms-theme .form-tabs-list .nav-link.active {
 	color: var(--dms-blue);
 	border-bottom-color: var(--dms-blue) !important;
 }
+/* Fix: on tabbed forms (e.g. Project), the sticky tab bar sits inside the
+   theme's padded card. Keep it fully opaque and above the scrolling form body
+   so content can't bleed over the tabs, and extend its background across the
+   card's side padding so nothing peeks around the edges while scrolling. */
+body.dms-theme .form-tabs-list {
+	background-color: var(--card-bg);
+	z-index: 11;
+	margin-left: -12px;
+	margin-right: -12px;
+	padding-left: 12px;
+	padding-right: 12px;
+}
 body.dms-theme .form-footer .comment-box {
 	border-radius: 10px;
 }
