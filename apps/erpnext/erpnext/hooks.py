@@ -1,10 +1,5 @@
 app_name = "erpnext"
-
-fixtures = [
-	{"dt": "Custom Field", "filters": [["dt", "=", "Item"], ["fieldname", "=", "mft_pricecard_description"]]}
-]
-
-app_title = "ERPNext"
+app_title = "SBIQC"
 app_publisher = "Frappe Technologies Pvt. Ltd."
 app_description = """ERP made simple"""
 app_icon = "fa fa-th"

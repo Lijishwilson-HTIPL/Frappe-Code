@@ -75,8 +75,27 @@ frappe.ui.form.on("Project", {
 			frm.trigger("show_dashboard");
 			frm.trigger("show_task_summary");
 			frm.trigger("show_task_defect_summary_tab");
+			frm.trigger("relabel_issue_connection");
 		}
 		frm.trigger("set_custom_buttons");
+	},
+
+	dashboard_update: function (frm) {
+		frm.trigger("relabel_issue_connection");
+	},
+
+	relabel_issue_connection: function (frm) {
+		// The Connections widget renders one badge per linked DocType using its
+		// raw name ("Issue"). Projects calls Issues "Defects" everywhere else on
+		// this form, so relabel just this badge/tooltip without touching the
+		// Issue DocType or its Support-module label anywhere else in the app.
+		if (!frm.dashboard || !frm.dashboard.links_area || !frm.dashboard.links_area.body) return;
+		frm.dashboard.links_area.body
+			.find('.document-link[data-doctype="Issue"] .badge-link')
+			.text(__("Defect"));
+		frm.dashboard.links_area.body
+			.find('.document-link[data-doctype="Issue"] .open-notification')
+			.attr("title", __("Open {0}", [__("Defect")]));
 	},
 
 	show_task_summary: function (frm) {
