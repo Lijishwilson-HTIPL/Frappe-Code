@@ -350,6 +350,7 @@ function _render_document_workspace(frm) {
 					<td>${badge}</td>
 					<td>${title_cell}</td>
 					<td>${esc(v.version || '')}</td>
+					<td>${esc(v.document_number || '')}</td>
 					<td>${file_link}</td>
 					<td>${frappe.datetime.str_to_user(v.creation)}</td>
 					<td>${esc(v.owner || '')}</td>
@@ -378,12 +379,13 @@ function _render_document_workspace(frm) {
 							<th>${__('Status')}</th>
 							<th>${__('Title')}</th>
 							<th>${__('Version')}</th>
+							<th>${__('Document Number')}</th>
 							<th>${__('File')}</th>
 							<th>${__('Created')}</th>
 							<th>${__('Owner')}</th>
 						</tr>
 					</thead>
-					<tbody>${version_rows || `<tr><td colspan="6" class="text-muted">${__('No versions found')}</td></tr>`}</tbody>
+					<tbody>${version_rows || `<tr><td colspan="7" class="text-muted">${__('No versions found')}</td></tr>`}</tbody>
 				</table>
 				<h6 style="margin-top:16px;">${__('Audit History')} (${audit.length})</h6>
 				<table class="table table-bordered table-sm">

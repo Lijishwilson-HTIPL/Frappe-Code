@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMS — Entity Relationship &amp; Table Structure Reference</title>
+<style>
+  :root {
+    --navy: #1e3a5f; --navy-deep: #16304f; --blue: #2f6fb2; --blue-soft: #5b84ab;
+    --sky: #e8f2fc; --sky-2: #d5e8fa; --paper: #f6f8fb; --card: #ffffff;
+    --line: rgba(30, 58, 95, 0.14); --ink: #1b2b3a; --ink-dim: #55677a;
+    --grp-doc: #2f6fb2; --grp-doc-bg: #e8f2fc;
+    --grp-train: #2f7a5c; --grp-train-bg: #e4f3ec;
+    --grp-gov: #9a6b1f; --grp-gov-bg: #f8efdd;
+    --grp-ext: #6b6f76; --grp-ext-bg: #eef0f2;
+    --req: #b3362c; --ro: #6b6f76;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --navy: #cfe0f2; --navy-deep: #dfeaf6; --blue: #6fa3d8; --blue-soft: #8fb4dd;
+      --sky: #16304f; --sky-2: #1c344f; --paper: #0d1722; --card: #121e2c;
+      --line: rgba(207, 224, 242, 0.14); --ink: #e4ecf4; --ink-dim: #93a9c4;
+      --grp-doc: #79aee0; --grp-doc-bg: #16304f; --grp-train: #6fbf9a; --grp-train-bg: #163828;
+      --grp-gov: #e0b768; --grp-gov-bg: #3a2e14; --grp-ext: #a3aab3; --grp-ext-bg: #1c232b;
+      --req: #e08a82; --ro: #a3aab3;
+    }
+  }
+  :root[data-theme="dark"] {
+    --navy: #cfe0f2; --navy-deep: #dfeaf6; --blue: #6fa3d8; --blue-soft: #8fb4dd;
+    --sky: #16304f; --sky-2: #1c344f; --paper: #0d1722; --card: #121e2c;
+    --line: rgba(207, 224, 242, 0.14); --ink: #e4ecf4; --ink-dim: #93a9c4;
+    --grp-doc: #79aee0; --grp-doc-bg: #16304f; --grp-train: #6fbf9a; --grp-train-bg: #163828;
+    --grp-gov: #e0b768; --grp-gov-bg: #3a2e14; --grp-ext: #a3aab3; --grp-ext-bg: #1c232b;
+    --req: #e08a82; --ro: #a3aab3;
+  }
+  :root[data-theme="light"] {
+    --navy: #1e3a5f; --navy-deep: #16304f; --blue: #2f6fb2; --blue-soft: #5b84ab;
+    --sky: #e8f2fc; --sky-2: #d5e8fa; --paper: #f6f8fb; --card: #ffffff;
+    --line: rgba(30, 58, 95, 0.14); --ink: #1b2b3a; --ink-dim: #55677a;
+    --grp-doc: #2f6fb2; --grp-doc-bg: #e8f2fc; --grp-train: #2f7a5c; --grp-train-bg: #e4f3ec;
+    --grp-gov: #9a6b1f; --grp-gov-bg: #f8efdd; --grp-ext: #6b6f76; --grp-ext-bg: #eef0f2;
+    --req: #b3362c; --ro: #6b6f76;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--paper); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.55;
+  }
+  body { max-width: 1180px; margin: 0 auto; padding: 56px 32px 96px; }
+  h1, h2, h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; color: var(--navy-deep); text-wrap: balance; margin: 0; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+  header { display: flex; flex-direction: column; gap: 14px; padding-bottom: 32px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+  h1 { font-size: 34px; font-weight: 600; }
+  .subhead { max-width: 68ch; color: var(--ink-dim); font-size: 15.5px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; align-items: center; }
+  .chip { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; background: var(--sky); color: var(--navy); border: 1px solid var(--line); }
+  .dl-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; background: var(--navy); color: var(--paper); font-size: 13.5px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; }
+  .dl-btn:hover { background: var(--blue); }
+
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 0 36px; font-size: 13.5px; }
+  nav.toc a { color: var(--blue-soft); text-decoration: none; border-bottom: 1px dotted transparent; }
+  nav.toc a:hover { border-bottom-color: var(--blue-soft); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 44px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-dim); }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend-item.sep { border-left: 1px solid var(--line); padding-left: 22px; }
+
+  section.group { margin-bottom: 56px; scroll-margin-top: 20px; }
+  .group-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .group-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 5px; }
+  .group-tag.doc { color: var(--grp-doc); background: var(--grp-doc-bg); }
+  .group-tag.train { color: var(--grp-train); background: var(--grp-train-bg); }
+  .group-tag.gov { color: var(--grp-gov); background: var(--grp-gov-bg); }
+  h2 { font-size: 21px; font-weight: 600; }
+  .group-desc { color: var(--ink-dim); font-size: 14.5px; max-width: 70ch; margin: 8px 0 20px; }
+
+  /* Diagram surface is deliberately pinned to a fixed light "blueprint" background,
+     independent of the page's own light/dark theme — the diagram's line/text colors
+     below are hand-tuned for this one background, so it always renders at full contrast
+     instead of going dim when the page itself switches to dark mode. */
+  .diagram-card { background: #fbfdff; border: 1px solid #c7d6e8; border-radius: 12px; padding: 28px 24px; overflow-x: auto; }
+  .diagram-card .mermaid { min-width: 760px; }
+  .diagram-card svg { max-width: none !important; }
+
+  /* ---- doctype field-structure cards ---- */
+  .dtcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px 8px; margin: 18px 0; scroll-margin-top: 20px; }
+  .dtcard-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; margin-bottom: 4px; }
+  .dtcard-head h3 { font-size: 17px; }
+  .kind-pill { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; background: var(--sky); color: var(--navy); }
+  .pk-line { font-size: 12.5px; color: var(--ink-dim); margin-bottom: 10px; }
+  table.field-table { width: 100%; border-collapse: collapse; font-size: 13.3px; margin-bottom: 10px; }
+  table.field-table th { text-align: left; font-size: 10.8px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.field-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.field-table tr:last-child td { border-bottom: none; }
+  table.field-table td.fname { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--navy-deep); white-space: nowrap; }
+  table.field-table td.ftype { white-space: nowrap; color: var(--ink-dim); }
+  table.field-table td.flink { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.6px; }
+  table.field-table td.fnote { color: var(--ink-dim); font-size: 12.6px; }
+  .req-dot { color: var(--req); font-weight: 700; }
+  .ro-tag { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ro); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 5px; }
+
+  /* ---- reference table (relationship section) ---- */
+  table.ref { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
+  table.ref caption { text-align: left; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; }
+  table.ref th { text-align: left; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  table.ref td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.ref tr:last-child td { border-bottom: none; }
+  table.ref td.name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--navy-deep); white-space: nowrap; }
+  table.ref td.desc { color: var(--ink-dim); }
+  table.ref td.kind { font-size: 11.5px; color: var(--ink-dim); white-space: nowrap; }
+
+  details.full { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 20px; }
+  details.full[open] { padding-bottom: 20px; }
+  details.full summary { cursor: pointer; padding: 16px 0; font-family: ui-serif, Georgia, serif; font-size: 18px; font-weight: 600; color: var(--navy-deep); list-style: none; }
+  details.full summary::-webkit-details-marker { display: none; }
+  details.full summary::before { content: "▸ "; color: var(--blue); font-family: ui-monospace, monospace; }
+  details.full[open] summary::before { content: "▾ "; }
+  details.full .diagram-card { margin-top: 4px; }
+
+  footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--ink-dim); font-size: 13px; }
+
+  @media print {
+    .dl-btn, nav.toc { display: none; }
+    .dtcard, .diagram-card { break-inside: avoid; border: 1px solid #ccc; }
+    body { max-width: 100%; padding: 0 8px; }
+  }
+  @media (max-width: 640px) {
+    body { padding: 36px 18px 64px; }
+    h1 { font-size: 26px; }
+    .dl-btn { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Frappe App · quality_dms</div>
+  <h1>DMS — Entity Relationship &amp; Table Structure Reference</h1>
+  <p class="subhead">
+    Every DocType in the Quality Document Management System — grouped the way the app's own
+    sidebar is organized — with full relationship diagrams and, below, the complete field-by-field
+    structure of each database table.
+  </p>
+  <div class="meta-row">
+    <span class="chip">19 DocTypes</span>
+    <span class="chip">7 external references</span>
+    <span class="chip">module: DMS</span>
+    <button class="dl-btn" onclick="window.print()">⤓ Save as PDF</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#erd">Relationship diagrams</a>
+  <a href="#structures">Table structures</a>
+  <a href="#doc-mgmt-tables">— Document Management</a>
+  <a href="#training-tables">— Training &amp; Compliance</a>
+  <a href="#gov-tables">— Workflow, Approvals &amp; Audit</a>
+  <a href="#full-schema">Full schema diagram</a>
+</nav>
+
+<div class="legend">
+  <div class="legend-item"><span class="swatch" style="background:var(--grp-doc)"></span>Document Management</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--grp-train)"></span>Training &amp; Compliance</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--grp-gov)"></span>Workflow, Approvals &amp; Audit</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--grp-ext)"></span>External (core Frappe / HR)</div>
+  <div class="legend-item sep"><span class="mono">A ||--o{ B : field</span> &nbsp;reads "one A has zero-or-many B, via B's <span class="mono">field</span> link"</div>
+</div>
+
+<h2 id="erd" style="margin-bottom:8px;">Relationship diagrams</h2>
+<p class="group-desc" style="margin-top:0;">How the tables connect — see the field-level structure of each one further down the page.</p>
+
+<section class="group" id="doc-mgmt">
+  <div class="group-head"><span class="group-tag doc">01</span><h2>Document Management</h2></div>
+  <p class="group-desc">The controlled-document core: identity, lifecycle status, classification, and the request/revision trail around it.</p>
+  <div class="diagram-card">
+    <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'primaryColor': '#e8f2fc', 'primaryTextColor': '#16304f', 'primaryBorderColor': '#2f6fb2',
+  'lineColor': '#3d5f80', 'tertiaryColor': '#ffffff',
+  'fontFamily': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', 'fontSize': '17px'
+}, 'er': {'diagramPadding': 24, 'entityPadding': 18, 'minEntityWidth': 115, 'minEntityHeight': 85, 'fontSize': 17}}}%%
+erDiagram
+    DocumentType     ||--o{ DocumentLibrary : "type"
+    DMSProject       ||--o{ DocumentLibrary : "project"
+    Department       ||--o{ DocumentLibrary : "department"
+    DocumentCategory ||--o{ DocumentLibrary : "category"
+    File             ||--o{ DocumentLibrary : "file_doc"
+    WorkflowState    ||--o{ DocumentLibrary : "workflow_state"
+    User             ||--o{ DocumentLibrary : "checked_out_by"
+    DocumentLibrary  ||--o{ DocumentLibrary : "revision_of"
+    DocumentRequest  ||--o{ DocumentLibrary : "originated_from_request"
+
+    DocumentLibrary  ||--o{ DocumentRevision : "document"
+    File             ||--o{ DocumentRevision : "file"
+
+    DocumentType     ||--o{ DocumentRequest : "document_type"
+    User             ||--o{ DocumentRequest : "requested_by / requested_for"
+    Department       ||--o{ DocumentRequest : "department"
+    DocumentCategory ||--o{ DocumentRequest : "request_category"
+    DocumentLibrary  ||--o{ DocumentRequest : "reference_document"
+    DocumentLibrary  ||--o{ DocumentRequest : "linked_document"
+    User             ||--o{ DocumentRequest : "approved_by / rejected_by"
+    </pre>
+  </div>
+</section>
+
+<section class="group" id="training">
+  <div class="group-head"><span class="group-tag train">02</span><h2>Training &amp; Compliance</h2></div>
+  <p class="group-desc">Curricula bundle documents; assignment rules decide who must train on what; training records track each employee's status through to closure.</p>
+  <div class="diagram-card">
+    <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'primaryColor': '#e4f3ec', 'primaryTextColor': '#16304f', 'primaryBorderColor': '#2f7a5c',
+  'lineColor': '#3f7a5f', 'tertiaryColor': '#ffffff',
+  'fontFamily': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', 'fontSize': '17px'
+}, 'er': {'diagramPadding': 24, 'entityPadding': 18, 'minEntityWidth': 115, 'minEntityHeight': 85, 'fontSize': 17}}}%%
+erDiagram
+    DMSCurriculum          ||--o{ DMSCurriculumDocument : "documents"
+    DocumentLibrary        ||--o{ DMSCurriculumDocument : "document"
+
+    DocumentCategory       ||--o{ DMSQuiz : "category"
+    DMSQuiz                ||--o{ DMSQuizQuestion : "questions"
+
+    DocumentCategory       ||--o{ DMSTrainingAssignmentRule : "document_category"
+    DocumentType           ||--o{ DMSTrainingAssignmentRule : "document_type"
+    Department             ||--o{ DMSTrainingAssignmentRule : "department"
+    Role                   ||--o{ DMSTrainingAssignmentRule : "role"
+    DMSCurriculum          ||--o{ DMSTrainingAssignmentRule : "curriculum"
+
+    DocumentLibrary        ||--o{ DMSTrainingRecord : "document"
+    Department             ||--o{ DMSTrainingRecord : "department"
+    DocumentCategory       ||--o{ DMSTrainingRecord : "category"
+    DMSQuiz                ||--o{ DMSTrainingRecord : "training_quiz"
+    DMSCurriculum          ||--o{ DMSTrainingRecord : "curriculum"
+    User                   ||--o{ DMSTrainingRecord : "assigned_by / verified_by / closed_by"
+
+    DMSTrainingRecord      ||--o{ DocumentAcknowledgement : "employees"
+    Employee               ||--o{ DocumentAcknowledgement : "employee"
+    Department             ||--o{ DocumentAcknowledgement : "department"
+    User                   ||--o{ DocumentAcknowledgement : "proxy_completed_by"
+
+    DMSTrainingRecord      ||--o{ DMSTrainingSession : "training_record"
+    User                   ||--o{ DMSTrainingSession : "trainer"
+    DMSTrainingSession     ||--o{ DMSTrainingSessionAttendee : "attendees"
+    Employee               ||--o{ DMSTrainingSessionAttendee : "employee"
+    </pre>
+  </div>
+</section>
+
+<section class="group" id="gov">
+  <div class="group-head"><span class="group-tag gov">03</span><h2>Workflow, Approvals &amp; Audit</h2></div>
+  <p class="group-desc">Who reviews/approves which category of document, and the immutable trail of what happened — the Part 11 layer.</p>
+  <div class="diagram-card">
+    <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'primaryColor': '#f8efdd', 'primaryTextColor': '#16304f', 'primaryBorderColor': '#9a6b1f',
+  'lineColor': '#8a6a2e', 'tertiaryColor': '#ffffff',
+  'fontFamily': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', 'fontSize': '17px'
+}, 'er': {'diagramPadding': 24, 'entityPadding': 18, 'minEntityWidth': 115, 'minEntityHeight': 85, 'fontSize': 17}}}%%
+erDiagram
+    Department       ||--o{ ApprovalMatrix : "department"
+    DocumentCategory ||--o{ ApprovalMatrix : "category"
+    Role             ||--o{ ApprovalMatrix : "reviewer"
+    Role             ||--o{ ApprovalMatrix : "approver"
+
+    DocumentLibrary  ||--o{ DMSAuditLog : "document"
+    DocumentRequest  ||--o{ DMSAuditLog : "request"
+    User             ||--o{ DMSAuditLog : "user"
+
+    CoreDocType      ||--o{ CFRPart11SignatureLog : "reference_doctype"
+    User             ||--o{ CFRPart11SignatureLog : "signer"
+    </pre>
+  </div>
+</section>
+
+<h2 id="structures" style="margin-bottom:4px;">Table structures</h2>
+<p class="group-desc" style="margin-top:0; margin-bottom:32px;">
+  Every stored column per DocType — layout-only fields (Section/Column Break) are omitted since Frappe
+  doesn't create a database column for them. <span class="req-dot">●</span> marks a required field;
+  <span class="ro-tag">RO</span> marks read-only (system- or workflow-set).
+</p>
+
+<section class="group" id="doc-mgmt-tables">
+  <div class="group-head"><span class="group-tag doc">01</span><h2>Document Management — tables</h2></div>
+
+  <div class="dtcard" id="t-document-library">
+    <div class="dtcard-head"><h3>Document Library</h3><span class="kind-pill">submittable</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:DOC-{YYYY}-{####}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">document_number</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">System-set identifier <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">type</td><td class="ftype">Link</td><td class="flink">Document Type</td><td></td><td class="fnote">SOP / Policy / Form / etc.</td></tr>
+        <tr><td class="fname">project</td><td class="ftype">Link</td><td class="flink">DMS Project</td><td></td><td class="fnote">Shown only when type = "Project"</td></tr>
+        <tr><td class="fname">title</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">department</td><td class="ftype">Link</td><td class="flink">Department</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">category</td><td class="ftype">Link</td><td class="flink">Document Category</td><td class="req-dot">●</td><td class="fnote">Drives approval routing &amp; training rules</td></tr>
+        <tr><td class="fname">version</td><td class="ftype">Data</td><td class="flink">default "1.0"</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">status</td><td class="ftype">Select</td><td class="flink">Draft / Review / Approved / Published / Obsolete / Archived / Rejected</td><td></td><td class="fnote">default Draft</td></tr>
+        <tr><td class="fname">file</td><td class="ftype">Attach</td><td class="flink">—</td><td></td><td class="fnote">Document File</td></tr>
+        <tr><td class="fname">training_video</td><td class="ftype">Attach</td><td class="flink">—</td><td></td><td class="fnote">Plays inside each Training Record</td></tr>
+        <tr><td class="fname">training_video_url</td><td class="ftype">Data (URL)</td><td class="flink">—</td><td></td><td class="fnote">YouTube/Vimeo alternative to uploaded video</td></tr>
+        <tr><td class="fname">file_doc</td><td class="ftype">Link</td><td class="flink">File</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">effective_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">review_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote">Next Review Date</td></tr>
+        <tr><td class="fname">training_quiz</td><td class="ftype">Link</td><td class="flink">DMS Quiz</td><td></td><td class="fnote">Must pass before training can be Completed</td></tr>
+        <tr><td class="fname">revision_of</td><td class="ftype">Link</td><td class="flink">Document Library (self)</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">originated_from_request</td><td class="ftype">Link</td><td class="flink">Document Request</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">workflow_state</td><td class="ftype">Link</td><td class="flink">Workflow State</td><td></td><td class="fnote">Backs Quality Document Workflow <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">checked_out_by</td><td class="ftype">Link</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">checked_out_on</td><td class="ftype">Datetime</td><td class="flink">—</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-document-type">
+    <div class="dtcard-head"><h3>Document Type</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">field:type_name</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">type_name</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">unique</td></tr>
+        <tr><td class="fname">description</td><td class="ftype">Text</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-document-category">
+    <div class="dtcard-head"><h3>Document Category</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">field:category_name</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">category_name</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">unique</td></tr>
+        <tr><td class="fname">description</td><td class="ftype">Text</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">requires_dual_signoff</td><td class="ftype">Check</td><td class="flink">default 0</td><td></td><td class="fnote">Forces two managers to verify Training Record completion</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-project">
+    <div class="dtcard-head"><h3>DMS Project</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">field:project_name</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">project_name</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">unique</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-document-request">
+    <div class="dtcard-head"><h3>Document Request</h3><span class="kind-pill">transactional</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:REQ-{YYYY}-{####}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">title</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">Proposed Title</td></tr>
+        <tr><td class="fname">request_type</td><td class="ftype">Select</td><td class="flink">New Document / Revision / Document Access Request / Controlled Copy Request / External Document Request / Obsolete Document Retrieval Request</td><td></td><td class="fnote">default New Document</td></tr>
+        <tr><td class="fname">document_type</td><td class="ftype">Link</td><td class="flink">Document Type</td><td></td><td class="fnote">shown for New Document / Revision</td></tr>
+        <tr><td class="fname">priority</td><td class="ftype">Select</td><td class="flink">Low / Medium / High / Critical</td><td></td><td class="fnote">default Medium</td></tr>
+        <tr><td class="fname">requested_by</td><td class="ftype">Link</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">requested_for</td><td class="ftype">Link</td><td class="flink">User</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">due_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">reference_document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td>†</td><td class="fnote">required for Revision/Access/Copy/Retrieval requests</td></tr>
+        <tr><td class="fname">department</td><td class="ftype">Link</td><td class="flink">Department</td><td>†</td><td class="fnote">required for New Document/Controlled Copy</td></tr>
+        <tr><td class="fname">request_category</td><td class="ftype">Link</td><td class="flink">Document Category</td><td>†</td><td class="fnote">required for New Document</td></tr>
+        <tr><td class="fname">reason</td><td class="ftype">Text Editor</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">Reason for Request</td></tr>
+        <tr><td class="fname">status</td><td class="ftype">Select</td><td class="flink">Pending / Approved / Rejected / Withdrawn</td><td></td><td class="fnote">default Pending</td></tr>
+        <tr><td class="fname">linked_document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td></td><td class="fnote">the resulting/target document</td></tr>
+        <tr><td class="fname">approved_by / approved_on</td><td class="ftype">Link (User) / Datetime</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">rejected_by / rejected_on</td><td class="ftype">Link (User) / Datetime</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">rejection_reason</td><td class="ftype">Small Text</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+    <p class="fnote" style="font-size:12px;margin:0 0 12px;">† conditionally required depending on <span class="mono">request_type</span> — see field descriptions in the JSON source for the exact condition.</p>
+  </div>
+
+  <div class="dtcard" id="t-document-revision">
+    <div class="dtcard-head"><h3>Document Revision</h3><span class="kind-pill">transactional</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:{document}-{version}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">version</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">change_log</td><td class="ftype">Text Editor</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">file</td><td class="ftype">Attach</td><td class="flink">—</td><td></td><td class="fnote">Archived File</td></tr>
+        <tr><td class="fname">file_doc</td><td class="ftype">Link</td><td class="flink">File</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">revision_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group" id="training-tables">
+  <div class="group-head"><span class="group-tag train">02</span><h2>Training &amp; Compliance — tables</h2></div>
+
+  <div class="dtcard" id="t-dms-curriculum">
+    <div class="dtcard-head"><h3>DMS Curriculum</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">field:title</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">title</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">unique</td></tr>
+        <tr><td class="fname">active</td><td class="ftype">Check</td><td class="flink">default 1</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">description</td><td class="ftype">Small Text</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">documents</td><td class="ftype">Table</td><td class="flink">DMS Curriculum Document</td><td></td><td class="fnote">child rows</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-curriculum-document">
+    <div class="dtcard-head"><h3>DMS Curriculum Document</h3><span class="kind-pill">child table</span></div>
+    <div class="pk-line">Child of <span class="mono">DMS Curriculum.documents</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">document_title</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">fetched from document.title <span class="ro-tag">RO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-quiz">
+    <div class="dtcard-head"><h3>DMS Quiz</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">field:title</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">title</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">unique</td></tr>
+        <tr><td class="fname">document_category</td><td class="ftype">Link</td><td class="flink">Document Category</td><td></td><td class="fnote">optional — quizzes reusable across a category</td></tr>
+        <tr><td class="fname">pass_percentage</td><td class="ftype">Float</td><td class="flink">—</td><td></td><td class="fnote">blank = Training Settings default</td></tr>
+        <tr><td class="fname">active</td><td class="ftype">Check</td><td class="flink">default 1</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">questions</td><td class="ftype">Table</td><td class="flink">DMS Quiz Question</td><td></td><td class="fnote">child rows</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-quiz-question">
+    <div class="dtcard-head"><h3>DMS Quiz Question</h3><span class="kind-pill">child table</span></div>
+    <div class="pk-line">Child of <span class="mono">DMS Quiz.questions</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">question_text</td><td class="ftype">Small Text</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">option_1 / option_2</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">option_3 / option_4</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">optional (support 2–4 choice questions)</td></tr>
+        <tr><td class="fname">correct_option</td><td class="ftype">Select</td><td class="flink">1 / 2 / 3 / 4</td><td class="req-dot">●</td><td class="fnote">default 1</td></tr>
+        <tr><td class="fname">marks</td><td class="ftype">Float</td><td class="flink">default 1</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-training-assignment-rule">
+    <div class="dtcard-head"><h3>DMS Training Assignment Rule</h3><span class="kind-pill">master / rule</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:TAR-{####}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">active</td><td class="ftype">Check</td><td class="flink">default 1</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">retraining_months</td><td class="ftype">Int</td><td class="flink">—</td><td></td><td class="fnote">overrides Training Settings default</td></tr>
+        <tr><td class="fname">document_category</td><td class="ftype">Link</td><td class="flink">Document Category</td><td></td><td class="fnote">blank = match all</td></tr>
+        <tr><td class="fname">document_type</td><td class="ftype">Link</td><td class="flink">Document Type</td><td></td><td class="fnote">blank = match all</td></tr>
+        <tr><td class="fname">department</td><td class="ftype">Link</td><td class="flink">Department</td><td></td><td class="fnote">target filter, blank = every department</td></tr>
+        <tr><td class="fname">role</td><td class="ftype">Link</td><td class="flink">Role</td><td></td><td class="fnote">target filter, blank = skip role filter</td></tr>
+        <tr><td class="fname">curriculum</td><td class="ftype">Link</td><td class="flink">DMS Curriculum</td><td></td><td class="fnote">onboarding curriculum auto-assigned via Employee.after_insert</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-training-record">
+    <div class="dtcard-head"><h3>DMS Training Record</h3><span class="kind-pill">transactional</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:TRN-{YYYY}-{####}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">document_title / department / category / training_quiz</td><td class="ftype">fetched</td><td class="flink">via document.*</td><td></td><td class="fnote"><span class="ro-tag">RO</span> read-only mirrors of the document</td></tr>
+        <tr><td class="fname">version</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">status</td><td class="ftype">Select</td><td class="flink">Draft / Assigned / In Progress / Completed / Overdue / Verified / Closed / Cancelled</td><td></td><td class="fnote">default Draft</td></tr>
+        <tr><td class="fname">due_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">assigned_by / assigned_date</td><td class="ftype">Link (User) / Date</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">curriculum</td><td class="ftype">Link</td><td class="flink">DMS Curriculum</td><td></td><td class="fnote">set when created via curriculum assignment <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">retraining_months</td><td class="ftype">Int</td><td class="flink">—</td><td></td><td class="fnote">blank = Training Settings / Assignment Rule default</td></tr>
+        <tr><td class="fname">total_assigned / total_completed / completion_percentage</td><td class="ftype">Int / Int / Percent</td><td class="flink">—</td><td></td><td class="fnote"><span class="ro-tag">RO</span> rolled up from employees table</td></tr>
+        <tr><td class="fname">training_description</td><td class="ftype">Text Editor</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">employees</td><td class="ftype">Table</td><td class="flink">Document Acknowledgement</td><td></td><td class="fnote">one row per assigned employee</td></tr>
+        <tr><td class="fname">verified_by / verified_date / verification_notes</td><td class="ftype">Link / Date / Text</td><td class="flink">User</td><td></td><td class="fnote">by/date <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">secondary_verified_by / secondary_verified_date / secondary_verification_notes</td><td class="ftype">Link / Date / Text</td><td class="flink">User</td><td></td><td class="fnote">required when category.requires_dual_signoff <span class="ro-tag">RO</span> by/date</td></tr>
+        <tr><td class="fname">effectiveness_rating</td><td class="ftype">Select</td><td class="flink">Effective / Partially Effective / Not Effective</td><td></td><td class="fnote">follow-up on-the-job check <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">effectiveness_verified_by / effectiveness_verified_date / effectiveness_notes</td><td class="ftype">Link / Date / Text</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span> by/date</td></tr>
+        <tr><td class="fname">closed_by / closed_date / closure_notes</td><td class="ftype">Link / Date / Text</td><td class="flink">User</td><td></td><td class="fnote"><span class="ro-tag">RO</span> by/date</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-document-acknowledgement">
+    <div class="dtcard-head"><h3>Document Acknowledgement</h3><span class="kind-pill">child table</span></div>
+    <div class="pk-line">Child of <span class="mono">DMS Training Record.employees</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">employee</td><td class="ftype">Link</td><td class="flink">Employee</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">department</td><td class="ftype">Link</td><td class="flink">Department</td><td></td><td class="fnote">fetched from employee <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">status</td><td class="ftype">Select</td><td class="flink">Suggested / Pending / In Progress / Completed / Failed / Overdue / Excused</td><td></td><td class="fnote">default Pending</td></tr>
+        <tr><td class="fname">due_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">acknowledged / acknowledged_on</td><td class="ftype">Check / Datetime</td><td class="flink">—</td><td></td><td class="fnote">acknowledged_on <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">completion_date</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">assessment_score</td><td class="ftype">Float</td><td class="flink">—</td><td></td><td class="fnote">score out of 100 (optional)</td></tr>
+        <tr><td class="fname">quiz_passed / quiz_attempts</td><td class="ftype">Check / Int</td><td class="flink">—</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">retake_allowed</td><td class="ftype">Check</td><td class="flink">default 0</td><td></td><td class="fnote">manager-granted, auto-consumed on next attempt <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">expires_on</td><td class="ftype">Date</td><td class="flink">—</td><td></td><td class="fnote">completion + retraining cycle <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">escalated</td><td class="ftype">Check</td><td class="flink">default 0</td><td></td><td class="fnote">set once overdue escalation email sent <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">proxy_completed_by / proxy_reason</td><td class="ftype">Link (User) / Small Text</td><td class="flink">User</td><td></td><td class="fnote">manager completed on employee's behalf <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">e_signature</td><td class="ftype">Signature</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">certificate_file</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">generated training certificate <span class="ro-tag">RO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-training-session">
+    <div class="dtcard-head"><h3>DMS Training Session</h3><span class="kind-pill">transactional</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:SESS-{YYYY}-{####}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">training_record</td><td class="ftype">Link</td><td class="flink">DMS Training Record</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">session_title</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">status</td><td class="ftype">Select</td><td class="flink">Scheduled / Completed / Cancelled</td><td></td><td class="fnote">default Scheduled</td></tr>
+        <tr><td class="fname">session_datetime</td><td class="ftype">Datetime</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">trainer</td><td class="ftype">Link</td><td class="flink">User</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">location</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">notes</td><td class="ftype">Small Text</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">attendees</td><td class="ftype">Table</td><td class="flink">DMS Training Session Attendee</td><td></td><td class="fnote">child rows</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-training-session-attendee">
+    <div class="dtcard-head"><h3>DMS Training Session Attendee</h3><span class="kind-pill">child table</span></div>
+    <div class="pk-line">Child of <span class="mono">DMS Training Session.attendees</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">employee</td><td class="ftype">Link</td><td class="flink">Employee</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">employee_name</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">fetched from employee <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">attended</td><td class="ftype">Check</td><td class="flink">default 0</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-training-settings">
+    <div class="dtcard-head"><h3>Training Settings</h3><span class="kind-pill">single / config</span></div>
+    <div class="pk-line">Singleton — one row for the whole site</div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">default_pass_percentage</td><td class="ftype">Float</td><td class="flink">default 80</td><td></td><td class="fnote">min. quiz score to mark training Completed</td></tr>
+        <tr><td class="fname">default_retraining_months</td><td class="ftype">Int</td><td class="flink">default 12</td><td></td><td class="fnote">months before retraining required</td></tr>
+        <tr><td class="fname">escalation_days</td><td class="ftype">Int</td><td class="flink">default 3</td><td></td><td class="fnote">days overdue before escalating to manager</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group" id="gov-tables">
+  <div class="group-head"><span class="group-tag gov">03</span><h2>Workflow, Approvals &amp; Audit — tables</h2></div>
+
+  <div class="dtcard" id="t-approval-matrix">
+    <div class="dtcard-head"><h3>Approval Matrix</h3><span class="kind-pill">master</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">format:{department}-{category}</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">department</td><td class="ftype">Link</td><td class="flink">Department</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">category</td><td class="ftype">Link</td><td class="flink">Document Category</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">reviewer</td><td class="ftype">Link</td><td class="flink">Role</td><td></td><td class="fnote">Reviewer Role</td></tr>
+        <tr><td class="fname">approver</td><td class="ftype">Link</td><td class="flink">Role</td><td class="req-dot">●</td><td class="fnote">Approver Role</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-dms-audit-log">
+    <div class="dtcard-head"><h3>DMS Audit Log</h3><span class="kind-pill">log</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">autoincrement</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">document</td><td class="ftype">Link</td><td class="flink">Document Library</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">request</td><td class="ftype">Link</td><td class="flink">Document Request</td><td></td><td class="fnote"></td></tr>
+        <tr><td class="fname">action</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">user</td><td class="ftype">Link</td><td class="flink">User</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">timestamp</td><td class="ftype">Datetime</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">ip_address</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dtcard" id="t-cfr-part-11-signature-log">
+    <div class="dtcard-head"><h3>CFR Part 11 Signature Log</h3><span class="kind-pill">log</span></div>
+    <div class="pk-line">PK: <span class="mono">name</span> — autoname <span class="mono">ESIGN-.YYYY.-.#####</span></div>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Links to / Options</th><th>Req</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="fname">reference_doctype</td><td class="ftype">Link</td><td class="flink">DocType</td><td class="req-dot">●</td><td class="fnote">what kind of record was signed</td></tr>
+        <tr><td class="fname">reference_name</td><td class="ftype">Data</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">the specific record's name (dynamic link)</td></tr>
+        <tr><td class="fname">signer</td><td class="ftype">Link</td><td class="flink">User</td><td class="req-dot">●</td><td class="fnote"></td></tr>
+        <tr><td class="fname">signer_name / signer_email</td><td class="ftype">Data</td><td class="flink">—</td><td>†</td><td class="fnote">signer_name required</td></tr>
+        <tr><td class="fname">position</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">Position / Designation</td></tr>
+        <tr><td class="fname">timestamp</td><td class="ftype">Datetime</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">ip_address</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote"><span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">document_checksum</td><td class="ftype">Data</td><td class="flink">—</td><td></td><td class="fnote">SHA-256 <span class="ro-tag">RO</span></td></tr>
+        <tr><td class="fname">meaning</td><td class="ftype">Small Text</td><td class="flink">—</td><td class="req-dot">●</td><td class="fnote">Meaning of Signature</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<details class="full" id="full-schema">
+  <summary>Full schema — all 19 DocTypes in one diagram</summary>
+  <div class="diagram-card">
+    <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': {
+  'primaryColor': '#e8f2fc', 'primaryTextColor': '#16304f', 'primaryBorderColor': '#2f6fb2',
+  'lineColor': '#3d5f80', 'tertiaryColor': '#ffffff',
+  'fontFamily': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', 'fontSize': '16px'
+}, 'er': {'diagramPadding': 22, 'entityPadding': 16, 'minEntityWidth': 105, 'minEntityHeight': 78, 'fontSize': 16}}}%%
+erDiagram
+    DocumentType     ||--o{ DocumentLibrary : "type"
+    DMSProject       ||--o{ DocumentLibrary : "project"
+    Department       ||--o{ DocumentLibrary : "department"
+    DocumentCategory ||--o{ DocumentLibrary : "category"
+    File             ||--o{ DocumentLibrary : "file_doc"
+    DMSQuiz          ||--o{ DocumentLibrary : "training_quiz"
+    WorkflowState    ||--o{ DocumentLibrary : "workflow_state"
+    User             ||--o{ DocumentLibrary : "checked_out_by"
+    DocumentLibrary  ||--o{ DocumentLibrary : "revision_of"
+    DocumentRequest  ||--o{ DocumentLibrary : "originated_from_request"
+
+    DocumentLibrary  ||--o{ DocumentRevision : "document"
+    File             ||--o{ DocumentRevision : "file"
+
+    DocumentType     ||--o{ DocumentRequest : "document_type"
+    User             ||--o{ DocumentRequest : "requested_by"
+    User             ||--o{ DocumentRequest : "requested_for"
+    Department       ||--o{ DocumentRequest : "department"
+    DocumentCategory ||--o{ DocumentRequest : "request_category"
+    DocumentLibrary  ||--o{ DocumentRequest : "reference_document"
+    DocumentLibrary  ||--o{ DocumentRequest : "linked_document"
+    User             ||--o{ DocumentRequest : "approved_by"
+    User             ||--o{ DocumentRequest : "rejected_by"
+
+    DocumentLibrary  ||--o{ DMSAuditLog : "document"
+    DocumentRequest  ||--o{ DMSAuditLog : "request"
+    User             ||--o{ DMSAuditLog : "user"
+
+    CoreDocType      ||--o{ CFRPart11SignatureLog : "reference_doctype"
+    User             ||--o{ CFRPart11SignatureLog : "signer"
+
+    Department       ||--o{ ApprovalMatrix : "department"
+    DocumentCategory ||--o{ ApprovalMatrix : "category"
+    Role             ||--o{ ApprovalMatrix : "reviewer"
+    Role             ||--o{ ApprovalMatrix : "approver"
+
+    DMSCurriculum          ||--o{ DMSCurriculumDocument : "documents"
+    DocumentLibrary        ||--o{ DMSCurriculumDocument : "document"
+
+    DocumentCategory       ||--o{ DMSQuiz : "category"
+    DMSQuiz                ||--o{ DMSQuizQuestion : "questions"
+
+    DocumentCategory       ||--o{ DMSTrainingAssignmentRule : "document_category"
+    DocumentType           ||--o{ DMSTrainingAssignmentRule : "document_type"
+    Department             ||--o{ DMSTrainingAssignmentRule : "department"
+    Role                   ||--o{ DMSTrainingAssignmentRule : "role"
+    DMSCurriculum          ||--o{ DMSTrainingAssignmentRule : "curriculum"
+
+    DocumentLibrary        ||--o{ DMSTrainingRecord : "document"
+    Department             ||--o{ DMSTrainingRecord : "department"
+    DocumentCategory       ||--o{ DMSTrainingRecord : "category"
+    DMSQuiz                ||--o{ DMSTrainingRecord : "training_quiz"
+    DMSCurriculum          ||--o{ DMSTrainingRecord : "curriculum"
+    User                   ||--o{ DMSTrainingRecord : "assigned_by"
+    User                   ||--o{ DMSTrainingRecord : "verified_by"
+    User                   ||--o{ DMSTrainingRecord : "closed_by"
+
+    DMSTrainingRecord      ||--o{ DocumentAcknowledgement : "employees"
+    Employee               ||--o{ DocumentAcknowledgement : "employee"
+    Department             ||--o{ DocumentAcknowledgement : "department"
+    User                   ||--o{ DocumentAcknowledgement : "proxy_completed_by"
+
+    DMSTrainingRecord      ||--o{ DMSTrainingSession : "training_record"
+    User                   ||--o{ DMSTrainingSession : "trainer"
+    DMSTrainingSession     ||--o{ DMSTrainingSessionAttendee : "attendees"
+    Employee               ||--o{ DMSTrainingSessionAttendee : "employee"
+    </pre>
+  </div>
+</details>
+
+<footer>
+  Generated from the DocType JSON source under <span class="mono">apps/quality_dms/quality_dms/dms/doctype/</span>.
+  Click <strong>⤓ Save as PDF</strong> above to export this page, or open the saved
+  <span class="mono">.html</span> file directly in any browser — no server required.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  function currentMermaidTheme() {
+    var stamped = document.documentElement.getAttribute('data-theme');
+    if (stamped === 'dark') return 'dark';
+    if (stamped === 'light') return 'base';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'base';
+  }
+  mermaid.initialize({ startOnLoad: true, theme: currentMermaidTheme(), securityLevel: 'loose' });
+</script>
+
+</body>
+</html>

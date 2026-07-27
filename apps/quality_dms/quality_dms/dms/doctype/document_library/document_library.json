@@ -1,42 +1,81 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "allow_rename": 1,
+ "allow_rename": 0,
  "autoname": "format:DOC-{YYYY}-{####}",
  "creation": "2026-06-24 11:03:23.790176",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "document_number",
+  "sec_document_info",
+  "title",
   "type",
   "project",
-  "title",
   "department",
   "category",
+  "col_info_break",
+  "document_number",
   "version",
   "status",
   "workflow_state",
-  "file",
-  "training_video",
-  "training_video_url",
-  "file_doc",
-  "effective_date",
-  "review_date",
-  "training_quiz",
   "revision_of",
   "originated_from_request",
+  "sec_file_training",
+  "file",
+  "training_video",
+  "file_doc",
+  "col_file_break",
+  "training_video_url",
+  "training_quiz",
+  "sec_dates",
+  "effective_date",
+  "col_dates_break",
+  "review_date",
   "section_checkout",
   "checked_out_by",
+  "col_checkout_break",
   "checked_out_on"
  ],
  "fields": [
   {
+   "fieldname": "sec_document_info",
+   "fieldtype": "Section Break",
+   "label": "Document Information"
+  },
+  {
+   "fieldname": "col_info_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sec_file_training",
+   "fieldtype": "Section Break",
+   "label": "File & Training"
+  },
+  {
+   "fieldname": "col_file_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sec_dates",
+   "fieldtype": "Section Break",
+   "label": "Dates"
+  },
+  {
+   "fieldname": "col_dates_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "col_checkout_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The version-specific number of the current published version (e.g. SOP-2026-0001). Changes each time a new version is published. The permanent Document ID is the record's own ID (name), which never changes.",
    "fieldname": "document_number",
    "fieldtype": "Data",
    "in_global_search": 1,
    "in_list_view": 1,
-   "label": "Document Number",
+   "label": "Current Document Number",
    "no_copy": 1,
    "read_only": 1,
    "search_index": 1
@@ -82,6 +121,7 @@
    "default": "1.0",
    "fieldname": "version",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Version",
    "read_only": 1
   },
@@ -89,6 +129,7 @@
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Draft\nReview\nApproved\nPublished\nObsolete\nArchived\nRejected"
   },
@@ -121,11 +162,13 @@
   {
    "fieldname": "effective_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Effective Date"
   },
   {
    "fieldname": "review_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Next Review Date"
   },
   {
@@ -156,7 +199,6 @@
   {
    "fieldname": "workflow_state",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Workflow State",
    "options": "Workflow State",
    "print_hide": 1,

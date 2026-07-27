@@ -18,6 +18,19 @@ frappe.ui.form.on("Issue", {
 	},
 
 	refresh: function (frm) {
+		// Issue is called "Defect" throughout Projects; the core form toolbar
+		// and breadcrumb build their "New Issue" text from the raw DocType
+		// name, with no per-doctype override hook. Fix both here, after
+		// core's own refresh_header/set_breadcrumbs have already run (this
+		// handler fires later in the same refresh cycle), so only the label
+		// changes and nothing about the Issue DocType itself.
+		if (frm.is_new()) {
+			const new_defect_title = __("New {0}", [__("Defect")]);
+			frm.page.set_title(new_defect_title);
+			frappe.utils.set_title(new_defect_title + " - " + frm.docname);
+			frappe.breadcrumbs.$breadcrumbs.find("li a.title-text-form").text(new_defect_title);
+		}
+
 		// buttons
 		if (frm.doc.status !== "Closed") {
 			frm.add_custom_button(__("Close"), function () {

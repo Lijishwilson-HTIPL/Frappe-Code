@@ -36,6 +36,28 @@
 		"Training Matrix Report",
 	]);
 
+	// The ERPNext Projects module reuses the same navy/blue theme so its
+	// workspace, lists, and forms match the DMS look.
+	const PROJECT_DOCTYPES = new Set([
+		"Project",
+		"Task",
+		"Timesheet",
+		"Project Template",
+		"Project Type",
+		"Project Update",
+		"Activity Type",
+		"Activity Cost",
+		"Task Type",
+		"Issue",
+	]);
+	const PROJECT_REPORTS = new Set([
+		"Project Summary",
+		"Daily Timesheet Summary",
+		"Timesheet Billing Summary",
+		"Project wise Stock Tracking",
+		"Delayed Tasks Summary",
+	]);
+
 	function slug(txt) {
 		return (txt || "").toString().toLowerCase().replace(/[\s_]+/g, "-");
 	}
@@ -72,8 +94,20 @@
 		return false;
 	}
 
+	function is_projects_route() {
+		const route = (frappe.get_route && frappe.get_route()) || [];
+		if (!route.length) return false;
+		const view = route[0];
+		const target = route[1] || "";
+		if (view === "Workspaces") return slug(target) === "projects";
+		if (view === "query-report") return PROJECT_REPORTS.has(target);
+		// any view of a Projects doctype: List, Form, Kanban, Gantt, Report, …
+		if (PROJECT_DOCTYPES.has(target)) return true;
+		return false;
+	}
+
 	function apply() {
-		document.body.classList.toggle("dms-theme", is_dms_route());
+		document.body.classList.toggle("dms-theme", is_dms_route() || is_projects_route());
 	}
 
 	$(document).ready(function () {

@@ -1,8 +1,10 @@
 {
  "chart_name": "Documents by Status",
  "chart_type": "Group By",
+ "color": "#1e3a5f",
  "creation": "2026-06-24 11:10:58.260888",
  "currency": "",
+ "custom_options": "{\"colors\": [\"#a9c6e6\", \"#1e3a5f\", \"#2f6fb2\", \"#5b84ab\", \"#7fa0c4\", \"#16304f\"]}",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Document Library",

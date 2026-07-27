@@ -131,7 +131,7 @@
   {
    "fieldname": "issue_type",
    "fieldtype": "Link",
-   "label": "Issue Type",
+   "label": "Defect Type",
    "options": "Issue Type"
   },
   {

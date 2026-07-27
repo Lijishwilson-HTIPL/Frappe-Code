@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMS — ERD</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #eef1f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+    color: #1b2b3a;
+  }
+  .page-head {
+    padding: 20px 28px 14px;
+    background: #fff;
+    border-bottom: 1px solid #d3dbe6;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .page-head h1 { margin: 0 0 4px; font-size: 20px; color: #16304f; }
+  .page-head p { margin: 0; font-size: 13px; color: #5b6b7c; }
+  .toolbar { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .toolbar button {
+    font-size: 12.5px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #c3cedd; background: #f6f8fb; color: #1b2b3a; cursor: pointer;
+  }
+  .toolbar button:hover { background: #e8f0fa; border-color: #2f6fb2; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: #5b6b7c; margin-left: auto; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .key-pk { width: 12px; height: 12px; display: inline-block; }
+
+  /* scroll canvas */
+  #scroll { overflow: auto; height: calc(100vh - 96px); }
+  #canvas { position: relative; padding: 40px; min-width: max-content; }
+  #wires { position: absolute; top: 0; left: 0; overflow: visible; z-index: 0; pointer-events: none; }
+  #cols { position: relative; z-index: 1; display: flex; gap: 60px; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 34px; }
+
+  /* table box — MySQL Workbench style */
+  .tbl {
+    width: 232px;
+    background: #fff;
+    border: 1px solid #9aa7b6;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(20,40,70,.18);
+    font-size: 11.5px;
+    overflow: hidden;
+  }
+  .tbl.ext { width: 190px; opacity: .96; }
+  .tbl-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px;
+    background: linear-gradient(180deg, #cfe0f2 0%, #a9c6e6 100%);
+    border-bottom: 1px solid #7fa0c4;
+    font-weight: 700; color: #1a3350; font-size: 12px;
+  }
+  .tbl.ext .tbl-head { background: linear-gradient(180deg, #dfe4ea 0%, #c2cad4 100%); border-bottom-color: #a7b0bd; color: #33404f; }
+  .tbl-head .ico { width: 13px; height: 13px; flex: none; }
+  .rows { list-style: none; margin: 0; padding: 0; }
+  .rows li {
+    display: flex; align-items: center; gap: 6px;
+    padding: 2.5px 8px;
+    border-bottom: 1px solid #eef1f5;
+    white-space: nowrap;
+  }
+  .rows li:last-child { border-bottom: none; }
+  .rows li .kico { width: 12px; flex: none; text-align: center; font-size: 10px; }
+  .rows li .cn { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+  .rows li .ct { color: #7d8896; font-size: 10.5px; margin-left: 8px; }
+  .rows li.pk { font-weight: 700; }
+  .rows li.pk .cn { color: #1a3350; }
+  .rows li.fk .cn { color: #2f6fb2; }
+  .idx-foot {
+    padding: 3px 8px; font-size: 10px; color: #6b7789;
+    background: #f2f5f9; border-top: 1px solid #dfe5ec;
+    display: flex; align-items: center; gap: 5px;
+  }
+  /* Diagram deliberately keeps the light "blueprint" look in both themes,
+     matching the reference MySQL Workbench export. */
+</style>
+</head>
+<body>
+<div class="page-head">
+  <h1>DMS — Physical Database ERD</h1>
+  <p>Quality DMS (<code>quality_dms</code>) — every DocType shown as its physical MariaDB table (<code>tab&lt;DocType&gt;</code>) with real columns, SQL types, primary keys and foreign-key links. Dashed lines are relationships (Link fields &amp; child→parent).</p>
+  <div class="toolbar">
+    <button onclick="zoomBy(0.1)">Zoom in +</button>
+    <button onclick="zoomBy(-0.1)">Zoom out −</button>
+    <button onclick="resetZoom()">Reset</button>
+    <button onclick="window.print()">Save as PDF</button>
+    <div class="legend">
+      <span><svg class="key-pk" viewBox="0 0 16 16"><circle cx="5" cy="8" r="3.4" fill="none" stroke="#d4a017" stroke-width="1.6"/><path d="M8 8 H14 M12 8 V11 M14 8 V11" stroke="#d4a017" stroke-width="1.6" fill="none"/></svg> Primary key (name)</span>
+      <span style="color:#2f6fb2">◆ Foreign key (Link)</span>
+      <span>▦ DMS table &nbsp; ▤ external / framework table</span>
+    </div>
+  </div>
+</div>
+
+<div id="scroll"><div id="canvas">
+  <svg id="wires"></svg>
+  <div id="cols"></div>
+</div></div>
+
+<script>
+// ---- SQL type mapping (Frappe fieldtype -> MariaDB type) ----
+const T = {
+  Data:"varchar(140)", Link:"varchar(140)", Select:"varchar(140)", "Dynamic Link":"varchar(140)",
+  "Small Text":"text", Text:"text", "Text Editor":"longtext", "Long Text":"longtext", Code:"longtext",
+  Int:"int(11)", Check:"int(1)", Float:"decimal(21,9)", Currency:"decimal(21,9)", Percent:"decimal(21,9)",
+  Date:"date", Datetime:"datetime(6)", Attach:"text", Signature:"longtext"
+};
+// standard Frappe columns present on every doctype table
+const STD = [["name","varchar(140)","pk"],["creation","datetime(6)"],["modified","datetime(6)"],
+  ["modified_by","varchar(140)"],["owner","varchar(140)"],["docstatus","int(1)"],["idx","int(8)"]];
+const CHILD_STD = [["parent","varchar(140)"],["parentfield","varchar(140)"],["parenttype","varchar(140)"]];
+
+function f(name, type) { return [name, T[type] || "varchar(140)"]; }
+
+// ---- table definitions: [displayName, group, isChild, dataColumns[]] ----
+// dataColumns entries: [colName, fieldtype]
+const TABLES = [
+  // external / framework (compact)
+  ["Department","ext",false,[], true], ["User","ext",false,[], true], ["Role","ext",false,[], true],
+  ["File","ext",false,[], true], ["Workflow State","ext",false,[], true], ["Employee","ext",false,[], true],
+  ["DocType","ext",false,[], true],
+
+  // document masters
+  ["Document Type","master",false,[f("type_name","Data"),f("prefix","Data"),f("description","Text")]],
+  ["Document Category","master",false,[f("category_name","Data"),f("description","Text"),f("requires_dual_signoff","Check")]],
+  ["DMS Project","master",false,[f("project_name","Data")]],
+
+  // core document
+  ["Document Library","doc",false,[
+    f("document_number","Data"),f("type","Link"),f("project","Link"),f("title","Data"),
+    f("department","Link"),f("category","Link"),f("version","Data"),f("status","Select"),
+    f("file","Attach"),f("training_video","Attach"),f("training_video_url","Data"),f("file_doc","Link"),
+    f("effective_date","Date"),f("review_date","Date"),f("training_quiz","Link"),f("revision_of","Link"),
+    f("originated_from_request","Link"),f("workflow_state","Link"),f("checked_out_by","Link"),f("checked_out_on","Datetime")]],
+  ["Document Request","doc",false,[
+    f("title","Data"),f("request_type","Select"),f("document_type","Link"),f("priority","Select"),
+    f("requested_by","Link"),f("requested_for","Link"),f("due_date","Date"),f("reference_document","Link"),
+    f("department","Link"),f("request_category","Link"),f("reason","Text Editor"),f("status","Select"),
+    f("linked_document","Link"),f("approved_by","Link"),f("approved_on","Datetime"),f("rejected_by","Link"),
+    f("rejected_on","Datetime"),f("rejection_reason","Small Text")]],
+  ["Document Revision","doc",false,[
+    f("document","Link"),f("version","Data"),f("change_log","Text Editor"),f("file","Attach"),
+    f("file_doc","Link"),f("revision_date","Date")]],
+
+  // training
+  ["DMS Curriculum","train",false,[f("title","Data"),f("active","Check"),f("description","Small Text")]],
+  ["DMS Curriculum Document","train",true,[f("document","Link"),f("document_title","Data")]],
+  ["DMS Quiz","train",false,[f("title","Data"),f("document_category","Link"),f("pass_percentage","Float"),f("active","Check")]],
+  ["DMS Quiz Question","train",true,[f("question_text","Small Text"),f("option_1","Data"),f("option_2","Data"),
+    f("option_3","Data"),f("option_4","Data"),f("correct_option","Select"),f("marks","Float")]],
+  ["DMS Training Assignment Rule","train",false,[f("active","Check"),f("retraining_months","Int"),
+    f("document_category","Link"),f("document_type","Link"),f("department","Link"),f("role","Link"),f("curriculum","Link")]],
+  ["DMS Training Record","train",false,[
+    f("document","Link"),f("document_title","Data"),f("version","Data"),f("document_file","Data"),
+    f("department","Link"),f("category","Link"),f("training_quiz","Link"),f("status","Select"),f("due_date","Date"),
+    f("assigned_by","Link"),f("assigned_date","Date"),f("curriculum","Link"),f("retraining_months","Int"),
+    f("total_assigned","Int"),f("total_completed","Int"),f("completion_percentage","Percent"),
+    f("training_description","Text Editor"),f("verified_by","Link"),f("verified_date","Date"),
+    f("verification_notes","Text"),f("secondary_verified_by","Link"),f("secondary_verified_date","Date"),
+    f("secondary_verification_notes","Text"),f("effectiveness_rating","Select"),f("effectiveness_verified_by","Link"),
+    f("effectiveness_verified_date","Date"),f("effectiveness_notes","Text"),f("closed_by","Link"),
+    f("closed_date","Date"),f("closure_notes","Text")]],
+  ["Document Acknowledgement","train",true,[
+    f("employee","Link"),f("employee_name","Data"),f("department","Link"),f("status","Select"),f("due_date","Date"),
+    f("acknowledged","Check"),f("acknowledged_on","Datetime"),f("completion_date","Date"),f("assessment_score","Float"),
+    f("quiz_passed","Check"),f("quiz_attempts","Int"),f("retake_allowed","Check"),f("expires_on","Date"),
+    f("escalated","Check"),f("proxy_completed_by","Link"),f("proxy_reason","Small Text"),
+    f("e_signature","Signature"),f("certificate_file","Data")]],
+  ["DMS Training Session","train",false,[
+    f("training_record","Link"),f("session_title","Data"),f("status","Select"),f("session_datetime","Datetime"),
+    f("trainer","Link"),f("location","Data"),f("notes","Small Text")]],
+  ["DMS Training Session Attendee","train",true,[f("employee","Link"),f("employee_name","Data"),f("attended","Check")]],
+
+  // governance
+  ["Approval Matrix","gov",false,[f("department","Link"),f("category","Link"),f("reviewer","Link"),f("approver","Link")]],
+  ["DMS Audit Log","gov",false,[f("document","Link"),f("request","Link"),f("action","Data"),f("user","Link"),
+    f("timestamp","Datetime"),f("ip_address","Data")]],
+  ["CFR Part 11 Signature Log","gov",false,[
+    f("reference_doctype","Link"),f("reference_name","Data"),f("signer","Link"),f("signer_name","Data"),
+    f("signer_email","Data"),f("position","Data"),f("timestamp","Datetime"),f("ip_address","Data"),
+    f("document_checksum","Data"),f("meaning","Small Text")]],
+  ["Training Settings","gov",false,[f("default_pass_percentage","Float"),f("default_retraining_months","Int"),f("escalation_days","Int")]],
+];
+
+// ---- relationships: [fromTable, fromCol, toTable] ----
+const RELS = [
+  ["Document Library","type","Document Type"],["Document Library","project","DMS Project"],
+  ["Document Library","department","Department"],["Document Library","category","Document Category"],
+  ["Document Library","file_doc","File"],["Document Library","training_quiz","DMS Quiz"],
+  ["Document Library","revision_of","Document Library"],["Document Library","originated_from_request","Document Request"],
+  ["Document Library","workflow_state","Workflow State"],["Document Library","checked_out_by","User"],
+  ["Document Request","document_type","Document Type"],["Document Request","requested_by","User"],
+  ["Document Request","requested_for","User"],["Document Request","reference_document","Document Library"],
+  ["Document Request","department","Department"],["Document Request","request_category","Document Category"],
+  ["Document Request","linked_document","Document Library"],["Document Request","approved_by","User"],
+  ["Document Request","rejected_by","User"],
+  ["Document Revision","document","Document Library"],["Document Revision","file_doc","File"],
+  ["DMS Curriculum Document","parent","DMS Curriculum"],["DMS Curriculum Document","document","Document Library"],
+  ["DMS Quiz","document_category","Document Category"],
+  ["DMS Quiz Question","parent","DMS Quiz"],
+  ["DMS Training Assignment Rule","document_category","Document Category"],["DMS Training Assignment Rule","document_type","Document Type"],
+  ["DMS Training Assignment Rule","department","Department"],["DMS Training Assignment Rule","role","Role"],
+  ["DMS Training Assignment Rule","curriculum","DMS Curriculum"],
+  ["DMS Training Record","document","Document Library"],["DMS Training Record","department","Department"],
+  ["DMS Training Record","category","Document Category"],["DMS Training Record","training_quiz","DMS Quiz"],
+  ["DMS Training Record","assigned_by","User"],["DMS Training Record","curriculum","DMS Curriculum"],
+  ["DMS Training Record","verified_by","User"],["DMS Training Record","secondary_verified_by","User"],
+  ["DMS Training Record","effectiveness_verified_by","User"],["DMS Training Record","closed_by","User"],
+  ["Document Acknowledgement","parent","DMS Training Record"],["Document Acknowledgement","employee","Employee"],
+  ["Document Acknowledgement","department","Department"],["Document Acknowledgement","proxy_completed_by","User"],
+  ["DMS Training Session","training_record","DMS Training Record"],["DMS Training Session","trainer","User"],
+  ["DMS Training Session Attendee","parent","DMS Training Session"],["DMS Training Session Attendee","employee","Employee"],
+  ["Approval Matrix","department","Department"],["Approval Matrix","category","Document Category"],
+  ["Approval Matrix","reviewer","Role"],["Approval Matrix","approver","Role"],
+  ["DMS Audit Log","document","Document Library"],["DMS Audit Log","request","Document Request"],["DMS Audit Log","user","User"],
+  ["CFR Part 11 Signature Log","reference_doctype","DocType"],["CFR Part 11 Signature Log","signer","User"],
+];
+
+// column layout by group (visual columns of the diagram)
+const LAYOUT = [
+  ["Department","User","Role","File","Workflow State","Employee","DocType"],
+  ["Document Type","Document Category","DMS Project"],
+  ["Document Library","Document Request","Document Revision"],
+  ["DMS Curriculum","DMS Curriculum Document","DMS Quiz","DMS Quiz Question","DMS Training Assignment Rule"],
+  ["DMS Training Record","Document Acknowledgement","DMS Training Session","DMS Training Session Attendee"],
+  ["Approval Matrix","DMS Audit Log","CFR Part 11 Signature Log","Training Settings"],
+];
+
+const byName = {}; TABLES.forEach(t => byName[t[0]] = t);
+// foreign-key column set per table
+const fkCols = {}; RELS.forEach(([ft,fc]) => { (fkCols[ft] = fkCols[ft] || new Set()).add(fc); });
+
+const KEY_SVG = '<svg viewBox="0 0 16 16" width="11" height="11"><circle cx="5" cy="8" r="3.2" fill="none" stroke="#d4a017" stroke-width="1.6"/><path d="M8 8 H14 M12 8 V11 M14 8 V11" stroke="#d4a017" stroke-width="1.6" fill="none"/></svg>';
+const TBL_ICO = '<svg class="ico" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="#fff" stroke="#3f6ea5" stroke-width="1.2"/><line x1="1.5" y1="6" x2="14.5" y2="6" stroke="#3f6ea5" stroke-width="1"/><line x1="6" y1="6" x2="6" y2="13.5" stroke="#3f6ea5" stroke-width="1"/></svg>';
+
+function makeTable(def) {
+  const [nm, grp, isChild, cols, ext] = def;
+  const el = document.createElement("div");
+  el.className = "tbl" + (grp === "ext" ? " ext" : "");
+  el.dataset.name = nm;
+  let rows = "";
+  const emit = (cn, ct, cls) => {
+    let kico = "";
+    if (cls === "pk") kico = KEY_SVG;
+    else if (cls === "fk") kico = '<span style="color:#2f6fb2;font-size:9px">◆</span>';
+    rows += `<li class="${cls||''}"><span class="kico">${kico}</span><span class="cn">${cn}</span><span class="ct">${ct}</span></li>`;
+  };
+  emit("name","varchar(140)","pk");
+  const fks = fkCols[nm] || new Set();
+  if (!ext) {
+    cols.forEach(([cn,ct]) => emit(cn, ct, fks.has(cn) ? "fk" : ""));
+    // standard system columns (skip 'name', already shown)
+    STD.slice(1).forEach(([cn,ct]) => emit(cn,ct,""));
+    if (isChild) CHILD_STD.forEach(([cn,ct]) => emit(cn, ct, fks.has(cn) ? "fk" : ""));
+  }
+  el.innerHTML = `<div class="tbl-head">${TBL_ICO}<span>${ext ? nm.replace(/ /g,'_').toLowerCase() : 'tab'+nm}</span></div>`
+    + `<ul class="rows">${rows}</ul>`
+    + `<div class="idx-foot">${TBL_ICO.replace('class="ico"','width="11" height="11"')}Indexes</div>`;
+  return el;
+}
+
+const colsWrap = document.getElementById("cols");
+LAYOUT.forEach(colNames => {
+  const c = document.createElement("div"); c.className = "col";
+  colNames.forEach(n => { if (byName[n]) c.appendChild(makeTable(byName[n])); });
+  colsWrap.appendChild(c);
+});
+
+// ---- draw dashed connector wires ----
+function boxEl(name){ return colsWrap.querySelector(`.tbl[data-name="${CSS.escape(name)}"]`); }
+function drawWires() {
+  const svg = document.getElementById("wires");
+  const canvas = document.getElementById("canvas");
+  svg.setAttribute("width", canvas.scrollWidth);
+  svg.setAttribute("height", canvas.scrollHeight);
+  let paths = "";
+  const seen = new Set();
+  RELS.forEach(([ft, fc, tt]) => {
+    const a = boxEl(ft), b = boxEl(tt);
+    if (!a || !b) return;
+    const ar = { x:a.offsetLeft, y:a.offsetTop, w:a.offsetWidth, h:a.offsetHeight };
+    const br = { x:b.offsetLeft, y:b.offsetTop, w:b.offsetWidth, h:b.offsetHeight };
+    let x1,x2;
+    const aMidY = ar.y + ar.h/2, bMidY = br.y + br.h/2;
+    if (br.x >= ar.x + ar.w) { x1 = ar.x + ar.w; x2 = br.x; }          // b to the right
+    else if (ar.x >= br.x + br.w) { x1 = ar.x; x2 = br.x + br.w; }     // b to the left
+    else { x1 = ar.x + ar.w; x2 = br.x + br.w; }                       // overlap cols
+    const midX = (x1 + x2) / 2;
+    const key = ft+"|"+tt;
+    const dim = seen.has(key); seen.add(key);
+    const stroke = dim ? "#9db1c7" : "#5b7ea5";
+    paths += `<path d="M ${x1} ${aMidY} C ${midX} ${aMidY}, ${midX} ${bMidY}, ${x2} ${bMidY}" `
+      + `fill="none" stroke="${stroke}" stroke-width="1" stroke-dasharray="4 3"/>`;
+    paths += `<circle cx="${x1}" cy="${aMidY}" r="2.2" fill="${stroke}"/>`;
+    paths += `<circle cx="${x2}" cy="${bMidY}" r="2.2" fill="${stroke}"/>`;
+  });
+  svg.innerHTML = paths;
+}
+drawWires();
+window.addEventListener("resize", drawWires);
+
+// ---- zoom ----
+let scale = 1;
+function applyZoom(){ const c=document.getElementById("cols"); const s=document.getElementById("wires");
+  document.getElementById("canvas").style.transform = `scale(${scale})`;
+  document.getElementById("canvas").style.transformOrigin = "top left";
+}
+function zoomBy(d){ scale = Math.min(2, Math.max(0.4, scale + d)); applyZoom(); }
+function resetZoom(){ scale = 1; applyZoom(); }
+</script>
+</body>
+</html>

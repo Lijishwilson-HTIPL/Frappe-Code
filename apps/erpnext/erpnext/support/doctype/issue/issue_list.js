@@ -1,3 +1,14 @@
+// The "+ Add Defect" button opens the standard Quick Entry dialog, which
+// otherwise titles itself "New Issue" from the raw DocType name. Frappe looks
+// for a "<Doctype>QuickEntryForm" class before falling back to the generic
+// one, so this override only changes the dialog title — everything else
+// (fields, save behavior) is inherited unchanged.
+frappe.ui.form.IssueQuickEntryForm = class IssueQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+	get_title() {
+		return __("New {0}", [__("Defect")]);
+	}
+};
+
 frappe.listview_settings["Issue"] = {
 	colwidths: { subject: 6 },
 	add_fields: ["priority"],
@@ -35,6 +46,22 @@ frappe.listview_settings["Issue"] = {
 				}
 			};
 			listview.set_primary_action();
+		}
+
+		// Page title (set once, before onload runs, so a single override here
+		// sticks) and the breadcrumb, which frappe.breadcrumbs re-renders on
+		// every route change — patch it once, globally, but only relabel when
+		// the crumb is actually for Issue so no other doctype is affected.
+		listview.page.set_title(__("Defect"));
+		if (!frappe.breadcrumbs.__issue_defect_patched) {
+			frappe.breadcrumbs.__issue_defect_patched = true;
+			const original_set_list_breadcrumb = frappe.breadcrumbs.set_list_breadcrumb.bind(frappe.breadcrumbs);
+			frappe.breadcrumbs.set_list_breadcrumb = function (breadcrumbs) {
+				original_set_list_breadcrumb(breadcrumbs);
+				if (breadcrumbs.doctype === "Issue") {
+					this.$breadcrumbs.find("li a.title-text").text(__("Defect"));
+				}
+			};
 		}
 	},
 	get_indicator: function (doc) {
