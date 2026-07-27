@@ -130,7 +130,7 @@ jobs:
 
             echo "=== Waiting for backend to become healthy before migrating ==="
             for i in $(seq 1 30); do
-              if sudo docker exec crm-backend-1 curl -sf http://localhost:8000/api/method/ping >/dev/null 2>&1; then
+              if sudo docker exec crm-backend-1 curl -sf -H "Host: mysite.local" http://localhost:8000/api/method/ping >/dev/null 2>&1; then
                 echo "Backend is up."
                 break
               fi
