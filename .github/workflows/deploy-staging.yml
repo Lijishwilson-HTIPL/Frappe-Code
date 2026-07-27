@@ -128,6 +128,23 @@ jobs:
             echo "=== Recreating all app-tier services from the new tag ==="
             sudo docker compose up -d
 
+            echo "=== Waiting for backend to become healthy before migrating ==="
+            for i in $(seq 1 30); do
+              if sudo docker exec crm-backend-1 curl -sf http://localhost:8000/api/method/ping >/dev/null 2>&1; then
+                echo "Backend is up."
+                break
+              fi
+              echo "Backend not ready yet, waiting... ($i/30)"
+              sleep 5
+              if [ "$i" -eq 30 ]; then
+                echo "Backend never became healthy — aborting before migrate."
+                exit 1
+              fi
+            done
+
+            echo "=== Running bench migrate (schema/patches — do NOT skip, do NOT run manually on the server) ==="
+            sudo docker exec crm-backend-1 bench --site all migrate
+
             echo "=== Clearing Frappe cache (avoid stale asset-hash HTML) ==="
             sudo docker exec crm-backend-1 bench --site all clear-cache || true
             sudo docker exec crm-backend-1 bench --site all clear-website-cache || true
