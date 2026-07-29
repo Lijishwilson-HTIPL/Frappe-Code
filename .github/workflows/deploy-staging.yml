@@ -145,6 +145,28 @@ jobs:
             echo "=== Running bench migrate (schema/patches — do NOT skip, do NOT run manually on the server) ==="
             sudo docker exec crm-backend-1 bench --site all migrate
 
+            echo "=== Force-reimporting DMS Workspace/Number Card/Dashboard Chart/Sidebar fixtures ==="
+            echo "=== (bench migrate does NOT overwrite these once they exist in the DB — see quality_dms dashboard incident 2026-07-28) ==="
+            for f in \
+              apps/quality_dms/quality_dms/dms/workspace/dms/dms.json \
+              apps/quality_dms/quality_dms/dms/number_card/pending_revision_requests/pending_revision_requests.json \
+              apps/quality_dms/quality_dms/dms/number_card/total_revisions/total_revisions.json \
+              apps/quality_dms/quality_dms/dms/number_card/total_documents/total_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/draft_documents/draft_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/published_documents/published_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/documents_in_review/documents_in_review.json \
+              apps/quality_dms/quality_dms/dms/number_card/obsolete_documents/obsolete_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/approved_documents/approved_documents.json \
+              apps/quality_dms/quality_dms/dms/dashboard_chart/training_compliance_by_department/training_compliance_by_department.json \
+              apps/quality_dms/quality_dms/dms/dashboard_chart/documents_by_status/documents_by_status.json \
+              apps/quality_dms/quality_dms/workspace_sidebar/dms.json \
+            ; do
+              full="/home/frappe/frappe-bench/${f}"
+              echo "--- reimporting ${full} ---"
+              sudo docker exec crm-backend-1 bench --site mysite.local execute frappe.modules.import_file.import_file_by_path \
+                --kwargs "{\"path\": \"${full}\", \"force\": True, \"ignore_version\": True}" || echo "WARNING: reimport failed for ${full}, continuing"
+            done
+
             echo "=== Clearing Frappe cache (avoid stale asset-hash HTML) ==="
             sudo docker exec crm-backend-1 bench --site all clear-cache || true
             sudo docker exec crm-backend-1 bench --site all clear-website-cache || true
