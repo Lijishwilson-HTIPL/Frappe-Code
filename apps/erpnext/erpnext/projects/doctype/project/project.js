@@ -180,7 +180,8 @@ frappe.ui.form.on("Project", {
 					<div class="flex align-items-center" style="gap: 8px; font-weight: 700; font-size: 18px; color: var(--dms-blue, #1e3a5f);">
 						${frappe.utils.icon(icon, "md")} ${__(title)}
 					</div>
-					<a href="${view_route}" style="font-size: 12px;">${__("View All")}</a>
+					<a href="${view_route}" class="btn btn-default btn-xs"
+						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
 				</div>
 				<div style="display: flex; gap: 12px; flex-wrap: wrap;">
 					${stat_card(doctype, project, "Total", s.total, null)}
