@@ -1,7 +1,7 @@
 ================================================================================
   MFT Landing 2026 — Work Progress Log
   Project: Hephzibah Technologies — MFT Platform SaaS
-  Last Updated: 2026-05-27
+  Last Updated: 2026-07-24
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -3345,3 +3345,100 @@ LESSON LEARNED:
   apps/erpnext is a SEPARATE git repo from frappe-bench. Never run git stash
   or git checkout inside apps/erpnext. All our git operations must happen
   only from /home/paul/frappe-bench (the frappe-bench root repo).
+
+================================================================================
+SESSION: 2026-07-24
+================================================================================
+
+[1] CI/CD PIPELINE — BUILD IN GITHUB ACTIONS, PUSH TO GHCR, DEPLOY VIA SSH
+---------------------------------------------------------------------------
+GOAL: stop building the crm-deploy image on the live staging server
+  (72.167.140.185, htipladmin, /home/htipladmin/crm-docker-build) and instead
+  build it in CI, push to GHCR (private package), and have the deploy step
+  just pull + recreate containers.
+
+DECISION: keep the server's EXISTING multi-service topology (backend/frontend
+  nginx/websocket/queue-short/queue-long/scheduler, same docker-compose.yml,
+  same "sites"/"db-data" volumes) — do NOT switch to this repo's own
+  single-container Dockerfile/docker-compose.yml. That single-container setup
+  is missing the crm_unify app, uses a different DB version (mariadb 10.6 vs
+  live 10.11) and different volume names (frappe_sites vs sites) — deploying
+  it as a second stack would either collide on port 8000 or, if swapped in
+  for the live one, orphan all existing site/DB data. Confirmed via direct
+  inspection of the live containers before making this call — no destructive
+  step was taken.
+
+FILES ADDED/CHANGED (branch: staging-deployment):
+  - apps-public.json          : erpnext@v16.23.1, hrms@v16.10.0, helpdesk@develop
+                                 (mirrors the server's existing apps-public.json
+                                 used to build crm-base:public-apps)
+  - Containerfile.crm-custom  : mirrors the server's Containerfile.custom exactly
+                                 (adds telephony, sbiqc_provisioning, crm_unify,
+                                 quality_dms, crm on top of the base image, then
+                                 bench build) — takes BASE_IMAGE as a build-arg
+                                 instead of hardcoding crm-base:public-apps
+  - .github/workflows/deploy-staging.yml : 3-job pipeline —
+      build-base   : builds frappe/frappe_docker's official images/layered
+                      Containerfile against apps-public.json, pushes to
+                      ghcr.io/hephzibahtechnologies/frappe-code-base:public-apps
+      build-custom : builds Containerfile.crm-custom on that base, tags with
+                      the short commit SHA, pushes to
+                      ghcr.io/hephzibahtechnologies/frappe-code:<sha>
+      deploy       : SSH into 72.167.140.185, docker login ghcr.io, pull the
+                      new tag, update .env's CUSTOM_TAG (same folder, same
+                      volumes), docker compose up -d, clear Frappe cache,
+                      prune old crm-deploy tags
+  - Fixed workflow trigger typo: "stagging-deployment" -> "staging-deployment"
+    (the old workflow never fired on the real branch because of this typo)
+
+BUGS FOUND AND FIXED VIA ACTUAL FAILED RUNS (not guessed — each one confirmed
+  by reading gh actions job logs before the next attempt):
+  1. GHCR tags must be lowercase; github.repository preserves "Frappe-Code"'s
+     real casing -> hardcoded lowercase image names instead.
+  2. frappe_docker has no "version-16" branch (only "main") — version-16 is
+     the FRAPPE_BRANCH build-arg (which branch of the frappe framework itself
+     to clone inside the Containerfile), not a frappe_docker git ref.
+  3. images/layered's actual build file is named "Containerfile", not the
+     default "Dockerfile" docker/build-push-action looks for.
+  4. apps_json secret was passed via `secrets:` (treats the value as literal
+     secret content) instead of `secret-files:` (mounts a file's contents) —
+     also had a stray toJson() that would have double-quoted the path.
+  5. images/layered/Containerfile does `COPY resources/core/start.sh ...` —
+     paths relative to the frappe_docker REPO ROOT, not the images/layered
+     subdirectory. Build context had to be the whole repo, with file: pointing
+     at images/layered/Containerfile within it.
+  6. Tried pinning helpdesk to an exact commit SHA (to guarantee byte-for-byte
+     reproducible builds) instead of the moving "develop" branch — but
+     `git clone --branch <ref> --depth 1` only accepts an actual branch/tag
+     name, not an arbitrary commit SHA. Reverted to "develop" per user
+     decision (keep it simple; a fork+tag would be needed for a true pin).
+
+SECRETS CONFIGURED (repo: hephzibahtechnologies/Frappe-Code):
+  - STAGING_HOST = 72.167.140.185
+  - STAGING_USER = htipladmin
+  - STAGING_SSH_KEY = new dedicated ed25519 keypair generated just for this
+    CI deploy (private key saved locally at
+    C:\Users\Raju\.ssh\staging-deploy-ed25519 on the dev machine, public key
+    appended to htipladmin's ~/.ssh/authorized_keys on the server — existing
+    keys/access untouched)
+  - GHCR_PULL_TOKEN = GitHub PAT (read:packages scope) provided by user
+
+RESULT — FULL PIPELINE VERIFIED WORKING END TO END (run 30025872982):
+  - build-base: success, build-custom: success, deploy: success
+  - Confirmed live on server: all 6 app-tier containers (backend, frontend,
+    queue-long, queue-short, scheduler, websocket) running the new image
+    ghcr.io/hephzibahtechnologies/frappe-code:05aa23fd7244 consistently
+  - db/redis untouched (25h+ uptime through the deploy — no data loss)
+  - Login page verified HTTP 200 after deploy
+
+PENDING / NEXT STEPS:
+  - Consider revoking/regenerating GHCR_PULL_TOKEN since it was pasted in
+    plaintext during the chat session that set it up
+  - Decide whether to pin helpdesk to an exact version via a fork+tag if an
+    exact reproducible build is ever required again
+  - Old crm-deploy:* image tags on the server are pruned automatically by the
+    deploy script now (keeps only the currently-deployed tag)
+
+================================================================================
+END OF SESSION — 2026-07-24
+================================================================================
