@@ -16,11 +16,15 @@ Policy (fail-closed):
   ERROR      -> blocked (virus_scan_block_on_error=0 to allow)
 
 Site config keys (site_config.json), all optional:
-  virus_scan_enabled           default 1
-  virus_scan_max_file_size     default 104857600 (100 MB)
-  virus_scan_block_suspicious  default 1
-  virus_scan_block_on_error    default 1
-  virus_scan_block_executables default 1
+  virus_scan_enabled                 default 1
+  virus_scan_max_file_size           default 104857600 (100 MB)
+  virus_scan_block_suspicious        default 1
+  virus_scan_block_on_error          default 1
+  virus_scan_block_executables       default 1
+  virus_scan_block_scripts           default 1   (shell/PHP/JS with wrong ext)
+  virus_scan_block_suspicious_content default 1  (eval/exec/base64/powershell...)
+  virus_scan_block_office_macros     default 1   (vbaProject.bin / remote links)
+  virus_scan_block_pdf_active        default 1   (/JavaScript /Launch /EmbeddedFile)
   clamav_host / clamav_port / clamav_socket
 """
 
@@ -43,11 +47,41 @@ SKIPPED = "SKIPPED"
 EICAR_SIGNATURE = (
 	b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 )
+# Distinctive, escape-proof fragment of the EICAR string. Containers that escape
+# special characters (PDF escapes ( ) \\, some XML encodings) break the full
+# signature, but this fragment survives and is unique to the EICAR test file.
+EICAR_MARKER = b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE"
+
+
+def _has_eicar(data):
+	return EICAR_SIGNATURE in data or EICAR_MARKER in data
 
 EXECUTABLE_SIGNATURES = {
 	b"MZ": "PE (Windows) executable",
 	b"\x7fELF": "ELF (Linux) executable",
 }
+
+# Heuristic signatures (expanded from the MFT scanner). Each maps a leading
+# magic to (description, extensions where that content is legitimately expected).
+SCRIPT_SIGNATURES = {
+	b"#!/bin/":  ("Shell script", {".sh", ".bash", ".zsh"}),
+	b"#! /bin/": ("Shell script", {".sh", ".bash", ".zsh"}),
+	b"<?php":    ("PHP script", {".php"}),
+	b"<script":  ("Inline script / HTML", {".html", ".htm", ".js"}),
+}
+
+# Byte substrings common in droppers, webshells and macro payloads.
+SUSPICIOUS_CONTENT_PATTERNS = [
+	b"eval(", b"exec(", b"system(", b"shell_exec(", b"base64_decode(",
+	b"powershell", b"cmd.exe", b"/bin/bash", b"WScript.Shell",
+	b"CreateObject(", b"Auto_Open", b"AutoOpen", b"Document_Open",
+]
+
+# OOXML (zip-based) Office documents.
+OFFICE_ZIP_EXTS = {".docx", ".docm", ".xlsx", ".xlsm", ".pptx", ".pptm",
+                   ".dotm", ".xltm", ".potm"}
+# Strong indicators of active/executable content inside a PDF.
+PDF_STRONG_MARKERS = [b"/JavaScript", b"/JS", b"/Launch", b"/EmbeddedFile"]
 
 
 def _conf(key, default):
@@ -215,18 +249,185 @@ def _scan_with_clamav(clamd, content):
 	return INFECTED, "clamav", threats, None
 
 
-def _scan_with_pattern_match(content, file_name):
-	"""Pure-Python fallback: EICAR test signature + executable detection."""
+def _file_ext(file_name):
+	return os.path.splitext(file_name or "")[1].lower()
+
+
+_ARCHIVE_EXTS = (".zip", ".docx", ".docm", ".xlsx", ".xlsm", ".pptx", ".pptm",
+                 ".jar", ".7z", ".rar", ".gz", ".apk")
+_ZIP_TEXT_SCAN_CAP = 10 * 1024 * 1024  # cap total decompressed bytes scanned
+
+
+def _scan_zip_container(content, file_name):
+	"""Open a zip / OOXML file and:
+	  1) detect VBA macros (vbaProject.bin) and remote-template / external links,
+	  2) DECOMPRESS the parts and scan their text for EICAR + suspicious patterns.
+	A raw-byte scan cannot see inside a compressed container, so a signature
+	hidden inside a .docx/.xlsx/.zip is only found by decompressing first.
+	Returns (result, threats)."""
+	import io
+	import zipfile
+
+	threats = []
+	result = CLEAN
+	try:
+		with zipfile.ZipFile(io.BytesIO(content)) as z:
+			names = z.namelist()
+
+			if int(_conf("virus_scan_block_office_macros", 1)):
+				if any(n.endswith("vbaProject.bin") for n in names):
+					threats.append(f"Embedded VBA macro (vbaProject.bin) in Office file: {file_name}")
+					result = SUSPICIOUS
+				for n in names:
+					if not n.endswith(".rels"):
+						continue
+					try:
+						rel = z.read(n)
+					except Exception:
+						continue
+					if b'TargetMode="External"' in rel and (b"http://" in rel or b"https://" in rel):
+						threats.append(f"External/remote reference in Office relationships: {file_name}")
+						result = SUSPICIOUS
+						break
+
+			# Decompress and concatenate part contents (bounded; skip nested
+			# archives and oversized entries to avoid decompression bombs).
+			blob = bytearray()
+			for info in z.infolist():
+				if info.is_dir() or info.file_size > _ZIP_TEXT_SCAN_CAP:
+					continue
+				if info.filename.lower().endswith(_ARCHIVE_EXTS):
+					continue
+				try:
+					blob.extend(z.read(info.filename))
+				except Exception:
+					continue
+				if len(blob) >= _ZIP_TEXT_SCAN_CAP:
+					break
+			blob = bytes(blob)
+
+			# EICAR hidden inside the document is definitive.
+			if _has_eicar(blob):
+				return INFECTED, [f"EICAR-Test-Signature (inside {file_name})"]
+
+			if int(_conf("virus_scan_block_suspicious_content", 1)):
+				hits = [p.decode("ascii", "ignore") for p in SUSPICIOUS_CONTENT_PATTERNS if p in blob]
+				if hits:
+					threats.append(f"Suspicious content inside document {hits}: {file_name}")
+					if result == CLEAN:
+						result = SUSPICIOUS
+	except zipfile.BadZipFile:
+		return CLEAN, []  # not actually a zip/OOXML file
+	except Exception:
+		return CLEAN, []
+	return result, threats
+
+
+def _inflate_pdf_streams(content, cap=_ZIP_TEXT_SCAN_CAP):
+	"""Decompress the FlateDecode `stream ... endstream` blocks of a PDF so the
+	decompressed text can be scanned (a raw scan can't see inside them).
+	Bounded to `cap` bytes; non-Flate/failed streams are skipped."""
+	import re
+	import zlib
+
+	blob = bytearray()
+	for m in re.finditer(rb"stream\r?\n", content):
+		start = m.end()
+		end = content.find(b"endstream", start)
+		if end == -1:
+			continue
+		raw = content[start:end].rstrip(b"\r\n")
+		try:
+			data = zlib.decompress(raw)
+		except Exception:
+			continue
+		blob.extend(data)
+		if len(blob) >= cap:
+			break
+	return bytes(blob[:cap])
+
+
+def _scan_pdf_document(content, file_name):
+	"""Flag active content (JavaScript/launch/embedded) AND scan the decompressed
+	PDF streams for EICAR + suspicious patterns. Returns (result, threats)."""
 	threats = []
 	result = CLEAN
 
-	if EICAR_SIGNATURE in content[:1024]:
+	found = [m.decode() for m in PDF_STRONG_MARKERS if m in content]
+	if found:
+		# /OpenAction on its own is common/benign, so only surface it for context.
+		if b"/OpenAction" in content:
+			found.append("/OpenAction")
+		threats.append(f"Active content in PDF ({', '.join(sorted(set(found)))}): {file_name}")
+		result = SUSPICIOUS
+
+	blob = _inflate_pdf_streams(content)
+	if _has_eicar(blob):
+		return INFECTED, [f"EICAR-Test-Signature (inside PDF stream): {file_name}"]
+
+	if int(_conf("virus_scan_block_suspicious_content", 1)):
+		hits = [p.decode("ascii", "ignore") for p in SUSPICIOUS_CONTENT_PATTERNS if p in blob]
+		if hits:
+			threats.append(f"Suspicious content inside PDF {hits}: {file_name}")
+			if result == CLEAN:
+				result = SUSPICIOUS
+
+	return result, threats
+
+
+def _scan_with_pattern_match(content, file_name):
+	"""Pure-Python heuristic scan (no external engine). Expanded from the MFT
+	scanner: EICAR + executables + scripts + suspicious content, plus
+	document-aware checks for Office macros and PDF active content."""
+	threats = []
+	result = CLEAN
+	ext = _file_ext(file_name)
+
+	# 1) EICAR test signature anywhere in the raw bytes -> INFECTED (definitive).
+	if _has_eicar(content):
 		return INFECTED, "pattern_match", ["EICAR-Test-Signature"], None
 
+	# 2) Raw executables (magic bytes).
 	if int(_conf("virus_scan_block_executables", 1)):
 		for signature, description in EXECUTABLE_SIGNATURES.items():
 			if content.startswith(signature):
 				threats.append(f"{description} content in upload: {file_name}")
+				result = SUSPICIOUS
+
+	# 3) Script content carried under an unexpected extension.
+	if int(_conf("virus_scan_block_scripts", 1)):
+		head = content[:64].lstrip()
+		for sig, (desc, ok_exts) in SCRIPT_SIGNATURES.items():
+			if head.startswith(sig) and ext not in ok_exts:
+				threats.append(f"{desc} content with unexpected extension '{ext or 'none'}': {file_name}")
+				result = SUSPICIOUS
+
+	# 4) Zip / Office container: macros, remote links, and a DECOMPRESSED scan of
+	#    the parts (catches EICAR / patterns hidden inside the compression).
+	if content[:2] == b"PK":
+		zres, zthreats = _scan_zip_container(content, file_name)
+		if zres == INFECTED:
+			return INFECTED, "pattern_match", zthreats, None
+		if zres == SUSPICIOUS:
+			threats.extend(zthreats)
+			result = SUSPICIOUS
+
+	# 5) PDF: active content + decompressed-stream scan (EICAR / patterns inside).
+	if int(_conf("virus_scan_block_pdf_active", 1)) and content[:5] == b"%PDF-":
+		pres, pthreats = _scan_pdf_document(content, file_name)
+		if pres == INFECTED:
+			return INFECTED, "pattern_match", pthreats, None
+		if pres == SUSPICIOUS:
+			threats.extend(pthreats)
+			result = SUSPICIOUS
+
+	# 6) Suspicious content substrings (bounded window to limit cost/false positives).
+	if int(_conf("virus_scan_block_suspicious_content", 1)):
+		window = content[:1_000_000]
+		hits = [p.decode("ascii", "ignore") for p in SUSPICIOUS_CONTENT_PATTERNS if p in window]
+		if hits:
+			threats.append(f"Suspicious content pattern(s) {hits}: {file_name}")
+			if result == CLEAN:
 				result = SUSPICIOUS
 
 	return result, "pattern_match", threats, None

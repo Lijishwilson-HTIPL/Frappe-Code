@@ -75,8 +75,27 @@ frappe.ui.form.on("Project", {
 			frm.trigger("show_dashboard");
 			frm.trigger("show_task_summary");
 			frm.trigger("show_task_defect_summary_tab");
+			frm.trigger("relabel_issue_connection");
 		}
 		frm.trigger("set_custom_buttons");
+	},
+
+	dashboard_update: function (frm) {
+		frm.trigger("relabel_issue_connection");
+	},
+
+	relabel_issue_connection: function (frm) {
+		// The Connections widget renders one badge per linked DocType using its
+		// raw name ("Issue"). Projects calls Issues "Defects" everywhere else on
+		// this form, so relabel just this badge/tooltip without touching the
+		// Issue DocType or its Support-module label anywhere else in the app.
+		if (!frm.dashboard || !frm.dashboard.links_area || !frm.dashboard.links_area.body) return;
+		frm.dashboard.links_area.body
+			.find('.document-link[data-doctype="Issue"] .badge-link')
+			.text(__("Defect"));
+		frm.dashboard.links_area.body
+			.find('.document-link[data-doctype="Issue"] .open-notification')
+			.attr("title", __("Open {0}", [__("Defect")]));
 	},
 
 	show_task_summary: function (frm) {
@@ -132,24 +151,19 @@ frappe.ui.form.on("Project", {
 
 		$wrapper.html(`<div class="text-muted" style="padding: 12px 0;">${__("Loading summary...")}</div>`);
 
-		// Status sets behind each aggregate bucket — mirrors the grouping
-		// done server-side in get_task_summary / get_defect_summary.
-		const STATUS_GROUPS = {
-			Task: {
-				completed: ["Completed"],
-				pending: ["Open", "Working", "Pending Review", "Overdue", "Hold"],
-				cancelled: ["Cancelled"],
-			},
-			Issue: {
-				completed: ["Resolved", "Closed"],
-				pending: ["Open", "Replied", "On Hold"],
-			},
+		// Every status the doctype's own Select field defines, in schema order —
+		// each always gets a card, even at zero, instead of only showing
+		// whichever statuses happen to have records today (which duplicated
+		// "Completed" against the old Total/Completed/Pending row above it).
+		const ALL_STATUSES = {
+			Task: ["Open", "Working", "Pending Review", "Overdue", "Hold", "Completed", "Cancelled"],
+			Issue: ["Open", "Replied", "On Hold", "Resolved", "Closed"],
 		};
 
 		// One individual card per stat — same visual language as the
 		// workspace's "Active Projects / Open Tasks" overview tiles, each
 		// tile clickable to open the matching filtered list.
-		const stat_card = (doctype, project, label, value, color, statuses) => `
+		const stat_card = (doctype, project, label, value, statuses) => `
 			<a class="summary-stat-card" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
 				project
 			)}" data-statuses='${statuses ? JSON.stringify(statuses) : ""}'
@@ -157,52 +171,23 @@ frappe.ui.form.on("Project", {
 					border-radius: 10px; padding: 14px 16px; cursor: pointer; text-decoration: none !important;
 					box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.06)); transition: box-shadow 0.15s ease, transform 0.15s ease;">
 				<div class="text-muted" style="font-size: 12px; margin-bottom: 4px;">${__(label)}</div>
-				<div style="font-size: 26px; font-weight: 700; color: ${color};">${value}</div>
+				<div style="font-size: 26px; font-weight: 700; color: var(--text-color, #1f272e);">${value}</div>
 			</a>`;
-
-		const status_rows = (doctype, project, by_status) =>
-			Object.keys(by_status)
-				.sort()
-				.map(
-					(status) => `
-						<a class="summary-stat-card flex justify-between" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
-							project
-						)}" data-statuses='${JSON.stringify([status])}' style="padding: 4px 0; font-size: 12px; cursor: pointer; text-decoration: none !important;">
-							<span class="text-muted">${__(status)}</span>
-							<span>${by_status[status]}</span>
-						</a>`
-				)
-				.join("");
 
 		const section = (title, icon, doctype, project, s, view_route) => `
 			<div>
-				<div class="flex justify-between align-items-center" style="margin-bottom: 10px;">
-					<div class="flex align-items-center" style="gap: 8px; font-weight: 650; font-size: 15px;">
-						${frappe.utils.icon(icon, "sm")} ${__(title)}
+				<div class="flex justify-between align-items-center" style="margin-bottom: 12px;">
+					<div class="flex align-items-center" style="gap: 8px; font-weight: 700; font-size: 18px; color: var(--dms-blue, #1e3a5f);">
+						${frappe.utils.icon(icon, "md")} ${__(title)}
 					</div>
-					<a href="${view_route}" style="font-size: 12px;">${__("View All")}</a>
+					<a href="${view_route}" class="btn btn-default btn-xs"
+						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
 				</div>
-				<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
-					${stat_card(doctype, project, "Total", s.total, "var(--text-color, #1f272e)", null)}
-					${stat_card(
-						doctype,
-						project,
-						"Completed",
-						s.completed,
-						"var(--green-600, #2b8a3e)",
-						STATUS_GROUPS[doctype].completed
-					)}
-					${stat_card(
-						doctype,
-						project,
-						"Pending",
-						s.pending,
-						"var(--orange-600, #d9822b)",
-						STATUS_GROUPS[doctype].pending
-					)}
-				</div>
-				<div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd); border-radius: 10px; padding: 10px 16px;">
-					${status_rows(doctype, project, s.by_status) || `<span class="text-muted" style="font-size: 12px;">${__("No records yet")}</span>`}
+				<div style="display: flex; gap: 12px; flex-wrap: wrap;">
+					${stat_card(doctype, project, "Total", s.total, null)}
+					${ALL_STATUSES[doctype]
+						.map((status) => stat_card(doctype, project, status, s.by_status[status] || 0, [status]))
+						.join("")}
 				</div>
 			</div>`;
 

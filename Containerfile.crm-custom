@@ -1,0 +1,65 @@
+ARG BASE_IMAGE=crm-base:public-apps
+FROM ${BASE_IMAGE}
+
+USER frappe
+WORKDIR /home/frappe/frappe-bench
+
+# apps/<name> already sit at the correct relative path in this repo, so a
+# plain COPY of the whole directory lines them up with frappe-bench's layout
+# exactly the way the server's Containerfile.custom did with individual COPYs.
+COPY --chown=frappe:frappe apps/telephony apps/telephony
+COPY --chown=frappe:frappe apps/sbiqc_provisioning apps/sbiqc_provisioning
+COPY --chown=frappe:frappe apps/crm_unify apps/crm_unify
+COPY --chown=frappe:frappe apps/quality_dms apps/quality_dms
+COPY --chown=frappe:frappe apps/crm apps/crm
+
+# erpnext/hrms/helpdesk are already installed in the base image (pulled
+# pristine from upstream via apps-public.json so bench get-app can set up
+# python deps / DB records once). But this repo carries a long history of
+# LOCAL customizations on top of those apps (Issue->Defect rename, SBIQC
+# branding, Task Assignment Board, MFT License, Career Inquiry, RCA
+# escalation, etc.) that were never actually reaching the deployed image --
+# only the fully-custom apps above were. Overlay this repo's modified files
+# on top of the pristine base so those customizations are finally deployed.
+COPY --chown=frappe:frappe apps/erpnext apps/erpnext
+COPY --chown=frappe:frappe apps/hrms apps/hrms
+COPY --chown=frappe:frappe apps/helpdesk apps/helpdesk
+
+RUN sed -i -e '$a\' sites/apps.txt \
+    && printf '%s\n' telephony sbiqc_provisioning crm_unify quality_dms crm >> sites/apps.txt \
+    && cat sites/apps.txt
+
+RUN /home/frappe/frappe-bench/env/bin/pip install -e apps/telephony -e apps/sbiqc_provisioning -e apps/crm_unify -e apps/quality_dms -e apps/crm \
+    -e apps/erpnext -e apps/hrms -e apps/helpdesk
+
+ENV NVM_DIR=/home/frappe/.nvm
+ENV PATH=${NVM_DIR}/versions/node/v24.13.0/bin/:${PATH}
+
+RUN mkdir -p sites/assets \
+    && cp -r /home/frappe/frappe-bench/assets/* sites/assets/ 2>/dev/null || true
+
+RUN bash -c '\
+    for app in telephony sbiqc_provisioning crm_unify quality_dms crm erpnext hrms helpdesk; do \
+      if [ -f apps/$app/package.json ]; then \
+        (cd apps/$app && yarn install --check-files) || echo "yarn install skipped/failed for $app, continuing"; \
+      fi; \
+    done'
+
+RUN printf '%s\n' \
+    '{' \
+    ' "db_host": "127.0.0.1",' \
+    ' "db_port": 3306,' \
+    ' "redis_cache": "redis://127.0.0.1:13000",' \
+    ' "redis_queue": "redis://127.0.0.1:11000",' \
+    ' "redis_socketio": "redis://127.0.0.1:13000",' \
+    ' "socketio_port": 9001,' \
+    ' "webserver_port": 8000' \
+    '}' > sites/common_site_config.json
+
+RUN bench build
+
+RUN echo "{}" > sites/common_site_config.json
+
+RUN rm -rf /home/frappe/frappe-bench/assets \
+    && cp -r /home/frappe/frappe-bench/sites/assets /home/frappe/frappe-bench/assets \
+    && rm -rf /home/frappe/frappe-bench/sites/assets

@@ -7,6 +7,34 @@
 
 ---
 
+## ⚠️ Production Container Safety — Read Before Touching the Staging/Prod Server
+
+**Never run `bench build`, `bench migrate`, or any other asset- or schema-mutating
+command directly inside a single running container on the deployed server
+(`72.167.140.185`, `crm-docker-build`).**
+
+That deployment runs `frontend`, `backend`, `websocket`, `queue-short`, `queue-long`,
+and `scheduler` as separate containers that all share **one identical image tag**
+(see `deploy-staging.yml` + the server's `docker-compose.yml`). Built assets are
+baked into that image at build time — every container is supposed to be byte-identical.
+
+Running `bench build` (or similar) live inside just one container (e.g. `crm-backend-1`)
+only updates that container's own writable layer. It silently diverges that one
+container from the others, which are still on the frozen image baseline — this is
+exactly what caused the July 27, 2026 incident: `crm-backend-1` had newer asset
+hashes than `crm-frontend-1`, so nginx 404'd on every CSS/JS bundle and the UI
+rendered blank/broken after a "restart".
+
+**If you need to ship an asset or schema change:** commit it, push to
+`staging-deployment`, and let the existing CI/CD workflow
+(`.github/workflows/deploy-staging.yml`) rebuild the image and redeploy — that
+recreates every service from the same fresh image atomically. Don't patch a running
+container by hand except as a temporary emergency measure, and if you do, know that
+the next real deploy will supersede/wipe it anyway (containers are recreated, not
+patched in place).
+
+---
+
 ## First-Time Setup
 
 ### 1. Build and start all services

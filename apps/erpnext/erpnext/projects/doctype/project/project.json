@@ -84,8 +84,8 @@
   },
   {
    "fieldname": "details_tab",
-   "fieldtype": "Tab Break",
-   "label": "Details"
+   "fieldtype": "Section Break",
+   "label": "Project Details"
   },
   {
    "fieldname": "project_name",
