@@ -1,0 +1,266 @@
+================================================================================
+  MERCURY ERP DEMO — WORK PROGRESS LOG
+  Client: Mercury (Engineer-to-Order manufacturer)
+  Platform: ERPNext v16 / Frappe v16 (erpnext 16.23.1, frappe 16.23.0)
+  Site: mysite.local | Login: Administrator | Started: 2026-07-23
+================================================================================
+
+GOAL
+----
+Show Alex (Mercury) a working ERPNext demo covering the manufacturing workflow
+using standard modules (config only, no code). Phase 1 = 8 stages. Phase 2 =
+small custom shipment-acknowledgement add-on.
+
+Reference docs (in "web docs/"):
+  - Mercury_ERP_Feasibility_Report.docx
+  - Mercury_ERP_Phase1_Phase2_Build_Plan.md
+  - Workspace_Replication_Guide_UI.md
+  - mercury_phase1_stepbystep_guide.txt   (stage-by-stage, filled as we go)
+
+The 8 stages -> modules:
+  1 PO intake            -> Selling (Sales Order)
+  2 Design review / RTM  -> Workflow on Sales Order
+  3 Raw material         -> Buying (Material Request -> PO -> Purchase Receipt)
+  4 Fabrication/assembly -> Projects (Task 0/50/100%) [+ Manufacturing optional]
+  5 Inspection           -> Quality Management (Quality Inspection)
+  6 Packaging/QR/serials -> Stock (Packing Slip, Delivery Note, Serial No)
+  7 Milestone invoicing  -> Accounts (Payment Terms Template)
+  8 Progress % + report  -> Projects + Print Format
+
+--------------------------------------------------------------------------------
+COMPLETED SO FAR
+--------------------------------------------------------------------------------
+
+[1] THIN "mercury" APP (config container, git-tracked)  — 2026-07-23
+  - Created via: bench new-app mercury --no-git ; bench --site mysite.local install-app mercury
+  - Purpose: hold Mercury config as fixtures per .claude/rules.md (JSON = source of truth).
+    NOT a product like quality_dms; near-empty; Alex never sees it.
+  - hooks.py fixtures = [Workspace, Workspace Sidebar, Desktop Icon] (filtered to Mercury).
+  - Exported: apps/mercury/mercury/fixtures/{workspace,workspace_sidebar,desktop_icon}.json
+
+[2] "Mercury" WORKSPACE + navigation  — 2026-07-23
+  - Public workspace "Mercury" titled "Mercury — Manufacturing Journey" with 7 tiles:
+    Sales Order, Purchase Order, Project, Quality Inspection, Packing Slip,
+    Delivery Note, Sales Invoice (each a DocType-list shortcut, colour-coded).
+  - KEY v16 LEARNINGS (why it kept not showing):
+     * Desk groups workspaces into apps by module -> Module Def.app_name (NOT the
+       workspace "app" field). Set workspace module = "Setup" so it groups under ERPNext.
+     * The Workspaces FLYOUT is built from Desktop Icon records (each links to a
+       Workspace Sidebar). Had to create: a Workspace Sidebar "Mercury" (Overview
+       item first, then the 7 stage links) + a Desktop Icon "Mercury"
+       (link_type=Workspace Sidebar, parent_icon=ERPNext, app=erpnext, icon_type=Link).
+     * Left Home sidebar = items of the "Home" Workspace Sidebar -> added a "Mercury"
+       item there too.
+     * CACHE GOTCHA: get_desktop_icons caches in a "desktop_icons" Redis hash that
+       `bench clear-cache` does NOT flush. Must delete keys "desktop_icons" + "bootinfo"
+       (done via console) OR make the change through the UI (UI clears it per-session).
+     * The Workspace "public" field is READ-ONLY in the v16 form by core design; public
+       workspaces are made via the desk "Create Workspace" dialog (has Public toggle for
+       Workspace Managers) — that dialog/button is hidden in this SBIQC-customized desk.
+  - Result: Mercury shows in the ERPNext Workspaces flyout AND the left Home sidebar,
+    and clicking it opens the Mercury journey page. CONFIRMED WORKING.
+
+[3] STAGE 1 — PO INTAKE (Sales Order)  — 2026-07-23  DONE
+  - Step 0 masters created by user: Company "Joel Refineries", Customer "Joel",
+    Item "MERCURY-001 / Mercury Vacuum Pump", warehouse auto-created.
+  - Created Sales Order SAL-ORD-2026-00002 (Draft): item qty 1 @ 12,000;
+    Customer's Purchase Order = PO-JOEL-2026-0723 (More Info tab).
+  - Documented in mercury_phase1_stepbystep_guide.txt (purpose, prerequisites, steps,
+    field table w/ tab locations, expected outcome, gotchas).
+  - Correct that it stays in DRAFT — Stage 2 workflow moves it out.
+
+[4] INSTANCE BUG FIXED — Sales Order "is_subcontracted"  — 2026-07-23
+  - Saving Sales Order threw: AttributeError 'SalesOrder' has no attribute 'is_subcontracted'.
+  - Cause: working-copy apps/erpnext/.../sales_order/sales_order.json had been locally
+    modified with many standard v16 fields stripped (127 ins / 194 del vs release).
+  - Fix: git checkout -- that file (restored is_subcontracted etc.) + bench migrate.
+  - Audited 5 other modified erpnext doctype JSONs (contract, project, task,
+    purchase_receipt, issue): all had 0 net fields missing vs release -> NOT damaged.
+    sales_order.json was the only broken one.
+
+--------------------------------------------------------------------------------
+TODO TASKS
+--------------------------------------------------------------------------------
+
+[ ] PATH 2 — Fix sbiqc_provisioning desk-access gate for demo users
+    - manager@joel.com (Sales Manager) + engineer@joel.com (Sales User) created,
+      System User, enabled, password set. Login POST = 200 (succeeds) but every desk
+      page returns "Not Permitted"/403, incl. /desk/mercury; forced landing is
+      /app/sbiqc-provisioning which 403s.
+    - Cause: sbiqc_provisioning gates desk access + forces its page as home; new users
+      not whitelisted.
+    - Action: investigate (read-only) sbiqc_provisioning desk-access logic + home-page
+      setting, then whitelist demo users so real role-based login works.
+    - Status: DEFERRED. Demo runs as Administrator (all roles, bypasses gate); role
+      separation explained verbally + shown via Workflow "Allowed Role" config.
+
+[5] STAGE 2 — RTM APPROVAL WORKFLOW (Sales Order)  — 2026-07-24  DONE
+  - Workflow "Mercury RTM Approval" (Active) on Sales Order. States: Draft(0),
+    Submittal Under Customer Review(0), Revision Requested(0), RTM Approved(1=Submitted).
+    Transitions: Send for Customer Review / Approve RTM / Request Revision /
+    Resubmit for Review (roles: Sales User / Sales Manager).
+  - TESTED end-to-end on SAL-ORD-2026-00002 (customer Hilton): Draft -> Customer Review
+    -> RTM Approved (order submitted). Actions menu shows the allowed buttons.
+  - Exported to mercury fixtures: workflow.json, workflow_state.json,
+    workflow_action_master.json (per rules.md).
+  - Note: a leftover inactive "Sales Order RTM Approval" workflow exists (pre-existing,
+    harmless; only one Active per doctype). Can be deleted later.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 2 section).
+
+[6] STAGE 3 — RAW MATERIAL PROCUREMENT (Buying)  — 2026-07-24  DONE
+  - Prereqs: Supplier "Steel & Alloys Co." (Raw Material grp, USD); raw-material Item
+    "Steel Casting" (RM-STEEL, Stock, Purchase).
+  - Chain built + submitted: Material Request MAT-MR-2026-00001 (Received) ->
+    Purchase Order PUR-ORD-2026-00001 ($2,120, fully received) ->
+    Purchase Receipt MAT-PRE-2026-00001. Raw material received into Stores - JR.
+  - "To Bill" status = supplier invoice not entered (out of scope; receipt is what matters).
+  - Also this session: renamed stray warehouse "Joel-Primary warehouse - JR" ->
+    "Mercury Finished Goods - JR" (SO auto-updated). Company already named "Mercury"
+    (abbr stays JR - cosmetic, not worth changing). Customer display name fixed to "Joel".
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 3 section).
+
+[7] STAGE 4 — FABRICATION/ASSEMBLY PROGRESS 0/50/100% (Projects)  — 2026-07-27  DONE
+  - Project PROJ-0001 "Mercury Vacuum Pump - Joel (SAL-ORD-2026-00002)", Customer Joel,
+    % Complete Method = Task Progress, Type External.
+  - 7 Tasks (manufacturing stages): Raw Material Procurement 100, Fabrication 50,
+    Assembly/Inspection/Cleaning/Packaging/Shipping Prep 0. Task field = "% Progress"
+    (Timeline section).
+  - Project % Completed rolls up to 21% (150/7). Matches Mercury's simple 0/50/100 model.
+  - Gotcha: default method "Task Completion" showed 14% (counts only fully-done tasks);
+    switched to "Task Progress" -> 21%.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 4 section).
+
+[8] STAGE 5 — INSPECTION (Quality Management)  — 2026-07-27  DONE
+  - Template "Mercury Steel Casting QC" (Surface Finish, Hardness HB 180-220,
+    Dimensional Tolerance).
+  - QI MAT-QA-2026-00001 (Accepted, submitted): Incoming, Reference = Purchase Receipt
+    MAT-PRE-2026-00001, Item RM-STEEL, Sample 1.
+  - v16 constraints learned: (a) QI needs a mandatory reference doc (no standalone) —
+    so this is INCOMING on raw material; finished-pump QI = OUTGOING vs Delivery Note
+    in Stage 6. (b) Item needs "Inspection Required before Purchase" ticked to appear
+    in the QI item dropdown (item_query filters on it). (c) Non-numeric reading passes
+    only if Reading Value == Acceptance Criteria Value (exact match), else auto-Rejected
+    and forces overall Rejected; used "Manual Inspection" toggle to accept.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 5 section).
+
+  - NOTE: fund-raising feasibility detour done 2026-07-27 (see workprogress_fundraising.txt);
+    Mercury resumed 2026-07-29.
+
+[9] STAGE 6 — PACKAGING + QR LABEL + COMPONENT TRACKING (Stock)  — 2026-07-29  DONE
+    (all sub-parts 6a-6e complete)
+  - Requirement expanded: deliverable is a KIT (pump + accessories that vary pump-to-pump).
+    Decision: KEEP the existing pump order (SAL-ORD-2026-00002); add accessories as extra
+    lines on the Delivery Note (not a Product Bundle / not a new SO). Tradeoff: accessories
+    are delivered-but-not-ordered — acceptable for "ships with the pump".
+  - Component items created: BOLT-M16 (qty-tracked), NUT-M16 (qty-tracked),
+    FUSE-10A (serial-tracked). Pump MERCURY-001 now serial-tracked. Mixed tracking:
+    pump+fuse = Serial No; bolts+nuts = quantity. (Electrical parts like a fuse -> serial
+    or batch for traceability; commodity parts -> qty.)
+  - v16 GOTCHA: "Has Serial No" was disabled until Stock Settings -> Serial & Batch Item
+    -> "Activate Serial / Batch No for Item" was turned ON (off by default). Then serial
+    series set: pump MP-.#####, fuse FU-.#####.
+  - Stock Entry (Material Receipt) MAT-STE-2026-00002: pump MP-00001 x1 (8000), fuse
+    FU-00001 x1 (50), bolt x4 (5), nut x4 (2) -> Mercury Finished Goods - JR.
+    v16 GOTCHA: zero valuation rate blocks receipt -> gave nominal Basic Rates (valuation,
+    != Item Price/selling price). Serials entered via row "Use Serial No / Batch Fields".
+  - Delivery Note MAT-DN-2026-00002-1 (amended): pump line from SO + added FUSE-10A x1,
+    BOLT-M16 x4, NUT-M16 x4. Submitted.
+    v16 GOTCHA: Packing Slip can ONLY be made for a DRAFT Delivery Note. We had submitted
+    the DN, so: Cancel -> Amend (-> new draft "-1", the "-N" suffix = amendment number,
+    normal) -> create Packing Slip -> submit DN. (Lesson: make Packing Slip BEFORE submit.)
+  - QR SHIPPING LABEL (headline) DONE: Print Format "Mercury Shipping Label" (Delivery Note,
+    Custom Format). Shows MERCURY header + QR + Customer/PO/DN/date + component table with
+    serials. LIGHT CUSTOM: v16 has no built-in QR-in-print -> added jinja helper
+    mercury.utils.qr_base64 (uses pre-installed pyqrcode) + hooks jinja={"methods":[...]}.
+    Requires bench restart to load. Serials in print via get_serial_or_batch_nos(bundle).
+  - 6e DONE: Outgoing Quality Inspection on the finished pump (Type=Outgoing, Reference=
+    Delivery Note MAT-DN-2026-00002-1, Item MERCURY-001, template "Mercury Pump Final QC",
+    Manual Inspection, Accepted, submitted). Needed Item "Inspection Required before
+    Delivery" flag (Quality tab).
+  - Stage 6 fully documented in mercury_phase1_stepbystep_guide.txt (6a-6e + gotchas).
+  - TODO (rules.md): export the "Mercury Shipping Label" Print Format (and the Mercury
+    Pump Final QC template) to mercury fixtures.
+
+[10] STAGE 7 — MILESTONE INVOICING (Accounts / Payment Terms Template)  — 2026-07-29  DONE
+  - Payment Terms Template "Mercury 30/40/30 Milestones" (30% On RTM Approval / 40% On
+    Shipment / 60d / 30% On Delivery). Master doc (Save only, no Submit).
+  - Sales Invoice ACC-SINV-2026-00065 (from Delivery Note MAT-DN-2026-00002-1), template
+    applied -> Payment Schedule 30/40/30 of grand total $12,720 (incl 6% tax) =
+    3,816 / 5,088 / 3,816. Submitted (Unpaid).
+  - Applied on the INVOICE (SO submitted + amend blocked by linked DN).
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 7).
+  - TODO (rules.md): export Payment Terms Template to mercury fixtures.
+
+[11] STAGE 8 — PROGRESS % + MONTHLY REPORT (Projects + Print Format)  — 2026-07-29  DONE
+  - Print Format "Mercury Monthly Progress Report" on Project (Custom Format). Fetches the
+    project's Tasks live via frappe.get_all (verified works in v16 print Jinja), shows
+    overall % bar + per-stage status/progress bars.
+  - Verified on PROJ-0001: renders 21% overall + 7 stages (Raw Material 100, Fabrication
+    50, rest 0). No bench restart needed (standard frappe.get_all, no custom hook).
+  - Minor: Customer prints "—" if Project.customer empty (cosmetic; set it to Joel).
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 8).
+  - TODO (rules.md): export this Print Format to mercury fixtures.
+
+================================================================================
+*** PHASE 1 COMPLETE (2026-07-29) — all 8 manual stages done, config-only. ***
+   Foundation + Stages 1-8. Only custom code in Phase 1 = the ~3-line QR jinja helper.
+================================================================================
+
+[DEMO PREP] — 2026-07-30
+  - Prepared management-facing DEMO TOUR / narration scripts (practice aids, delivered
+    in chat; NOT added to the step-by-step guide doc):
+      * Stage 6 tour — "From Finished Build to Shipped": kit on one Delivery Note ->
+        per-component serial/qty tracking (pump MP-00001, fuse FU-00001) -> Packing Slip
+        -> QR Shipping Label (headline) -> Outgoing QI. Framed on Mercury pain points
+        (lost components / no barcode / no proof of receipt) + likely-Q&A answers.
+      * Stage 7 tour — "Milestone Billing Without the Complexity": Payment Terms Template
+        (30/40/30) -> Sales Invoice ACC-SINV-2026-00065 Payment Schedule
+        (3,816/5,088/3,816 of $12,720). Framed on Alex's "too complex to automate" concern.
+  - Each tour = hook + click-by-click beats + closing + anticipated management questions.
+  - PENDING (optional): Stage 8 (Monthly Report) tour; a combined one-page DEMO-SCRIPT
+    ARTIFACT (Stages 6-8) for a second screen during the presentation.
+
+--------------------------------------------------------------------------------
+NEXT UP  (post-Phase-1)
+--------------------------------------------------------------------------------
+[ ] EXPORT all pending config to mercury fixtures (rules.md): Shipping Label +
+    Monthly Report print formats, Payment Terms Template, QI templates
+    ("Mercury Steel Casting QC", "Mercury Pump Final QC"). (Workflow/Workspace/Desktop
+    Icon already exported.) Then bench migrate on a fresh DB should reproduce everything.
+[ ] NESTED COCKPIT SIDEBAR — needs 2 user decisions (see TODO section below).
+[ ] PHASE 2 (custom) — Shipment Acknowledgement DocType + customer QR-scan portal
+    (see Mercury_ERP_Phase1_Phase2_Build_Plan.md).
+[ ] PATH 2 (deferred) — sbiqc_provisioning desk-access gate for real multi-user login.
+
+--------------------------------------------------------------------------------
+TODO — AFTER STAGE 8 (needs user decision)
+--------------------------------------------------------------------------------
+[ ] NESTED "COCKPIT" SIDEBAR under the Mercury workspace.
+    Idea (user's): make each stage in the left Mercury sidebar a COLLAPSIBLE PARENT that
+    expands to the doctypes that stage uses — so the demo runs stage-by-stage with every
+    tool in place, no searching. Verified DOABLE in v16 (Workspace Sidebar Item supports
+    type="Sidebar Item Group" + child/indent/collapsible/show_arrow).
+    Proposed structure:
+      Stage 1 · PO Intake & RTM      -> Sales Order, Customer, Item, Company, Workflow
+      Stage 3 · Procurement          -> Supplier, Material Request, Purchase Order, Purchase Receipt
+      Stage 4 · Build Progress       -> Project, Task
+      Stage 5 · Inspection           -> Quality Inspection, QI Template
+      Stage 6 · Packaging & Dispatch -> Stock Entry, Serial No, Delivery Note, Packing Slip, Print Format
+      Stage 7 · Invoicing            -> Sales Invoice, Payment Terms Template
+    DECISIONS NEEDED FROM USER before building:
+      (a) Build via backend + re-export fixture? (recommended; flat UI can't nest easily)
+      (b) Group labels: stage-labeled ("Stage 1 · PO Intake") OR plain doctype names
+          ("Sales Order", "Purchase Order", ...) as parents?
+    Status: DEFERRED until after Stage 8 (finish manual stages first).
+
+[ ] PATH 2 (deferred) — sbiqc_provisioning desk-access gate for real multi-user login.
+
+--------------------------------------------------------------------------------
+STANDING RULES (see CLAUDE.md + .claude/rules.md)
+--------------------------------------------------------------------------------
+- Answer v16-only; verify against docs/source before stating where fields/buttons are.
+- Any DocType/config change -> export to JSON/fixtures + commit (JSON = source of truth).
+- Git: commit locally after each step; only push when user says "promote it".
+================================================================================
+END — MERCURY WORK PROGRESS
+================================================================================

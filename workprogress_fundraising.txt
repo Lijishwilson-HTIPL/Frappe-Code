@@ -1,0 +1,117 @@
+================================================================================
+  FUND RAISING PLATFORM — ERPNext FEASIBILITY (WORK PROGRESS / FINDINGS)
+  Use case: recurring donor support for ministry orgs (donors -> missionaries)
+  Platform: ERPNext v16 / Frappe v16 (erpnext 16.23.1, frappe 16.23.0)
+  Site: mysite.local  |  Status: FEASIBILITY ANALYSIS ONLY (no build yet)
+  Started: 2026-07-27
+================================================================================
+
+REQUIREMENT
+-----------
+Donors make recurring financial commitments (pledges) that fund individual
+missionaries. The platform must track:
+  - Donor pledges (recurring commitment: amount + frequency + missionary)
+  - Recurring contributions (actual payments against the pledge)
+  - Missed payments -> notify donor AND missionary/admin
+  - Funding shortages (missionary received < target) -> notify missionary + donors/admin
+Disbursement to missionaries (paying them) = adjacent/separate scope (Payroll or
+Supplier payment), not part of the core pledge-tracking requirement.
+
+VERDICT
+-------
+FEASIBLE and a strong fit. Foundation = ERPNext's recurring-billing + receivables
+engine (NOT the fundraising module). Split: ~65% configuration / ~35% targeted
+custom. 35% (not lower) because of real v16 gotchas (below).
+
+Mental model:
+  recurring pledge  = Subscription (auto-generates a periodic invoice)
+  contribution      = Payment against the invoice
+  missed payment    = Overdue invoice
+  funding shortage  = received-vs-target gap per missionary
+
+VERIFIED IN THIS v16 INSTALL (doctypes present)
+-----------------------------------------------
+  Subscription, Subscription Plan, Dunning, Payment Request, Budget,
+  Accounting Dimension, Auto Repeat (frappe), Notification (frappe).
+NOT installed: Non-Profit module (Donor / Donation / Membership). Not needed —
+the accounting engine is the better fit. (Installable as a separate app if ever wanted.)
+
+CONCEPT -> MODULE MAPPING
+-------------------------
+  Donor                          -> Customer (group "Donors")                 [Standard]
+  Missionary / receiver          -> Accounting Dimension "Missionary" on every
+                                    txn + Project/Cost Center per missionary   [Config]
+  Recurring pledge ($X/month)    -> Subscription + Subscription Plan           [Standard]
+  Contribution received          -> Payment Entry against invoice (-> Paid)     [Standard]
+  Missed payment                 -> Invoice auto Overdue past due date          [Standard]
+  Reminders / escalation         -> Dunning + Payment Request (online link)     [Config]
+  Notify donor & missionary      -> Notification (event/date-based email/SMS)   [Custom routing]
+  Funding shortage per missionary-> received-vs-target: custom report + sched.  [Custom]
+                                    alert (Budget is EXPENSE-oriented, not income)
+  Donor / missionary portal      -> Customer Portal + tailored view            [Light custom]
+
+RECOMMENDED WORKFLOW (end to end)
+---------------------------------
+  1. Onboard donor as Customer (group "Donors").
+  2. Record pledge = Subscription ($100/mo), tagged to a Missionary.
+  3. Each period -> Subscription auto-creates an invoice earmarked to that missionary.
+  4. Donor pays (Payment Entry, or online via Payment Request) -> invoice Paid.
+  5. Unpaid past due -> invoice Overdue -> notify donor + missionary; Dunning escalates.
+  6. Compare missionary received vs monthly target; if short -> alert missionary + donors/admin.
+  7. Dashboards: pledged vs received, overdue list, shortfall by missionary, donor history.
+
+WHERE REAL CUSTOMIZATION IS NEEDED (Phase 2, ~35%)
+--------------------------------------------------
+  - Funding-shortage engine: received-vs-target per missionary (Budget can't do income
+    shortfall) -> custom report + scheduled script + alerts.
+  - Dual-recipient notification routing: resolve/email the correct missionary tied to a
+    donor's pledge (needs a resolver, not just a checkbox).
+  - "Missionary" link field on Subscription/Customer to earmark cleanly.
+  - Donor / missionary self-service portal views.
+  - Donor-friendly labels ("Support Commitment" instead of "Invoice").
+
+KEY DESIGN DECISION
+-------------------
+  Subscription -> Invoice  (RECOMMENDED)  vs  custom "Pledge" doctype.
+  Subscription->Invoice reuses overdue detection, dunning, aging, online payment out of
+  the box (just relabel "Invoice" as "Support Commitment"). Custom Pledge doctype is
+  semantically cleaner but rebuilds the missed-payment/reminder machinery -> more custom/risk.
+  => Go with Subscription -> Invoice.
+
+WHY 35% CUSTOM, NOT LESS (v16 gotchas)
+--------------------------------------
+  - Income-side shortfall is not native (Budget targets expenses).
+  - Notification recipient routing needs logic to reach the right missionary.
+  - Field/validation quirks: read-only-after-create fields, exact-match validations,
+    reference-required rules (all observed on this instance).
+  - Caching & desk white-labelling: standard actions hidden, aggressive caching -> "simple
+    config" sometimes needs backend follow-up.
+  - Portal tailoring is light dev, not pure config.
+
+PHASED PLAN
+-----------
+  Phase 1 (config, no code): donors as Customers; pledges as Subscriptions (auto-invoicing);
+    payment tracking + overdue; Dunning/Payment Request; Accounting Dimension per missionary;
+    event/date Notifications to donors; dashboards.
+  Phase 2 (targeted custom): funding-shortage engine + alerts; dual-recipient routing;
+    Missionary link field; donor/missionary portal; friendly labels.
+
+DELIVERABLES PRODUCED (2026-07-27)
+----------------------------------
+  - Shareable artifact: "Fund Raising Platform with ERPNext" feasibility
+      https://claude.ai/code/artifact/e2553208-3692-42da-9f9d-e145f4982e32
+      (65/35 split bar, concept mapping, workflow, config-vs-custom, v16 risks)
+  - Word report: web docs/FundRaising_ERP_Feasibility_Report.docx
+      (same style as Mercury_ERP_Feasibility_Report.docx: Exec Summary, Requirement,
+       Module Mapping table, Customization, Phased Scope, Risks, Conclusion)
+
+OPEN QUESTIONS (to refine scope before any build)
+--------------------------------------------------
+  - Pledge model confirmed as Subscription->Invoice? (recommended)
+  - Missionary disbursement in scope? (Employee/Payroll vs Supplier vs out-of-scope)
+  - Exact "funding shortage" rule (target definition, period).
+  - Notification channels (email only vs +SMS) and who is notified when.
+  - Online donor payments via gateway/portal (like the MFT Stripe flow) or manual entry?
+
+STATUS: Feasibility only. No build started. Paused to resume Mercury Stage 6.
+================================================================================

@@ -1,9 +1,10 @@
 frappe
-telephony
-crm
-helpdesk
-hrms
 crm_unify
+telephony
+hrms
+helpdesk
 erpnext
-sbiqc_provisioning
 quality_dms
+mercury
+crm
+sbiqc_provisioning
