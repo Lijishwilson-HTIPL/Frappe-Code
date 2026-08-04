@@ -5,6 +5,61 @@
   Site: mysite.local | Login: Administrator | Started: 2026-07-23
 ================================================================================
 
+################################################################################
+## >>> HANDOFF FOR NEXT CHAT (read this first) — updated 2026-08-04 <<<
+################################################################################
+WHERE WE ARE:
+  - PHASE 1 = COMPLETE. All 8 manual stages configured (config-only; the ONLY custom
+    code is a ~3-line QR jinja helper in apps/mercury/mercury/utils.py).
+  - Management DEMO delivered 2026-07-29. Management gave NEW SUGGESTIONS.
+  - MGMT FEEDBACK #1 = DONE (2026-08-04): per-component QR labels + Mercury logo.
+    See section [12] below. Fixtures exported + committed.
+  - NEXT TASK: apply management's remaining feedback items ONE BY ONE (user pastes them).
+    Also still waiting on Mercury's REAL CUSTOMER REPORTS (user said they'd share; not
+    yet on disk — they will likely reshape Stage 8 report + Stage 6 label fields).
+
+GIT (important):
+  - Remote MOVED: use "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
+    (old "origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED). Our branch = paul-update.
+  - Local working branch = paul-update2 (superset of paul-update). Committed
+    03c7f0d68 "mercury thin app phase 1 - configurable 8 stages" and pushed to
+    hephzibah/paul-update. Then merged hephzibah/staging-deployment into local (clean).
+  - GIT RULES: user (Paul Sahaya Doss) is the SOLE author — NEVER add a Claude/Anthropic
+    co-author trailer. Commit locally after steps; push only when told. No creds stored
+    in WSL (push needs SSH or a PAT the user provides transiently — never store in chat).
+  - Leftover incidental changes are stashed as "pre-merge-leftovers".
+
+MACHINE-LOCAL SETUP (NOT in git — must be redone on any other machine):
+  - wkhtmltopdf 0.12.6.1 (with patched qt) installed WITHOUT root at ~/opt/wkhtmltox
+    (official jammy .deb extracted via dpkg-deb -x; no missing shared libs).
+    Frappe calls `wkhtmltopdf` by bare name (frappe/utils/pdf.py) with NO site_config
+    override, so it MUST be on the PATH of the bench processes.
+  - The bench process PATH did NOT include env/bin or ~/.local/bin, and /usr/local/bin
+    needs root. Solved with a new ~/frappe-bench/.env (honcho reads it on `bench start`
+    and applies it to every Procfile process) that prepends ~/opt/wkhtmltox/bin.
+    .env is gitignored (hardcodes /home/paul/...). MUST fully restart `bench start`
+    (Ctrl+C + bench start) — `bench restart` does NOT re-launch honcho, so it won't pick
+    .env up. Also had to clear the cached redis key "wkhtmltopdf_version".
+
+ENV / KEY RECORDS: site mysite.local, login Administrator (bypasses the sbiqc desk gate).
+  SO=SAL-ORD-2026-00002 · Workflow "Mercury RTM Approval" · Project PROJ-0001 ·
+  DN=MAT-DN-2026-00002-1 · SI=ACC-SINV-2026-00065 · print formats "Mercury Shipping Label"
+  (Delivery Note) & "Mercury Monthly Progress Report" (Project) · QI templates
+  "Mercury Steel Casting QC" / "Mercury Pump Final QC" · Payment Terms Template
+  "Mercury 30/40/30 Milestones". Company=Mercury (abbr JR), Customer=Joel.
+
+RULES: answer v16 ONLY (verify against docs/source, no guessing) — see CLAUDE.md +
+  .claude/rules.md. Any DocType/config change -> export to mercury fixtures + note it.
+
+OPEN ITEMS (also see NEXT UP + TODO sections below):
+  [x] DONE 2026-08-04: exported remaining config to mercury fixtures (rules.md) — the 2
+      Print Formats, Payment Terms Template and both QI Templates are now fixtures.
+  [ ] Apply remaining MANAGEMENT FEEDBACK items (the current focus).
+  [ ] Get Mercury's REAL CUSTOMER REPORTS from user (not yet on disk).
+  [ ] Nested cockpit sidebar (needs 2 user decisions). [ ] Phase 2 custom. [ ] Path 2 login.
+  Full step-by-step of all 8 stages: web docs/mercury_phase1_stepbystep_guide.txt.
+################################################################################
+
 GOAL
 ----
 Show Alex (Mercury) a working ERPNext demo covering the manufacturing workflow
@@ -219,6 +274,78 @@ TODO TASKS
   - Each tour = hook + click-by-click beats + closing + anticipated management questions.
   - PENDING (optional): Stage 8 (Monthly Report) tour; a combined one-page DEMO-SCRIPT
     ARTIFACT (Stages 6-8) for a second screen during the presentation.
+
+[12] MGMT FEEDBACK #1 — PER-COMPONENT QR LABELS + MERCURY LOGO  — 2026-08-04  DONE
+  ASK: "we don't want one QR for the whole bundle — every component must have its own
+  shipping label so the customer scans and acknowledges each one" (so no loose part is
+  missed). Later refined: 7 physical units => 7 labels, even when 2-3 are the same item.
+  - KIT CHANGED (user's instruction): dropped BOLT-M16 / NUT-M16 from the shipment (the
+    Item records still exist, just not in the kit) and added 3 real accessories, all
+    SERIAL-TRACKED so each unit has a unique identity:
+      BFV-8  8" Butterfly Valve   (BV-.#####)  qty 2
+      LG-01  Level Gauge          (LG-.#####)  qty 1
+      EJ-8   8" Expansion Joint   (EJ-.#####)  qty 3
+    + MERCURY-001 pump qty 1 => 7 units total. All have "Inspection Required before
+    Delivery" ticked (consistent with the pump).
+  - Stock Entry MAT-STE-2026-00004 (Material Receipt, ONE entry, 7 rows - user explicitly
+    wanted a single receipt) into Mercury Finished Goods - JR: MP-00002, BV-00001,
+    BV-00002, LG-00001, EJ-00001, EJ-00002, EJ-00003. One row per serial is forced by
+    serial tracking - that is normal, not a qty bug.
+  - NEW Delivery Note MAT-DN-2026-00003 (DRAFT, $18,800): 4 lines / 7 units.
+    WHY A NEW DN: the old MAT-DN-2026-00002-1 is submitted AND Sales Invoice
+    ACC-SINV-2026-00065 is built on it, so swapping its items would have meant cancelling
+    the Stage 7 invoice. Old DN + SI left intact as Stage 6/7 evidence. Kept DRAFT on
+    purpose so Packing Slips can still be attached (Packing Slip needs a draft DN).
+  - v16 GOTCHA: serial auto-generation failed with "naming series conflict" because
+    tabSeries had NO counter rows for MP-/BV-/LG-/EJ- while MP-00001 already existed.
+    Fixed by supplying serials explicitly (use_serial_batch_fields=1 + serial_no) and
+    syncing tabSeries (MP-=2, BV-=2, LG-=1, EJ-=3) so UI creation increments correctly.
+  - PRINT FORMAT "Mercury Shipping Label" REWRITTEN (was: 1 label + 1 bundle QR):
+      * page 1 = SHIPMENT MANIFEST listing all 7 units (Label 1/7..7/7, serial,
+        "Unit 2 of 3") - this is the receiver's tick-sheet.
+      * then ONE FULL LABEL PAGE PER UNIT (7 pages): component name/code, its serial in
+        large mono, LABEL n OF 7, Unit n of N, DN/date/customer/customer PO, own QR.
+      * Loop builds a flat unit list from each row's serials (falls back to one label per
+        line for any non-serialised item), so it adapts to any DN.
+      * QR PAYLOAD IS NOW PER-UNIT and Phase-2 ready (was doc.name => identical on every
+        label): {site}/shipment-ack?dn=<DN>&item=<code>&sr=<serial>. Verified all 7
+        payloads distinct. Phase 2 form can pre-fill for that exact unit.
+      * Old bundle version backed up at /tmp/mercury_label_BACKUP_bundle_qr.html.
+  - MERCURY LOGO added to all 8 headers. Stored as a FILE, not a DB record:
+    apps/mercury/mercury/public/images/mercury_logo.png (+ .svg kept for future large
+    format). Served via the existing sites/assets/mercury symlink at
+    /assets/mercury/images/mercury_logo.png. Had to create the missing public/ dir.
+    Logo sizing is ONE jinja var: {% set logo_w = 106 %} used by all 8 headers.
+    THREE REAL BUGS FOUND AND FIXED (all worth remembering):
+      (a) user's 1199x674 PNG was mostly empty padding - the wordmark only occupied
+          y=264..428. Sizing by height sized the PADDING. Cropped to the ink bbox with
+          PIL => 1173x164 (true aspect 7.152:1), transparent bg preserved.
+      (b) hardcoding BOTH width and height (200x31 = 6.45:1) stretched the logo ~11%
+          vertically. Now width only + height:auto => distortion is impossible.
+      (c) PREVIEW vs PDF MISMATCH (logo huge in Chrome preview, correct in PDF):
+          frappe/www/printview.py injects a legacy "mozilla hack for images in table":
+            body:last-child .print-format td img { width: 100% !important; }
+          Our logo sits in a <td>, and !important beats ANY inline width, so the preview
+          stretched it to the full table cell while the PDF honoured 106px. FIX: wrap the
+          img in <div style="width:{{logo_w}}px"> and give the img width:100% - the forced
+          100% then resolves to logo_w, so preview and PDF match. Comment left in the
+          format so nobody "fixes" it back. REMEMBER THIS for any print format image.
+  - FIXTURES EXPORTED (rules.md) - enabled the 3 commented placeholders in mercury
+    hooks.py and ran bench --site mysite.local export-fixtures --app mercury:
+      print_format.json              -> Mercury Shipping Label, Mercury Monthly Progress Report
+      payment_terms_template.json    -> Mercury 30/40/30 Milestones
+      quality_inspection_template.json -> Mercury Pump Final QC, "Mercury Steel Casting QC."
+    NOTE the trailing period in "Mercury Steel Casting QC." (typo in the record name;
+    harmless but rename later if it bothers anyone).
+  - WHERE THINGS LIVE (asked by user): the logo is a FILE ON DISK in the mercury app
+    (git-tracked, served via /assets), NOT in the DB and NOT embedded in the print format.
+    The Print Format is a DB record whose HTML only holds the URL string; exporting it to
+    fixtures puts that HTML into git as JSON. So a fresh machine needs: git pull +
+    bench migrate (imports fixtures) + the app installed (creates the assets symlink).
+  - STILL OPEN on this stage: DN MAT-DN-2026-00003 cannot be SUBMITTED until each of the
+    4 items has an Outgoing Quality Inspection (all have "Inspection Required before
+    Delivery"). Decide: raise 3 more QIs, or untick the flag on the accessories.
+    Also not yet done: Packing Slips (the per-freight-box "Option B" grouping).
 
 --------------------------------------------------------------------------------
 NEXT UP  (post-Phase-1)

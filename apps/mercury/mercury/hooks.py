@@ -282,11 +282,17 @@ fixtures = [
 		"Draft", "Submittal Under Customer Review", "Revision Requested", "RTM Approved"]]]},
 	{"dt": "Workflow Action Master", "filters": [["name", "in", [
 		"Send for Customer Review", "Approve RTM", "Request Revision", "Resubmit for Review"]]]},
+	# Stage 6 - "Mercury Shipping Label" (per-unit QR labels, references the logo at
+	# /assets/mercury/images/mercury_logo.png) and Stage 8 - "Mercury Monthly Progress
+	# Report". The logo itself is a FILE in this app's public/images (not a DB record),
+	# so it travels with git; only the HTML that references it lives in the DB.
+	{"dt": "Print Format", "filters": [["name", "like", "Mercury%"]]},
+	# Stage 7 - milestone billing schedule (30/40/30).
+	{"dt": "Payment Terms Template", "filters": [["name", "like", "Mercury%"]]},
+	# Stage 5 - incoming (raw material) + outgoing (finished pump) QC checklists.
+	{"dt": "Quality Inspection Template", "filters": [["name", "like", "Mercury%"]]},
 	# Added as later Phase 1 stages are built:
 	# {"dt": "Custom Field", "filters": [["module", "=", "Mercury"]]},
 	# {"dt": "Property Setter", "filters": [["module", "=", "Mercury"]]},
-	# {"dt": "Print Format", "filters": [["name", "like", "Mercury%"]]},
-	# {"dt": "Payment Terms Template", "filters": [["name", "like", "Mercury%"]]},
-	# {"dt": "Quality Inspection Template", "filters": [["name", "like", "Mercury%"]]},
 ]
 

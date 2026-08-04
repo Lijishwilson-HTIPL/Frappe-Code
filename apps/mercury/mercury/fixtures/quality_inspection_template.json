@@ -1,0 +1,80 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Quality Inspection Template",
+  "item_quality_inspection_parameter": [
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 0.0,
+    "min_value": 0.0,
+    "numeric": 0,
+    "parameter_group": null,
+    "specification": "Leak / Hydro Test",
+    "value": " Pass"
+   },
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 0.0,
+    "min_value": 0.0,
+    "numeric": 0,
+    "parameter_group": null,
+    "specification": "Performance Check",
+    "value": "Within curve"
+   },
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 0.0,
+    "min_value": 0.0,
+    "numeric": 0,
+    "parameter_group": null,
+    "specification": "Paint / Finish",
+    "value": "OK"
+   }
+  ],
+  "modified": "2026-07-29 15:38:43.661418",
+  "name": "Mercury Pump Final QC",
+  "quality_inspection_template_name": "Mercury Pump Final QC"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Quality Inspection Template",
+  "item_quality_inspection_parameter": [
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 0.0,
+    "min_value": 0.0,
+    "numeric": 0,
+    "parameter_group": null,
+    "specification": "Surface Finish",
+    "value": "No cracks / smooth"
+   },
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 220.0,
+    "min_value": 180.0,
+    "numeric": 1,
+    "parameter_group": null,
+    "specification": "Hardness (HB)",
+    "value": null
+   },
+   {
+    "acceptance_formula": null,
+    "formula_based_criteria": 0,
+    "max_value": 0.0,
+    "min_value": 0.0,
+    "numeric": 0,
+    "parameter_group": null,
+    "specification": "Dimensional Tolerance",
+    "value": "Within drawing spec"
+   }
+  ],
+  "modified": "2026-07-27 15:04:45.954363",
+  "name": "Mercury Steel Casting QC.",
+  "quality_inspection_template_name": "Mercury Steel Casting QC."
+ }
+]
