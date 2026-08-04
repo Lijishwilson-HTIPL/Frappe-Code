@@ -216,13 +216,19 @@ frappe.ui.form.on("Project", {
 			</div>`;
 
 		// Each block is a collapsible accordion, so a section that isn't relevant to
-		// a given project can be folded away instead of taking up the tab (a
-		// manufacturing project, for instance, never logs defects). Collapsed state
-		// is remembered per section per browser, so the chosen layout survives
-		// reloads and route changes. Default stays EXPANDED — folding is opt-in, so
-		// nobody's existing view changes until they collapse it themselves.
+		// a given project can be folded away instead of taking up the tab. Tasks are
+		// the primary content so they open by default; Defects start folded (they are
+		// empty on most projects, and manufacturing projects never log any) — the
+		// count badge in the header still shows the total while it's closed.
+		// Whatever the user chooses is remembered per section per browser, so the
+		// chosen layout survives reloads and route changes.
+		const DEFAULT_COLLAPSED = { Tasks: false, Defects: true };
 		const collapse_key = (title) => `project_summary_collapsed::${title}`;
-		const is_collapsed = (title) => localStorage.getItem(collapse_key(title)) === "1";
+		const is_collapsed = (title) => {
+			const saved = localStorage.getItem(collapse_key(title));
+			if (saved !== null) return saved === "1";
+			return !!DEFAULT_COLLAPSED[title];
+		};
 		const panel_id = (title) => `summary-panel-${frappe.scrub(title)}`;
 
 		const section = (title, icon, doctype, project, s, view_route) => {
@@ -241,13 +247,18 @@ frappe.ui.form.on("Project", {
 						${frappe.utils.icon(icon, "md")} ${__(title)}
 						<span class="summary-count-badge">${total}</span>
 					</div>
-					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
-						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
 				</div>
 				<div class="summary-accordion-panel" id="${panel_id(title)}">
 					<div class="summary-accordion-panel-inner">
 						<div style="padding-top: 4px;">
-							<div style="margin-bottom: 16px;">${legend(doctype)}</div>
+							<div class="flex align-items-center" style="gap: 12px; margin-bottom: 16px;">
+								<div style="flex: 1 1 auto; min-width: 0;">${legend(doctype)}</div>
+								<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
+									style="flex: 0 0 auto; font-size: 12px; border-radius: 6px; padding: 4px 12px; white-space: nowrap;">${__(
+										"View All {0}",
+										[__(title)]
+									)}</a>
+							</div>
 							<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
 								${stat_card(doctype, project, "Total", s.total, null, null)}
 								${ALL_STATUSES[doctype]
@@ -358,10 +369,6 @@ frappe.ui.form.on("Project", {
 					localStorage.setItem(collapse_key(title), "1");
 				}
 			};
-
-			$wrapper.off("click", ".summary-view-all").on("click", ".summary-view-all", function (e) {
-				e.stopPropagation();
-			});
 
 			$wrapper
 				.off("click", ".summary-accordion-header")
