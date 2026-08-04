@@ -215,25 +215,52 @@ frappe.ui.form.on("Project", {
 					.join("")}
 			</div>`;
 
-		const section = (title, icon, doctype, project, s, view_route) => `
-			<div>
-				<div class="flex justify-between align-items-center" style="margin-bottom: 8px;">
+		// Each block is a collapsible accordion, so a section that isn't relevant to
+		// a given project can be folded away instead of taking up the tab (a
+		// manufacturing project, for instance, never logs defects). Collapsed state
+		// is remembered per section per browser, so the chosen layout survives
+		// reloads and route changes. Default stays EXPANDED — folding is opt-in, so
+		// nobody's existing view changes until they collapse it themselves.
+		const collapse_key = (title) => `project_summary_collapsed::${title}`;
+		const is_collapsed = (title) => localStorage.getItem(collapse_key(title)) === "1";
+		const panel_id = (title) => `summary-panel-${frappe.scrub(title)}`;
+
+		const section = (title, icon, doctype, project, s, view_route) => {
+			const collapsed = is_collapsed(title);
+			const total = s.total || 0;
+			return `
+			<div class="summary-accordion ${collapsed ? "" : "open"}" data-section="${frappe.utils.escape_html(title)}">
+				<div class="summary-accordion-header" role="button" tabindex="0"
+					aria-expanded="${!collapsed}" aria-controls="${panel_id(title)}"
+					title="${__("Click to show or hide this section")}">
 					<div class="flex align-items-center" style="gap: 8px; font-weight: 700; font-size: 18px; color: var(--dms-blue, #1e3a5f);">
+						<svg class="summary-chevron" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+							<path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8"
+								stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
 						${frappe.utils.icon(icon, "md")} ${__(title)}
+						<span class="summary-count-badge">${total}</span>
 					</div>
-					<a href="${view_route}" class="btn btn-default btn-xs"
+					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
 						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
 				</div>
-				<div style="margin-bottom: 16px;">${legend(doctype)}</div>
-				<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
-					${stat_card(doctype, project, "Total", s.total, null, null)}
-					${ALL_STATUSES[doctype]
-						.map((status) =>
-							stat_card(doctype, project, status, s.by_status[status] || 0, [status], STATUS_ACCENT[doctype][status])
-						)
-						.join("")}
+				<div class="summary-accordion-panel" id="${panel_id(title)}">
+					<div class="summary-accordion-panel-inner">
+						<div style="padding-top: 4px;">
+							<div style="margin-bottom: 16px;">${legend(doctype)}</div>
+							<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
+								${stat_card(doctype, project, "Total", s.total, null, null)}
+								${ALL_STATUSES[doctype]
+									.map((status) =>
+										stat_card(doctype, project, status, s.by_status[status] || 0, [status], STATUS_ACCENT[doctype][status])
+									)
+									.join("")}
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>`;
+		};
 
 		Promise.all([
 			frappe.call({
@@ -255,12 +282,101 @@ frappe.ui.form.on("Project", {
 						transform: translateY(-1px);
 						background: color-mix(in srgb, var(--accent, transparent) 10%, var(--card-bg, #fff)) !important;
 					}
+					/* Collapsible section. Colours come from frappe's theme variables
+					   (not fixed hex) so this stays correct in dark mode. */
+					.summary-accordion-header {
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 8px;
+						padding: 8px 10px;
+						margin: 0 -10px 8px;
+						border-radius: 6px;
+						cursor: pointer;
+						user-select: none;
+						transition: background 0.15s ease;
+					}
+					.summary-accordion-header:hover {
+						background: var(--fg-hover-color, var(--control-bg, #f4f5f6));
+					}
+					.summary-accordion-header:focus-visible {
+						outline: 2px solid var(--primary, #2490ef);
+						outline-offset: 1px;
+					}
+					.summary-chevron {
+						width: 16px;
+						height: 16px;
+						flex-shrink: 0;
+						color: var(--text-muted, #8d99a6);
+						transform: rotate(-90deg);
+						transition: transform 0.25s ease;
+					}
+					.summary-accordion.open .summary-chevron { transform: rotate(0deg); }
+					.summary-count-badge {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						min-width: 22px;
+						height: 20px;
+						padding: 0 7px;
+						border-radius: 999px;
+						background: var(--control-bg, #f4f5f6);
+						color: var(--text-muted, #8d99a6);
+						font-size: 12px;
+						font-weight: 700;
+						font-variant-numeric: tabular-nums;
+					}
+					/* 0fr -> 1fr grid trick: animates to the panel's natural height
+					   without hardcoding a max-height. */
+					.summary-accordion-panel {
+						display: grid;
+						grid-template-rows: 0fr;
+						transition: grid-template-rows 0.28s ease;
+					}
+					.summary-accordion.open .summary-accordion-panel { grid-template-rows: 1fr; }
+					.summary-accordion-panel-inner { overflow: hidden; }
+					@media (prefers-reduced-motion: reduce) {
+						.summary-accordion-panel, .summary-chevron { transition: none; }
+					}
 				</style>
 				<div style="display: flex; flex-direction: column; gap: 22px; margin-top: 8px;">
 					${section("Tasks", "bullet-list", "Task", frm.doc.name, task_r.message, task_route)}
 					${section("Defects", "alert-triangle", "Issue", frm.doc.name, defect_r.message, defect_route)}
 				</div>
 			`);
+
+			// Collapse / expand a section and remember the choice. The "View All"
+			// button lives inside the header, so its click must not also toggle.
+			const toggle_section = ($header) => {
+				const $acc = $header.closest(".summary-accordion");
+				const open = $acc.toggleClass("open").hasClass("open");
+				$header.attr("aria-expanded", open);
+				const title = $acc.attr("data-section");
+				if (open) {
+					localStorage.removeItem(collapse_key(title));
+				} else {
+					localStorage.setItem(collapse_key(title), "1");
+				}
+			};
+
+			$wrapper.off("click", ".summary-view-all").on("click", ".summary-view-all", function (e) {
+				e.stopPropagation();
+			});
+
+			$wrapper
+				.off("click", ".summary-accordion-header")
+				.on("click", ".summary-accordion-header", function () {
+					toggle_section($(this));
+				});
+
+			$wrapper
+				.off("keydown", ".summary-accordion-header")
+				.on("keydown", ".summary-accordion-header", function (e) {
+					if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+						e.preventDefault();
+						toggle_section($(this));
+					}
+				});
 
 			$wrapper.off("click", ".summary-stat-card").on("click", ".summary-stat-card", function () {
 				const $el = $(this);

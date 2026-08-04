@@ -46,6 +46,29 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ## Features by commit
 
+### `<pending>` — collapsible Tasks/Defects sections on the Project Summary tab (2026-08-04) · NOT PUSHED
+- **Why:** the Mercury demo shouldn't show a "Defects" panel (DMS/SBIQC terminology,
+  always 0 for a manufacturing project). Rather than hard-hide it, both sections on the
+  Project Summary tab are now **accordions**, so it can be folded away for the demo and
+  unfolded again after.
+- Header (chevron + icon + title + **count badge** + View All) is clickable; panel uses
+  the `grid-template-rows: 0fr → 1fr` trick so it animates to natural height without a
+  hardcoded max-height. Keyboard accessible (`role=button`, `tabindex=0`,
+  `aria-expanded`, `aria-controls`, Enter/Space), and honours
+  `prefers-reduced-motion`.
+- **Default is EXPANDED** and the collapsed state is stored per section in
+  `localStorage` (`project_summary_collapsed::<title>`). Deliberate: this file is shared
+  with the DMS/SBIQC project module, so nobody else's view changes until they collapse it
+  themselves — and Paul collapses Defects once and it stays collapsed for the demo.
+- Styled with frappe theme variables (`--fg-hover-color`, `--control-bg`, `--text-muted`,
+  `--primary`) rather than fixed hex, so it is correct in dark mode.
+- `View All` sits inside the clickable header, so its click is `stopPropagation`'d —
+  otherwise opening the list would also toggle the section.
+- File: `apps/erpnext/erpnext/projects/doctype/project/project.js`
+  (`show_task_defect_summary_tab`). Doctype client script — no `bench build` needed,
+  just `bench clear-cache` + hard reload.
+Rollback-before-this: `3db8740fd`
+
 ### `<pending>` — Outgoing QIs for the whole kit + Stage 6 guide rewrite (2026-08-04) · NOT PUSHED
 - **Unblocked `MAT-DN-2026-00003` for submission.** All 4 kit items carry *Inspection
   Required before Delivery*, and erpnext (`stock_controller.py:1463`) requires a
