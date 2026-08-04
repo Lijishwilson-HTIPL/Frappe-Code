@@ -38,3 +38,50 @@ body[data-route^="Form"] .layout-side-section {
 body[data-route^="Form"] .layout-main {
 	align-items: flex-start;
 }
+
+/* ------------------------------------------------------------------------
+ * Keep the page head and the form tab bar permanently pinned.
+ *
+ * Core state (v16):
+ *   page.scss:113   .page-head { position: sticky; top: 0 }  ...but
+ *                   ui/page.js:69 + form/layout.js:560 push it to top:-15px on
+ *                   scroll-down for read-only / impersonated sessions.
+ *   form.scss:484   .form-tabs-list { position: sticky } with NO top value, so
+ *                   sticky does nothing until form/layout.js:538 adds
+ *                   .form-tabs-sticky-up / -down on the first scroll. That is why
+ *                   the tab bar only starts sticking after you scroll once.
+ *
+ * Pin both unconditionally, with the tab bar sitting directly under the head.
+ * ------------------------------------------------------------------------ */
+.page-head {
+	top: 0 !important;
+}
+
+.form-tabs-list,
+.form-tabs-sticky-up,
+.form-tabs-sticky-down,
+.form-tabs-sticky-down.show-navbar {
+	top: var(--page-head-height) !important;
+}
+
+/* ------------------------------------------------------------------------
+ * Hide the .main-section scrollbar (the page still scrolls normally).
+ *
+ * main.scss:37 makes .main-section a 100vh scroll container with
+ * `scrollbar-gutter: stable`, which both paints a visible bar down the right
+ * edge and permanently reserves space for it. Hiding it reclaims that space and
+ * removes the bar the client would otherwise see next to the form sidebar.
+ *
+ * TRADE-OFF: no visual scroll-position indicator. Wheel, trackpad, keyboard and
+ * touch scrolling are unaffected.
+ * ------------------------------------------------------------------------ */
+.main-section {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* legacy Edge */
+	scrollbar-gutter: auto;
+}
+
+.main-section::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
