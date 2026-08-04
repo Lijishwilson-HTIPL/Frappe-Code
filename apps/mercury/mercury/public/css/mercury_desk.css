@@ -1,0 +1,40 @@
+/* Mercury desk UI overrides.
+ *
+ * Loaded on every desk page via hooks.app_include_css. Additive only - we do not
+ * patch frappe/erpnext core CSS, so removing the hook line reverts everything.
+ */
+
+/* ------------------------------------------------------------------------
+ * ONE vertical scrollbar on form views (was two).
+ *
+ * v16 core creates two independent scroll containers on a Form route:
+ *   main.scss:37          .main-section { height: 100vh; overflow: scroll; }
+ *   form_sidebar.scss:274 body[data-route^="Form"] .layout-side-section {
+ *                             height: calc(100vh - var(--page-head-height));
+ *                             overflow-y: auto; position: sticky; }
+ *
+ * So whenever the right form sidebar is taller than the viewport (a few
+ * attachments is enough) the browser paints a second scrollbar right next to the
+ * page one, and the sidebar scrolls independently - which also lets it drift out
+ * of vertical alignment with .layout-main-section.
+ *
+ * Putting the sidebar back into normal page flow gives a single page scrollbar
+ * and keeps the sidebar and the main section starting at the same level.
+ *
+ * TRADE-OFF: the sidebar is no longer sticky/pinned - it scrolls with the page.
+ * That is the price of one scrollbar. To restore core behaviour, delete this
+ * block (or the app_include_css line in mercury/hooks.py).
+ * ------------------------------------------------------------------------ */
+body[data-route^="Form"] .layout-side-section {
+	height: auto;
+	overflow-x: visible;
+	overflow-y: visible;
+	position: static;
+	top: auto;
+}
+
+/* Both columns are flex children of .row.layout-main - align their tops so the
+ * form sidebar and the main section always begin on the same horizontal level. */
+body[data-route^="Form"] .layout-main {
+	align-items: flex-start;
+}

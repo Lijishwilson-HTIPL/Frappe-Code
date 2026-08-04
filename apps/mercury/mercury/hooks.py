@@ -25,7 +25,12 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/mercury/css/mercury.css"
+# Desk UI overrides (currently: collapse the duplicate vertical scrollbar that v16
+# core produces on form views). Additive CSS only - no core file is patched, so
+# commenting this line out reverts the behaviour completely.
+# Bump ?v= when editing the file so browsers pick the change up (same convention
+# as hrms/quality_dms above it in the include list).
+app_include_css = "/assets/mercury/css/mercury_desk.css?v=1"
 # app_include_js = "/assets/mercury/js/mercury.js"
 
 # include js, css files in header of web template
