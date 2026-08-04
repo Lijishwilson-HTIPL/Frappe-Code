@@ -224,12 +224,21 @@ frappe.ui.form.on("Project", {
 		// chosen layout survives reloads and route changes.
 		const DEFAULT_COLLAPSED = { Tasks: false, Defects: true };
 		const collapse_key = (title) => `project_summary_collapsed::${title}`;
+
+		// sessionStorage, not localStorage: a section the user opens stays open across
+		// reloads and route changes, but the defaults come back on a fresh session
+		// (new login / new tab). So Defects is always folded to begin with and never
+		// silently stays open from days ago.
 		const is_collapsed = (title) => {
-			const saved = localStorage.getItem(collapse_key(title));
+			const saved = sessionStorage.getItem(collapse_key(title));
 			if (saved !== null) return saved === "1";
 			return !!DEFAULT_COLLAPSED[title];
 		};
 		const panel_id = (title) => `summary-panel-${frappe.scrub(title)}`;
+
+		// One-off cleanup: an earlier build persisted this in localStorage, which
+		// outlived the session and could leave Tasks folded shut on first load.
+		Object.keys(DEFAULT_COLLAPSED).forEach((t) => localStorage.removeItem(collapse_key(t)));
 
 		const section = (title, icon, doctype, project, s, view_route) => {
 			const collapsed = is_collapsed(title);
@@ -247,11 +256,9 @@ frappe.ui.form.on("Project", {
 						${frappe.utils.icon(icon, "md")} ${__(title)}
 						<span class="summary-count-badge">${total}</span>
 					</div>
-					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
-						style="font-size: 12px; border-radius: 6px; padding: 4px 12px; white-space: nowrap;">${__(
-							"View All {0}",
-							[__(title)]
-						)}</a>
+					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all">${__("View All {0}", [
+						__(title),
+					])}</a>
 				</div>
 				<div class="summary-accordion-panel" id="${panel_id(title)}">
 					<div class="summary-accordion-panel-inner">
@@ -321,6 +328,19 @@ frappe.ui.form.on("Project", {
 						transition: transform 0.25s ease;
 					}
 					.summary-accordion.open .summary-chevron { transform: rotate(0deg); }
+					/* "View All Tasks" and "View All Defects" are different lengths, so
+					   without a shared width their left edges sit ragged against each
+					   other. A common min-width makes both buttons identical, so the
+					   two header rows line up on both edges. */
+					.summary-view-all {
+						flex: 0 0 auto;
+						min-width: 132px;
+						text-align: center;
+						font-size: 12px;
+						border-radius: 6px;
+						padding: 4px 12px;
+						white-space: nowrap;
+					}
 					.summary-count-badge {
 						display: inline-flex;
 						align-items: center;
@@ -361,11 +381,7 @@ frappe.ui.form.on("Project", {
 				const open = $acc.toggleClass("open").hasClass("open");
 				$header.attr("aria-expanded", open);
 				const title = $acc.attr("data-section");
-				if (open) {
-					localStorage.removeItem(collapse_key(title));
-				} else {
-					localStorage.setItem(collapse_key(title), "1");
-				}
+				sessionStorage.setItem(collapse_key(title), open ? "0" : "1");
 			};
 
 			// "View All" sits inside the clickable header, so its click must not also
