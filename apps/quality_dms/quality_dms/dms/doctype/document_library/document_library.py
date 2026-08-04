@@ -8,6 +8,22 @@ from frappe.utils import today, now_datetime
 
 _DMS_ROLES = {"Employee", "System Manager"}
 
+# Maps each Workflow State (set by the Document Approval Workflow's transitions)
+# onto the corresponding `status` Select value, so the two fields never drift
+# apart regardless of which one a given code path or UI action updates.
+_WORKFLOW_STATE_TO_STATUS = {
+	"Draft": "Draft",
+	"Pending Review": "Review",
+	"Pending Approval": "Approved",
+	"Published": "Published",
+	"Obsolete": "Obsolete",
+	"Archived": "Archived",
+	"Rejected": "Rejected",
+}
+
+# Workflow States that count as "in progress" for the Workbench sidebar link.
+_IN_PROGRESS_WORKFLOW_STATES = {"Draft", "Pending Review", "Pending Approval", "Rejected"}
+
 
 class DocumentLibrary(Document):
 
@@ -47,7 +63,37 @@ class DocumentLibrary(Document):
 			)
 
 	def validate(self):
+		self._sync_status_with_workflow_state()
+		self._sync_is_in_progress()
 		self._check_checkout_before_file_change()
+
+	def _sync_status_with_workflow_state(self):
+		"""`status` (plain Select, checked by check_out/request_revision/etc.) and
+		`workflow_state` (the field the Workflow engine actually writes to on every
+		transition) are two separate fields. The desk UI's workflow action buttons
+		(Submit for Review, Approve Review, Publish Document, ...) only ever touch
+		workflow_state -- nothing kept `status` in sync, so a document pushed all
+		the way to "Published" via the real workflow still read status="Draft"
+		forever, silently breaking every status-gated action (checkout, revision
+		requests, ...) even though the doc visibly showed "Published" elsewhere."""
+		mapped = _WORKFLOW_STATE_TO_STATUS.get(self.workflow_state)
+		if mapped and self.status != mapped:
+			self.status = mapped
+
+	def _sync_is_in_progress(self):
+		"""Single-value Check field mirroring whether workflow_state is one of the
+		"in progress" states. The Workbench sidebar link filters on this instead of
+		`workflow_state in [Draft, Pending Review, Pending Approval, Rejected]`
+		directly: a multi-value "in" filter passed via a Workspace Sidebar Item only
+		applies correctly on the initial in-app click (which uses an in-memory route
+		object) -- on a page reload or a directly-opened/shared URL, Frappe's URL
+		query-string parser collapses the comma-joined values into one literal
+		string instead of reconstructing the "in" filter, silently showing the
+		wrong (often empty, or unfiltered) result set. A single boolean equality
+		filter has no such round-trip problem."""
+		value = 1 if self.workflow_state in _IN_PROGRESS_WORKFLOW_STATES else 0
+		if self.is_in_progress != value:
+			self.is_in_progress = value
 
 	def on_update(self):
 		# NOTE: on_update is a real Frappe controller hook (fires after every
@@ -206,27 +252,28 @@ class DocumentLibrary(Document):
 		training on the prior version must re-review the updated content —
 		auto-assign them to the new version's Training Record instead of
 		waiting for them to notice the change themselves."""
-		# In-place revision model (current): a revision reopens THIS same record
-		# and bumps the version, so prior-version Training Records share this
-		# document name but carry an earlier version. Find the most recent
-		# Training Record for this document other than the one just created.
-		prior_trn_name = frappe.db.get_value(
-			"DMS Training Record",
-			{
-				"document": self.name,
-				"version": ("!=", self.version),
-				"name": ("!=", trn.name),
-			},
-			"name",
-			order_by="creation desc",
-		)
-
-		# Legacy separate-record model: fall back to the revision_of lineage
-		# for older data where each version was its own Document Library record.
-		if not prior_trn_name and self.revision_of:
+		# Separate-record revision model (current): a revision is a new Document
+		# Library record linked via revision_of, so the prior version's Training
+		# Record lives under that earlier document's name.
+		prior_trn_name = None
+		if self.revision_of:
 			prior_trn_name = frappe.db.get_value(
 				"DMS Training Record",
 				{"document": self.revision_of},
+				"name",
+				order_by="creation desc",
+			)
+
+		# Legacy in-place model: fall back to same-name-different-version lookup
+		# for older data created before revisions got their own record again.
+		if not prior_trn_name:
+			prior_trn_name = frappe.db.get_value(
+				"DMS Training Record",
+				{
+					"document": self.name,
+					"version": ("!=", self.version),
+					"name": ("!=", trn.name),
+				},
 				"name",
 				order_by="creation desc",
 			)
@@ -359,13 +406,17 @@ class DocumentLibrary(Document):
 		"""Return every version of this document so the UI can show all
 		versions/files in a single view.
 
-		A revision no longer creates a separate Document Library record — it
-		reopens this same record in place (see Document Request._create_revision_document),
-		with each prior version preserved as a Document Revision snapshot
-		(document_library.py::create_revision_record, fired on_submit). Older
-		test/legacy data may still have a revision_of chain of separate
-		records, which is merged in here too so nothing already created is
-		hidden from the view.
+		A revision creates a NEW Document Library record linked via revision_of
+		(see Document Request._create_revision_document), so every version's real
+		`status` lives on its own record — that's what the legacy_docs block below
+		returns, and it's authoritative. Older data from a since-removed in-place
+		model (a revision reused the same row, keeping only a Document Revision
+		snapshot of each superseded version) is merged in via the revisions block,
+		using that snapshot's own recorded `approval_status` rather than assuming
+		"Archived" — a superseded version was genuinely Published at the time, and
+		guessing "Archived" from a version-string mismatch alone is exactly the bug
+		this replaced (it mislabeled the still-active version as archived the
+		moment a new draft was opened, before that draft was ever approved).
 		"""
 		versions = {}
 
@@ -389,25 +440,25 @@ class DocumentLibrary(Document):
 
 		revisions = frappe.get_all(
 			"Document Revision",
-			filters={"document": self.name},
-			fields=["version", "document_number", "file", "file_doc", "revision_date"],
+			filters={"document": ["in", family_names]},
+			fields=["document", "version", "document_number", "file", "file_doc", "revision_date", "approval_status"],
 			order_by="revision_date asc",
 		)
 		for r in revisions:
 			if r["version"] in versions:
 				continue
 			versions[r["version"]] = {
-				"name": self.name,
+				"name": r["document"],
 				"title": self.title,
 				"version": r["version"],
 				"document_number": r["document_number"],
-				"status": "Archived" if r["version"] != self.version else self.status,
+				"status": r.get("approval_status") or "Published",
 				"file": r["file"],
 				"file_doc": r["file_doc"],
 				"creation": r["revision_date"],
 				"owner": None,
-				"is_current": r["version"] == self.version,
-				"linked_record": False,
+				"is_current": r["document"] == self.name and r["version"] == self.version,
+				"linked_record": r["document"] != self.name,
 			}
 
 		versions.setdefault(self.version, {

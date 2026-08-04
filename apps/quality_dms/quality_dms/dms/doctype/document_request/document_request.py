@@ -276,7 +276,11 @@ class DocumentRequest(Document):
 		orig_values = frappe.db.get_value(
 			"Document Library",
 			self.reference_document,
-			["status", "checked_out_by", "version"],
+			[
+				"status", "checked_out_by", "version", "title", "department",
+				"category", "type", "project", "training_video",
+				"training_video_url", "training_quiz",
+			],
 			as_dict=True,
 			for_update=True,
 		)
@@ -310,42 +314,58 @@ class DocumentRequest(Document):
 			new_version = "2.0"
 
 		try:
-			# Reopen the SAME Document Library record for the new version instead of
-			# inserting a separate row — the document keeps one permanent ID across
-			# its whole lifetime. The version being replaced is not lost: it was
-			# already snapshotted into Document Revision (file + fields) the moment
-			# it was published, via DocumentLibrary.create_revision_record() on
-			# on_submit — so it stays fully visible in Version History / Audit Log.
+			# Insert a NEW Document Library record for the draft revision instead of
+			# overwriting the published one in place. The old record (status, file,
+			# effective_date) is left completely untouched, so it stays the active
+			# document — visible, searchable, and "Published" — for as long as the
+			# new version takes to draft, review, and approve. Only when the new
+			# record is actually submitted/published does on_submit() ->
+			# _retire_previous_version() flip the old one to Obsolete, via the
+			# revision_of link set below.
 			#
-			# This bypasses the normal submit/cancel lifecycle intentionally
-			# (direct docstatus write) because Frappe's built-in cancel+amend would
-			# require docstatus=2 first, which does not fit a regulated DMS where a
-			# document is reworked in place rather than cancelled.
+			# (Previously this reopened the SAME row in place so the document kept
+			# one permanent ID/name across its whole lifetime — but that meant the
+			# published version literally stopped being Published the instant a
+			# revision started, since it was the same row. That traded away "one
+			# stable name" for "old version is briefly gone", which is the bug this
+			# fixes. Two rows cannot share one name in Frappe, so keeping a fully
+			# separate active old version now means each version gets its own
+			# permanent name — the version-specific `document_number` (not `name`)
+			# remains the human-facing identifier that's stable in spirit across
+			# versions of the same document.)
+			new_doc = frappe.new_doc("Document Library")
+			new_doc.title = orig_values.title
+			new_doc.department = orig_values.department
+			new_doc.category = orig_values.category
+			new_doc.type = orig_values.type
+			new_doc.project = orig_values.project
+			new_doc.training_video = orig_values.training_video
+			new_doc.training_video_url = orig_values.training_video_url
+			new_doc.training_quiz = orig_values.training_quiz
+			new_doc.version = new_version
+			new_doc.status = "Draft"
+			new_doc.workflow_state = "Draft"
+			new_doc.docstatus = 0
+			new_doc.revision_of = self.reference_document
+			new_doc.originated_from_request = self.name
+			new_doc.insert(ignore_permissions=True)
+
+			# The checkout lock was taken on the published doc to signal intent to
+			# revise; release it now that the draft exists so the published copy
+			# isn't left needlessly locked while the draft goes through review.
 			frappe.db.set_value(
 				"Document Library",
 				self.reference_document,
-				{
-					"docstatus": 0,
-					"status": "Draft",
-					"workflow_state": "Draft",
-					"version": new_version,
-					"file": None,
-					"file_doc": None,
-					"effective_date": None,
-					"review_date": None,
-					"checked_out_by": None,
-					"checked_out_on": None,
-					"originated_from_request": self.name,
-				},
+				{"checked_out_by": None, "checked_out_on": None},
 			)
 
-			frappe.db.set_value("Document Request", self.name, "linked_document", self.reference_document)
+			frappe.db.set_value("Document Request", self.name, "linked_document", new_doc.name)
 
 			frappe.msgprint(
-				f"'{self.reference_document}' has been reopened as v{new_version} "
-				f"(Draft) for revision. Upload the updated file and route it through "
-				f"review/approval to publish. The previous version remains available "
-				f"in its Version History.",
+				f"Revision draft created: "
+				f"<a href='/app/document-library/{new_doc.name}'>{new_doc.name}</a> "
+				f"(v{new_version}, Draft). '{self.reference_document}' remains the active "
+				f"Published document until the new version is approved and published.",
 				alert=True,
 			)
 
@@ -356,7 +376,7 @@ class DocumentRequest(Document):
 				"Document Request: Revision creation failed",
 			)
 			frappe.throw(
-				"Failed to reopen the document for revision. The approval has been rolled back."
+				"Failed to create the revision draft. The approval has been rolled back."
 			)
 
 	# ── Manual request fulfilment ─────────────────────────────────────────
