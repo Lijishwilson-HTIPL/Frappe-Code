@@ -160,33 +160,77 @@ frappe.ui.form.on("Project", {
 			Issue: ["Open", "Replied", "On Hold", "Resolved", "Closed"],
 		};
 
-		// One individual card per stat — same visual language as the
-		// workspace's "Active Projects / Open Tasks" overview tiles, each
-		// tile clickable to open the matching filtered list.
-		const stat_card = (doctype, project, label, value, statuses) => `
+		// Semantic accent per status — a thin bottom rule, not a left rail —
+		// so the card still reads clean/flat at rest and only reveals color
+		// as a footnote, matching each doctype's own list-view indicator
+		// colors (task_list.js / issue_list.js) for consistency across the app.
+		const STATUS_ACCENT = {
+			Task: {
+				Open: "var(--yellow-500, #fdd049)",
+				Working: "var(--blue-500, #2490ef)",
+				"Pending Review": "var(--orange-500, #f8a428)",
+				Overdue: "var(--red-500, #ea4c4c)",
+				Hold: "var(--gray-600, #74808b)",
+				Completed: "var(--green-500, #2ec973)",
+				Cancelled: "var(--gray-500, #8d99a6)",
+			},
+			Issue: {
+				Open: "var(--yellow-500, #fdd049)",
+				Replied: "var(--blue-500, #2490ef)",
+				"On Hold": "var(--orange-500, #f8a428)",
+				Resolved: "var(--green-500, #2ec973)",
+				Closed: "var(--gray-600, #74808b)",
+			},
+		};
+
+		// One individual card per stat — clickable to open the matching
+		// filtered list. Total gets no accent (it's an aggregate, not a
+		// status); a quiet hover lift signals interactivity without relying
+		// on color alone.
+		const stat_card = (doctype, project, label, value, statuses, accent) => `
 			<a class="summary-stat-card" data-doctype="${doctype}" data-project="${frappe.utils.escape_html(
 				project
 			)}" data-statuses='${statuses ? JSON.stringify(statuses) : ""}'
-				style="flex: 1; min-width: 150px; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd);
-					border-radius: 10px; padding: 14px 16px; cursor: pointer; text-decoration: none !important;
-					box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.06)); transition: box-shadow 0.15s ease, transform 0.15s ease;">
-				<div class="text-muted" style="font-size: 12px; margin-bottom: 4px;">${__(label)}</div>
-				<div style="font-size: 26px; font-weight: 700; color: var(--text-color, #1f272e);">${value}</div>
+				style="--accent: ${accent || "transparent"}; flex: 1 1 0; min-width: 0; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #d1d8dd);
+					border-bottom: 3px solid ${accent || "var(--border-color, #d1d8dd)"};
+					border-radius: 8px; padding: 11px 12px 9px; cursor: pointer; text-decoration: none !important;
+					box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05)); transition: box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease;
+					overflow: hidden;">
+				<div class="text-muted" style="font-size: 11px; font-weight: 500; letter-spacing: 0.01em; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${__(label)}</div>
+				<div class="num" style="font-size: 21px; font-weight: 650; line-height: 1; color: var(--text-color, #1f272e); font-variant-numeric: tabular-nums;">${value}</div>
 			</a>`;
+
+		// Small horizontal key so the underline colors are self-explanatory
+		// on first use, instead of relying on users to learn them by trial.
+		const legend = (doctype) => `
+			<div class="text-muted" style="display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; font-size: 11.5px; margin: 3%;">
+				${ALL_STATUSES[doctype]
+					.map(
+						(status) => `
+					<span style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+						<span style="width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_ACCENT[doctype][status]}; flex-shrink: 0;"></span>
+						${__(status)}
+					</span>`
+					)
+					.join("")}
+			</div>`;
 
 		const section = (title, icon, doctype, project, s, view_route) => `
 			<div>
-				<div class="flex justify-between align-items-center" style="margin-bottom: 12px;">
+				<div class="flex justify-between align-items-center" style="margin-bottom: 8px;">
 					<div class="flex align-items-center" style="gap: 8px; font-weight: 700; font-size: 18px; color: var(--dms-blue, #1e3a5f);">
 						${frappe.utils.icon(icon, "md")} ${__(title)}
 					</div>
 					<a href="${view_route}" class="btn btn-default btn-xs"
 						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
 				</div>
-				<div style="display: flex; gap: 12px; flex-wrap: wrap;">
-					${stat_card(doctype, project, "Total", s.total, null)}
+				<div style="margin-bottom: 16px;">${legend(doctype)}</div>
+				<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
+					${stat_card(doctype, project, "Total", s.total, null, null)}
 					${ALL_STATUSES[doctype]
-						.map((status) => stat_card(doctype, project, status, s.by_status[status] || 0, [status]))
+						.map((status) =>
+							stat_card(doctype, project, status, s.by_status[status] || 0, [status], STATUS_ACCENT[doctype][status])
+						)
 						.join("")}
 				</div>
 			</div>`;
@@ -209,6 +253,7 @@ frappe.ui.form.on("Project", {
 					.summary-stat-card:hover {
 						box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1)) !important;
 						transform: translateY(-1px);
+						background: color-mix(in srgb, var(--accent, transparent) 10%, var(--card-bg, #fff)) !important;
 					}
 				</style>
 				<div style="display: flex; flex-direction: column; gap: 22px; margin-top: 8px;">
