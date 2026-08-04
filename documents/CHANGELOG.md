@@ -46,6 +46,30 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ## Features by commit
 
+### `<pending>` — Outgoing QIs for the whole kit + Stage 6 guide rewrite (2026-08-04) · NOT PUSHED
+- **Unblocked `MAT-DN-2026-00003` for submission.** All 4 kit items carry *Inspection
+  Required before Delivery*, and erpnext (`stock_controller.py:1463`) requires a
+  **submitted QI on every row** (`Delivery Note Item.quality_inspection`), not one per
+  shipment. Created + submitted 4 Outgoing QIs against the DN:
+  `MAT-QA-2026-00003` pump (sample 1), `-00004` BFV-8 (2), `-00005` LG-01 (1),
+  `-00006` EJ-8 (3) — all Accepted, each linked on its row.
+  Verified by running `submit()` inside a transaction and rolling back:
+  **submits cleanly, DN left in draft on purpose** (Packing Slips need a draft DN).
+- **New QC template "Mercury Accessory Final QC"** (Visual / Surface Finish, Dimensional /
+  Flange Fit, Marking / Tag Present) — the pump's leak/performance/paint checks don't
+  apply to a valve or gauge. One shared template rather than three per-item ones.
+- **Closed a reproducibility gap:** template rows link to **Quality Inspection Parameter**
+  records that were in no fixture, so a fresh `bench migrate` would have failed the
+  template import with `LinkValidationError`. Added a `Quality Inspection Parameter`
+  fixture (9 records), listed **before** the template entry since fixtures import in
+  hooks order.
+- **Stage 6 of `web docs/mercury_phase1_stepbystep_guide.txt` rewritten** for the
+  per-unit-QR flow so it can be practised from scratch: revised 6a–6e, new 6f
+  (Packing Slip → submit), a "what changed from v1" section, and the new gotchas
+  (td-img width override, serial naming-series conflict, QI Parameter links,
+  exact-match non-numeric readings, wkhtmltopdf/PATH). Guide 643 → 776 lines.
+Rollback-before-this: `733f94aba`
+
 ### `c23b650eb` — merge DMS project-module UI updates (2026-08-04) · NOT PUSHED
 - Merged `hephzibah/DMS` into `paul-update` with `--no-ff` (explicit, revertable merge point).
 - Only **2 commits** were actually new — DMS's heavy project rework was already in our

@@ -1,0 +1,83 @@
+[
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-29 15:34:49.173457",
+  "name": "Leak / Hydro Test",
+  "parameter": "Leak / Hydro Test",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-08-04 15:45:33.079877",
+  "name": "Visual / Surface Finish",
+  "parameter": "Visual / Surface Finish",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-08-04 15:45:33.156623",
+  "name": "Dimensional / Flange Fit",
+  "parameter": "Dimensional / Flange Fit",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-08-04 15:45:33.159388",
+  "name": "Marking / Tag Present",
+  "parameter": "Marking / Tag Present",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-27 15:02:50.529569",
+  "name": "Surface Finish",
+  "parameter": "Surface Finish",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-27 15:03:13.223835",
+  "name": "Hardness (HB)",
+  "parameter": "Hardness (HB)",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-29 15:36:45.316647",
+  "name": "Performance Check",
+  "parameter": "Performance Check",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-29 15:38:06.455074",
+  "name": "Paint / Finish",
+  "parameter": "Paint / Finish",
+  "parameter_group": null
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Quality Inspection Parameter",
+  "modified": "2026-07-27 15:03:26.558648",
+  "name": "Dimensional Tolerance",
+  "parameter": "Dimensional Tolerance",
+  "parameter_group": null
+ }
+]

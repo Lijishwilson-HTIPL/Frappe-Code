@@ -289,7 +289,15 @@ fixtures = [
 	{"dt": "Print Format", "filters": [["name", "like", "Mercury%"]]},
 	# Stage 7 - milestone billing schedule (30/40/30).
 	{"dt": "Payment Terms Template", "filters": [["name", "like", "Mercury%"]]},
-	# Stage 5 - incoming (raw material) + outgoing (finished pump) QC checklists.
+	# Stage 5/6e - incoming (raw material) + outgoing (finished pump + accessories)
+	# QC checklists. NOTE: a template row's "specification" is a LINK to Quality
+	# Inspection Parameter, so those records must be imported BEFORE the templates
+	# or the template import fails with LinkValidationError. They are listed first
+	# because fixtures import in the order given here.
+	{"dt": "Quality Inspection Parameter", "filters": [["name", "in", [
+		"Surface Finish", "Hardness (HB)", "Dimensional Tolerance",
+		"Leak / Hydro Test", "Performance Check", "Paint / Finish",
+		"Visual / Surface Finish", "Dimensional / Flange Fit", "Marking / Tag Present"]]]},
 	{"dt": "Quality Inspection Template", "filters": [["name", "like", "Mercury%"]]},
 	# Added as later Phase 1 stages are built:
 	# {"dt": "Custom Field", "filters": [["module", "=", "Mercury"]]},
