@@ -247,18 +247,16 @@ frappe.ui.form.on("Project", {
 						${frappe.utils.icon(icon, "md")} ${__(title)}
 						<span class="summary-count-badge">${total}</span>
 					</div>
+					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
+						style="font-size: 12px; border-radius: 6px; padding: 4px 12px; white-space: nowrap;">${__(
+							"View All {0}",
+							[__(title)]
+						)}</a>
 				</div>
 				<div class="summary-accordion-panel" id="${panel_id(title)}">
 					<div class="summary-accordion-panel-inner">
 						<div style="padding-top: 4px;">
-							<div class="flex align-items-center" style="gap: 12px; margin-bottom: 16px;">
-								<div style="flex: 1 1 auto; min-width: 0;">${legend(doctype)}</div>
-								<a href="${view_route}" class="btn btn-default btn-xs summary-view-all"
-									style="flex: 0 0 auto; font-size: 12px; border-radius: 6px; padding: 4px 12px; white-space: nowrap;">${__(
-										"View All {0}",
-										[__(title)]
-									)}</a>
-							</div>
+							<div style="margin-bottom: 16px;">${legend(doctype)}</div>
 							<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
 								${stat_card(doctype, project, "Total", s.total, null, null)}
 								${ALL_STATUSES[doctype]
@@ -369,6 +367,12 @@ frappe.ui.form.on("Project", {
 					localStorage.setItem(collapse_key(title), "1");
 				}
 			};
+
+			// "View All" sits inside the clickable header, so its click must not also
+			// toggle the section open/closed.
+			$wrapper.off("click", ".summary-view-all").on("click", ".summary-view-all", function (e) {
+				e.stopPropagation();
+			});
 
 			$wrapper
 				.off("click", ".summary-accordion-header")
