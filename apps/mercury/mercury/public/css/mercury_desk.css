@@ -268,3 +268,161 @@ body {
 	background-color: transparent;
 	border-radius: 0;
 }
+
+/* ========================================================================
+ * "Light Aurora" board — Projects workspace only.
+ *
+ * Pastel aurora wash behind white glass cards, per the approved mock
+ * (Downloads/projects_dashboard_light_aurora.html).
+ *
+ * SCOPE: body[data-route="Workspaces/Projects"]. container.js:22 sets
+ * data-route from frappe.get_route_str(), so this matches the Projects
+ * workspace and NOTHING else - not the DMS workspace, not Project/Task lists
+ * or forms. Widen this selector and you re-skin other people's workspaces.
+ *
+ * WHY HERE AND NOT IN quality_dms.css: quality_dms.js:120 puts .dms-theme on
+ * the Projects route so it inherits the DMS navy theme. Aurora contradicts that
+ * theme, so it must override it rather than live beside it - and mercury_desk.css
+ * is LAST in app_include_css (slot 8 of 8), which is what makes these rules win
+ * over quality_dms' own !important card styles. If the load order ever changes,
+ * this whole block silently loses. See the header of this file.
+ *
+ * No web fonts: the mock uses Inter/Space Grotesk from Google Fonts, which a
+ * desk page must not fetch (offline/CSP on the QA server). The desk font is
+ * kept and only size/weight/colour are matched.
+ * ======================================================================== */
+
+/* The aurora wash. The mock puts it on a .board wrapper; the workspace has no
+ * such element, so it goes on the section that already backs the whole canvas. */
+body[data-route="Workspaces/Projects"] .layout-main-section {
+	background-color: #fbfcff;
+	background-image: radial-gradient(70% 90% at 12% 0%, rgba(244, 114, 160, 0.28), transparent 55%),
+		radial-gradient(70% 90% at 88% 8%, rgba(129, 140, 248, 0.28), transparent 55%),
+		radial-gradient(90% 90% at 55% 120%, rgba(45, 212, 191, 0.18), transparent 50%);
+	background-repeat: no-repeat;
+	border-radius: 24px;
+}
+
+/* Mock gap is 16px; core gives each block 7px of padding (desktop.scss ~1100). */
+body[data-route="Workspaces/Projects"] .ce-block__content {
+	padding: 8px;
+}
+
+/* Glass card shell, shared by the KPI cards and the two chart cards so the
+ * whole board reads as one surface. */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+	background: rgba(255, 255, 255, 0.62);
+	backdrop-filter: blur(16px) saturate(140%);
+	-webkit-backdrop-filter: blur(16px) saturate(140%);
+	border: 1px solid rgba(255, 255, 255, 0.85) !important;
+	border-radius: 18px;
+	box-shadow: 0 10px 30px rgba(79, 70, 229, 0.07), 0 2px 6px rgba(236, 72, 153, 0.05),
+		inset 0 1px 0 rgba(255, 255, 255, 0.9);
+	transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+body[data-route="Workspaces/Projects"] .widget.number-widget-box {
+	padding: 20px;
+	min-height: 118px;
+}
+
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+	padding: 24px;
+}
+
+body[data-route="Workspaces/Projects"] .widget.number-widget-box:hover,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 16px 40px rgba(79, 70, 229, 0.12), 0 3px 10px rgba(236, 72, 153, 0.08);
+}
+
+/* Card label: 13px slate, and allowed to wrap. quality_dms.css:272 sets 11px
+ * for the 8 narrow DMS cards; at 25% width these have room for the real label,
+ * which is what stops "Completed Tasks" rendering as "Comple...". */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .widget-title {
+	font-size: 13px !important;
+	font-weight: 500 !important;
+	color: #64748b !important;
+	white-space: normal !important;
+}
+
+/* The big figure. 34px, and the mock's ink->indigo gradient.
+ *
+ * Two overrides are unavoidable here:
+ *   - number_card_widget.js render_number() writes an inline colour per card;
+ *   - quality_dms.css:279-287 forces all of them to navy with !important.
+ * Both are beaten by colour:transparent, which is also what reveals the
+ * gradient painted behind the glyphs.
+ *
+ * Guarded by @supports: without background-clip:text, transparent text would
+ * render the number INVISIBLE - a blank KPI is far worse than a flat one. */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+	font-size: 34px !important;
+	font-weight: 700 !important;
+	line-height: 1.1 !important;
+	margin: 14px 0 10px;
+	font-variant-numeric: tabular-nums;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+		background: linear-gradient(120deg, #0f172a, #4338ca);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent !important;
+	}
+}
+
+/* "100 % since yesterday" / "0 % since yesterday" */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .percentage-stat-area {
+	font-size: 12px !important;
+	font-weight: 600;
+	margin-top: 0;
+}
+
+/* Section headings ("Project Overview", "Reports & Masters") */
+body[data-route="Workspaces/Projects"] .ce-block h4,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box .widget-title {
+	color: #475569 !important;
+}
+
+/* Chart card sub-label ("Last synced just now") */
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box .widget-subtitle {
+	color: #94a3b8 !important;
+	font-size: 12px !important;
+}
+
+/* Dark mode: the wash and the white glass are a light-theme design. Fall back to
+ * the plain themed card instead of white-on-dark, which would be unreadable. */
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .layout-main-section {
+	background-image: none;
+	background-color: var(--fg-color);
+}
+
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+	background: var(--card-bg);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: 1px solid var(--border-color) !important;
+	box-shadow: none;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+	[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+		background: none;
+		color: var(--text-color) !important;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+	body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+		transition: none;
+	}
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box:hover,
+	body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box:hover {
+		transform: none;
+	}
+}
