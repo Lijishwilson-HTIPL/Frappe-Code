@@ -40,6 +40,29 @@ body[data-route^="Form"] .layout-main {
 }
 
 /* ------------------------------------------------------------------------
+ * Kill the form sidebar's own scrollbar.
+ *
+ * This one does NOT come from frappe core - it is forced by HRMS:
+ *   hrms/public/css/layout_global.css:137
+ *     .layout-side-section .form-sidebar, .form-sidebar {
+ *         scrollbar-gutter: stable !important;
+ *         overflow-y: auto !important;   <- the bar on
+ *     }                                     .form-sidebar.overlay-sidebar
+ *
+ * It targets .form-sidebar itself with !important, so overriding the parent
+ * .layout-side-section (above) does not affect it. mercury_desk.css is included
+ * AFTER hrms in app_include_css, so matching !important here wins.
+ * ------------------------------------------------------------------------ */
+.layout-side-section .form-sidebar,
+.layout-side-section .sidebar-image-section,
+.form-sidebar,
+.form-sidebar.overlay-sidebar {
+	overflow-y: visible !important;
+	overflow-x: visible !important;
+	scrollbar-gutter: auto !important;
+}
+
+/* ------------------------------------------------------------------------
  * Keep the page head and the form tab bar permanently pinned.
  *
  * Core state (v16):
