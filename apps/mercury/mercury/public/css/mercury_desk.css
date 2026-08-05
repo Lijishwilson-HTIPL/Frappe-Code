@@ -346,7 +346,15 @@ body[data-route="Workspaces/Projects"] .layout-main-section-wrapper {
  * back down away from the page head. */
 body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
 body[data-route="Workspaces/Projects"] .layout-main-section {
-	padding: 3%;
+	padding: 1% 3% 3%;
+}
+
+/* The heading's own leading stacks on top of the board inset. Zeroed so the gap
+ * above "Project Overview" is the board padding alone. */
+body.dms-theme[data-route="Workspaces/Projects"] .codex-editor h4,
+body[data-route="Workspaces/Projects"] .codex-editor h4 {
+	margin-top: 0;
+	line-height: 1.2;
 }
 
 body[data-route="Workspaces/Projects"] .codex-editor__redactor > .ce-block:first-child,
