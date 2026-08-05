@@ -98,13 +98,18 @@ body[data-route^="Form"] .layout-main {
 	z-index: 20 !important;
 }
 
-/* Sit flush under the head. The 6px top margin core gives the tab bar is what
- * showed up as "some top space" once it was pinned. */
+/* No top offset. Core's sticky classes set top: var(--navbar-height) (48px), which
+ * pushed the tab bar down by a page-head's worth and left an empty band above it.
+ * With top: 0 the bar pins flush to the top of the scrollport instead, and the
+ * 6px core top margin is removed so nothing sits above it.
+ *
+ * The page head keeps a higher z-index, so on scroll the tab bar tucks under the
+ * head rather than colliding with it. */
 .form-tabs-list,
 .form-tabs-sticky-up,
 .form-tabs-sticky-down,
 .form-tabs-sticky-down.show-navbar {
-	top: var(--page-head-height) !important;
+	top: 0 !important;
 	margin-top: 0 !important;
 	z-index: 19 !important;
 }
