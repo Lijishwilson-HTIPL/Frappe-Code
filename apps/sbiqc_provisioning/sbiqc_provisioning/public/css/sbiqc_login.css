@@ -1,0 +1,266 @@
+/* Full-page login layout (see www/login.html): a centered floating card
+   with a navy brand panel on the left and the real form on the right. */
+
+body.page-login,
+body:has(.sbiqc-login-shell) {
+	background: #e8ecf2;
+}
+
+.sbiqc-page {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	padding: 32px;
+}
+
+.sbiqc-login-shell {
+	flex: 0 0 auto;
+	display: grid;
+	grid-template-columns: 1.05fr 1fr;
+	width: 100%;
+	max-width: 1120px;
+	border-radius: 24px;
+	overflow: hidden;
+	box-shadow: 0 30px 70px -20px rgba(15, 32, 56, 0.35), 0 6px 20px rgba(15, 32, 56, 0.1);
+}
+
+@media (max-width: 860px) {
+	.sbiqc-login-shell {
+		grid-template-columns: 1fr;
+	}
+	.sbiqc-brand-panel {
+		display: none;
+	}
+}
+
+/* ---- left brand panel: navy gradient, decorative cards, brand mark + tagline ---- */
+.sbiqc-brand-panel {
+	position: relative;
+	background: linear-gradient(155deg, #0f2038 0%, #1f4e79 62%, #4a86b8 100%);
+	color: #eef4fa;
+	min-height: 640px;
+	padding: 44px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	overflow: hidden;
+}
+
+.sbiqc-brand-cards {
+	position: absolute;
+	top: 78px;
+	left: 48px;
+	width: 310px;
+	height: 240px;
+	z-index: 0;
+	pointer-events: none;
+}
+.sbiqc-brand-card {
+	position: absolute;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.sbiqc-brand-card--back {
+	top: 0;
+	left: 48px;
+	width: 226px;
+	height: 156px;
+	transform: rotate(-8deg);
+}
+.sbiqc-brand-card--front {
+	top: 66px;
+	left: 0;
+	width: 288px;
+	height: 180px;
+	transform: rotate(6deg);
+	padding: 26px 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	background: rgba(255, 255, 255, 0.1);
+}
+.sbiqc-brand-card-line {
+	display: block;
+	height: 7px;
+	border-radius: 3.5px;
+	background: rgba(255, 255, 255, 0.35);
+	width: 100%;
+}
+.sbiqc-brand-card-line.short {
+	width: 60%;
+}
+
+.sbiqc-brand-mark {
+	position: absolute;
+	top: 38px;
+	left: 44px;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+}
+.sbiqc-brand-logo {
+	height: 48px;
+	width: auto;
+	display: block;
+}
+.sbiqc-brand-star {
+	width: 40px;
+	height: 40px;
+	color: #d64545;
+}
+
+.sbiqc-brand-copy {
+	position: relative;
+	z-index: 1;
+}
+.sbiqc-brand-copy h1 {
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: 40px;
+	line-height: 1.15;
+	margin: 0 0 12px;
+	font-weight: 700;
+	color: #ffffff;
+}
+.sbiqc-brand-copy p {
+	margin: 0;
+	color: rgba(238, 244, 250, 0.8);
+	font-size: 16px;
+	line-height: 1.5;
+	max-width: 34ch;
+}
+
+.sbiqc-feature-list {
+	position: relative;
+	z-index: 1;
+	list-style: none;
+	margin: 26px 0 30px;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+.sbiqc-feature-list li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 15px;
+	color: rgba(238, 244, 250, 0.85);
+}
+.sbiqc-feature-icon {
+	flex: 0 0 auto;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	border: 1px solid rgba(238, 244, 250, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #d64545;
+}
+.sbiqc-feature-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* ---- right form panel: reskin frappe's existing markup, don't replace it ---- */
+.sbiqc-form-panel {
+	padding: 56px 52px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: #ffffff;
+}
+
+.sbiqc-form-panel section {
+	max-width: 380px;
+	width: 100%;
+}
+
+.sbiqc-form-panel .page-card {
+	box-shadow: none;
+	border: none;
+	background: transparent;
+	max-width: none;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+.sbiqc-form-panel .page-card-head {
+	text-align: left;
+	padding: 0 0 24px;
+}
+.sbiqc-form-panel .page-card-head .app-logo {
+	display: none;
+}
+.sbiqc-form-panel .page-card-head h4 {
+	font-size: 28px;
+	font-weight: 700;
+	color: #17212b;
+}
+
+.sbiqc-form-panel .form-control {
+	border: 1px solid #e1e8ee;
+	border-radius: 8px;
+	padding: 12px 14px 12px 38px;
+	background: #f7f9fb;
+}
+.sbiqc-form-panel .form-control:focus {
+	border-color: #1f4e79;
+	box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.12);
+	background: #ffffff;
+}
+.sbiqc-form-panel .email-field,
+.sbiqc-form-panel .password-field {
+	position: relative;
+}
+.sbiqc-form-panel .field-icon {
+	position: absolute;
+	top: 13px;
+	left: 12px;
+	color: #8a94a0;
+}
+.sbiqc-form-panel .toggle-password {
+	position: absolute;
+	right: 12px;
+	top: 11px;
+	font-size: 12.5px;
+}
+
+.sbiqc-form-panel .btn-login,
+.sbiqc-form-panel .btn-forgot,
+.sbiqc-form-panel .btn-login-with-email-link {
+	background: linear-gradient(90deg, #1f4e79 0%, #4a86b8 100%);
+	border: none;
+	border-radius: 8px;
+	padding: 11px 18px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	box-shadow: 0 8px 20px -8px rgba(31, 78, 121, 0.6);
+}
+
+.sbiqc-form-panel .login-divider {
+	text-align: center;
+	font-size: 13px;
+}
+
+.sbiqc-form-panel .btn-login-option {
+	border-radius: 8px;
+}
+
+.sbiqc-form-panel .forgot-password-message a,
+.sbiqc-form-panel .sign-up-message a {
+	color: #1f4e79;
+	font-weight: 600;
+}
+
+.sbiqc-login-footer {
+	text-align: center;
+	padding: 18px 24px 4px;
+	font-size: 12.5px;
+	color: #6b7480;
+}

@@ -239,17 +239,45 @@ body.dms-theme .widget.shortcut-widget-box .indicator-pill {
 	color: var(--dms-on-navy);
 }
 
-/* Key Metrics number cards: blue top accent, big navy figures */
+/* Key Metrics number cards: colored bottom accent per stat (matches each
+   Number Card's own `color` field, mirrored onto --card-accent by
+   quality_dms.js), big navy figures. Cards without a matched accent fall
+   back to the plain brand blue. */
 body.dms-theme .widget.number-widget-box {
-	border-top: 3px solid var(--dms-blue);
-	padding: 16px 18px;
+	border: 1px solid var(--dms-sky-2);
+	border-bottom: 3px solid var(--card-accent, var(--dms-blue));
+	border-radius: 8px;
+	box-shadow: 0 1px 4px rgba(30, 58, 95, 0.08);
+	padding: 10px 12px;
+	min-height: 64px;
+	overflow: hidden;
+	width: auto;
+}
+
+/* Confirmed via live DOM inspection: the workspace body is one shared
+   Editor.js flex container (.codex-editor__redactor, flex-wrap: wrap), and
+   each block's width comes from Bootstrap classes (col-xs-12/col-sm-6/
+   col-md-4/col-lg-3) on its .ce-block wrapper -- NOT from .number-widget-box
+   itself, and NOT from a CSS Grid. :has(.number-widget-box) uniquely
+   selects only the 8 Key Metrics blocks (no other block type contains that
+   class), so header/spacer/chart/shortcut blocks elsewhere are untouched. */
+body.dms-theme .ce-block:has(.number-widget-box) {
+	flex: 0 0 12.5% !important;
+	max-width: 12.5% !important;
+	width: 12.5% !important;
+}
+body.dms-theme .widget.number-widget-box:hover {
+	box-shadow: 0 4px 10px rgba(30, 58, 95, 0.14);
 }
 body.dms-theme .widget.number-widget-box .widget-title {
 	color: var(--ink-gray-6, #5b6b7c);
 	font-weight: 600;
+	font-size: 11px;
+	line-height: 1.25;
+	white-space: normal;
 }
 body.dms-theme .widget.number-widget-box .number {
-	font-size: 28px;
+	font-size: 20px;
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 	/* Number Card colors are set per-card via inline style (see
@@ -888,3 +916,12 @@ body.dms-theme .progress {
 	border-radius: 999px;
 	overflow: hidden;
 }
+
+/* Curated Document Library entry points (Repository, Workbench, Published
+   Documents card): hide the clear-all-filters (X) button so the scoped view
+   reads as the default list, not a removable filter. Set only when the
+   active filter is exactly one of the curated ones (see quality_dms.js). */
+body.dms-locked-filter .filter-x-button {
+	display: none !important;
+}
+

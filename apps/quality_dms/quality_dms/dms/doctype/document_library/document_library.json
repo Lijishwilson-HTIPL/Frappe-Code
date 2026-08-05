@@ -19,6 +19,7 @@
   "version",
   "status",
   "workflow_state",
+  "is_in_progress",
   "revision_of",
   "originated_from_request",
   "sec_file_training",
@@ -201,6 +202,17 @@
    "fieldtype": "Link",
    "label": "Workflow State",
    "options": "Workflow State",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "description": "Auto-set from Workflow State (Draft/Pending Review/Pending Approval/Rejected = 1, Published/Obsolete/Archived = 0). Exists so the Workbench sidebar link can use a single robust equality filter instead of a multi-value \"in\" filter, which does not survive a page reload/direct URL correctly.",
+   "fieldname": "is_in_progress",
+   "fieldtype": "Check",
+   "label": "Is In Progress",
+   "no_copy": 1,
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
