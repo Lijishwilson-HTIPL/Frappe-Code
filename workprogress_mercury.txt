@@ -6,68 +6,175 @@
 ================================================================================
 
 ################################################################################
-## >>> HANDOFF FOR NEXT CHAT (read this first) — updated 2026-08-04 <<<
+## >>> HANDOFF FOR NEXT CHAT (read this WHOLE block first) — updated 2026-08-05 <<<
 ################################################################################
-WHERE WE ARE:
-  - PHASE 1 = COMPLETE. All 8 manual stages configured (config-only; the ONLY custom
-    code is a ~3-line QR jinja helper in apps/mercury/mercury/utils.py).
-  - Management DEMO delivered 2026-07-29. Management gave NEW SUGGESTIONS.
-  - MGMT FEEDBACK #1 = DONE (2026-08-04): per-component QR labels + Mercury logo.
-    See section [12] below. Fixtures exported + committed.
-  - NEXT TASK: apply management's remaining feedback items ONE BY ONE (user pastes them).
-    Also still waiting on Mercury's REAL CUSTOMER REPORTS (user said they'd share; not
-    yet on disk — they will likely reshape Stage 8 report + Stage 6 label fields).
+You are picking up the Mercury ERP demo mid-project. Read this block, then
+"web docs/mercury_phase1_stepbystep_guide.txt" (Stage 6 was REWRITTEN 2026-08-04)
+and "documents/PROJECT_UI_CHANGES.md" if anything UI-related comes up.
+Nothing is broken. Do NOT re-do finished work.
 
-GIT (important):
-  - Remote MOVED: use "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
-    (old "origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED). Our branch = paul-update.
-  - Local working branch = paul-update2 (superset of paul-update). Committed
-    03c7f0d68 "mercury thin app phase 1 - configurable 8 stages" and pushed to
-    hephzibah/paul-update. Then merged hephzibah/staging-deployment into local (clean).
-  - GIT RULES: user (Paul Sahaya Doss) is the SOLE author — NEVER add a Claude/Anthropic
-    co-author trailer. Commit locally after steps; push only when told. No creds stored
-    in WSL (push needs SSH or a PAT the user provides transiently — never store in chat).
-  - Leftover incidental changes are stashed as "pre-merge-leftovers".
+--------------------------------------------------------------------------------
+WHERE WE ARE
+--------------------------------------------------------------------------------
+  - PHASE 1 = COMPLETE (all 8 stages, config-only; the ONLY custom code is the
+    ~3-line QR jinja helper in apps/mercury/mercury/utils.py).
+  - Management demo delivered 2026-07-29; management gave suggestions.
+  - MGMT FEEDBACK #1 = DONE (2026-08-04/05): per-UNIT QR shipping labels + logo.
+    7 physical units => 7 labels, each with its own unique QR. See [12] below.
+  - PROJECT MODULE / DESK UI FIXES = DONE (2026-08-04/05), pushed + protected.
+    See [13] below and documents/PROJECT_UI_CHANGES.md.
+  - staging-deployment MERGED into local 2026-08-05 (clean, unpushed).
 
-MACHINE-LOCAL SETUP (NOT in git — must be redone on any other machine):
-  - wkhtmltopdf 0.12.6.1 (with patched qt) installed WITHOUT root at ~/opt/wkhtmltox
-    (official jammy .deb extracted via dpkg-deb -x; no missing shared libs).
-    Frappe calls `wkhtmltopdf` by bare name (frappe/utils/pdf.py) with NO site_config
-    override, so it MUST be on the PATH of the bench processes.
-  - The bench process PATH did NOT include env/bin or ~/.local/bin, and /usr/local/bin
-    needs root. Solved with a new ~/frappe-bench/.env (honcho reads it on `bench start`
-    and applies it to every Procfile process) that prepends ~/opt/wkhtmltox/bin.
-    .env is gitignored (hardcodes /home/paul/...). MUST fully restart `bench start`
-    (Ctrl+C + bench start) — `bench restart` does NOT re-launch honcho, so it won't pick
-    .env up. Also had to clear the cached redis key "wkhtmltopdf_version".
+--------------------------------------------------------------------------------
+THE VERY NEXT THINGS TO DO (in this order)
+--------------------------------------------------------------------------------
+  1. *** RUN bench migrate *** The staging-deployment merge brought new DocType
+     JSON, 2 new DMS Number Cards, a changed DMS sidebar and quality_dms/hooks.py
+     changes. Not yet migrated:
+         cd ~/frappe-bench
+         bench --site mysite.local migrate
+         bench --site mysite.local clear-cache
+         bench start          (FULL restart - see MACHINE-LOCAL below)
+     Then hard-reload the browser (Ctrl+Shift+R) and run the checklist in
+     documents/PROJECT_UI_CHANGES.md section 4.
+  2. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — the user was about to brief this
+     when the session ended. ASK THEM FOR IT; do not guess what it is.
+  3. MERCURY'S REAL CUSTOMER DOCUMENTS — 4 PDFs are on disk at
+     C:\Users\Paul Sahaya Doss\Downloads\ :
+         103-1105VS10 Pump Project Schedule 01-12-26.pdf
+         1105VS10 Customer Inspection Notice LRVP FAT.pdf
+         1105VS10-PL3 Pump Freight Box Packing List.pdf
+         1105VS10-PR-250623-EVP Pump Progress Report.pdf
+     *** THE USER SAID: DO NOT ANALYSE THESE UNTIL ASKED. *** They will hand them
+     over ONE AT A TIME. They will reshape Stage 8 (progress report) and Stage 6
+     (label / packing-list fields), so do not redesign those before reading them.
+  4. STAGE 6 STILL OPEN: Packing Slip(s) for MAT-DN-2026-00003, THEN submit the DN.
+     The DN is deliberately still DRAFT because a Packing Slip can only be attached
+     to a draft Delivery Note. The freight-box grouping is waiting on the
+     "1105VS10-PL3 Pump Freight Box Packing List" PDF above. All 4 Outgoing QIs are
+     already done, so the DN WILL submit cleanly whenever you choose to.
 
-ENV / KEY RECORDS: site mysite.local, login Administrator (bypasses the sbiqc desk gate).
-  SO=SAL-ORD-2026-00002 · Workflow "Mercury RTM Approval" · Project PROJ-0001 ·
-  DN=MAT-DN-2026-00002-1 · SI=ACC-SINV-2026-00065 · print formats "Mercury Shipping Label"
-  (Delivery Note) & "Mercury Monthly Progress Report" (Project) · QI templates
-  "Mercury Steel Casting QC" / "Mercury Pump Final QC" · Payment Terms Template
-  "Mercury 30/40/30 Milestones". Company=Mercury (abbr JR), Customer=Joel.
+--------------------------------------------------------------------------------
+GIT — CURRENT STATE (verified 2026-08-05)
+--------------------------------------------------------------------------------
+  - Remote: "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
+    ("origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED — never push there.)
+  - ONE branch now: paul-update (local AND remote). paul-update2 was consolidated
+    away 2026-08-04 (it was a superset; old local paul-update was fully contained
+    in it, so nothing was lost). Upstream is set to hephzibah/paul-update.
+  - Remote tip = 38932a7b4 "docs: protect the Project/desk UI fixes ..."
+  - Local HEAD  = 03a8a49b5 "merge: bring in staging-deployment ..."
+    => LOCAL IS 5 AHEAD, UNPUSHED (the merge commit + the 4 staging commits).
+  - ROLLBACK TAGS: pre-staging-merge (=38932a7b4), pre-dms-merge (=3c8dd4878).
+  - GIT RULES: Paul Sahaya Doss is the SOLE author — NEVER add a Claude/Anthropic
+    co-author trailer. Commit locally after each step; PUSH ONLY when the user says
+    "promote it". Credentials ARE stored (~/.git-credentials, helper=store), so
+    push works without prompting — which makes it MORE important not to push
+    unasked. Never print or read that file.
+  - Commit messages: plain, explain the ROOT CAUSE and the trade-off. Multi-line
+    messages: write to a temp file and use `git commit -F file` — heredocs through
+    the WSL bridge break on quotes/backticks.
 
-RULES: answer v16 ONLY (verify against docs/source, no guessing) — see CLAUDE.md +
-  .claude/rules.md. Any DocType/config change -> export to mercury fixtures + note it.
+--------------------------------------------------------------------------------
+ENVIRONMENT / HOW TO RUN COMMANDS (this bites every new session)
+--------------------------------------------------------------------------------
+  - The bench lives in WSL. The Bash tool runs WINDOWS Git Bash, so `bench` and
+    `/home/paul` do NOT exist there. Prefix everything:
+        wsl -d Ubuntu-22.04 -- bash -c 'cd ~/frappe-bench && <command>'
+  - $(command substitution) and $? often come back EMPTY through that bridge.
+    Use direct commands, not substitution, when the value matters.
+  - For python against the site, avoid `bench console` (interactive). Use:
+        cd ~/frappe-bench/sites && ../env/bin/python /tmp/script.py
+    with frappe.init(site="mysite.local"); frappe.connect().
+  - Anything needing PDF generation must run under the honcho env:
+        cd ~/frappe-bench && honcho run bash -c "cd sites && ../env/bin/python ..."
 
-OPEN ITEMS (also see NEXT UP + TODO sections below):
-  [ ] *** ACTION ITEM (deferred, do later) *** RE-APPLY THE PROJECT/DESK UI FIXES after
-      any pull/merge of newer code (DMS, staging-deployment, upstream erpnext). The
-      accordion work lives in apps/erpnext/.../project/project.js - an ERPNEXT CORE FILE
-      that a merge can clobber. Full re-apply guide, root causes and verification
-      checklist: documents/PROJECT_UI_CHANGES.md. The desk CSS is safe (it lives in the
-      mercury app as additive overrides; no core file patched).
-      NOTE: most of these defects come from OUR OWN apps overriding core layout with
-      !important - hrms/layout_global.css:137 (2nd scrollbar on .form-sidebar) and
-      quality_dms.css:862 (position:relative on .page-head breaks the sticky header
-      desk-wide). Worth fixing at source instead; see section 6 of that doc.
-  [x] DONE 2026-08-04: exported remaining config to mercury fixtures (rules.md) — the 2
-      Print Formats, Payment Terms Template and both QI Templates are now fixtures.
-  [ ] Apply remaining MANAGEMENT FEEDBACK items (the current focus).
-  [ ] Get Mercury's REAL CUSTOMER REPORTS from user (not yet on disk).
-  [ ] Nested cockpit sidebar (needs 2 user decisions). [ ] Phase 2 custom. [ ] Path 2 login.
-  Full step-by-step of all 8 stages: web docs/mercury_phase1_stepbystep_guide.txt.
+MACHINE-LOCAL SETUP (NOT in git — redo on any other machine):
+  - wkhtmltopdf 0.12.6.1 (WITH PATCHED QT — the plain apt build is rejected by
+    frappe) installed WITHOUT root at ~/opt/wkhtmltox (official jammy .deb
+    extracted with dpkg-deb -x; no missing shared libs). sudo is NOT available in
+    this WSL (password prompt), and /usr/local/bin needs root.
+  - frappe calls `wkhtmltopdf` by bare name (frappe/utils/pdf.py) and there is NO
+    site_config override, so it MUST be on the PATH of the bench processes. The
+    bench PATH has neither env/bin nor ~/.local/bin. Solved with
+    ~/frappe-bench/.env — honcho reads it on `bench start` and applies it to every
+    Procfile process. .env is gitignored (hardcodes /home/paul/...).
+  - *** `bench restart` does NOT re-launch honcho, so it will NOT pick .env up.
+    You must fully stop `bench start` (Ctrl+C) and run `bench start` again. ***
+  - If the "Invalid wkhtmltopdf version" dialog persists, delete the redis key
+    "wkhtmltopdf_version" (frappe.cache.delete_key).
+
+--------------------------------------------------------------------------------
+KEY RECORDS (current, after mgmt feedback #1)
+--------------------------------------------------------------------------------
+  Site mysite.local · login Administrator (bypasses the sbiqc desk gate).
+  Company=Mercury (abbr JR) · Customer=Joel · Project PROJ-0001 (now ~78%, the
+  user updated the tasks themselves — do not "fix" it).
+  Stage 1-5 : SO SAL-ORD-2026-00002 · Workflow "Mercury RTM Approval" ·
+              MR MAT-MR-2026-00001 -> PO PUR-ORD-2026-00001 -> PR MAT-PRE-2026-00001 ·
+              incoming QI MAT-QA-2026-00001
+  Stage 6 v1 (KEPT as evidence, do not touch): DN MAT-DN-2026-00002-1 (submitted)
+              + Packing Slip MAT-PAC-2026-00001 + outgoing QI MAT-QA-2026-00002
+  Stage 7    : SI ACC-SINV-2026-00065 (submitted, 30/40/30) — built on that v1 DN,
+              which is WHY v2 needed a new DN instead of editing the old one.
+  Stage 6 v2 (CURRENT): Stock Entry MAT-STE-2026-00004 (ONE receipt, 7 rows) ->
+              DN MAT-DN-2026-00003 (STILL DRAFT, $18,800) with 4 lines / 7 units:
+                MERCURY-001 x1  serial MP-00002
+                BFV-8  8" Butterfly Valve x2  serials BV-00001, BV-00002
+                LG-01  Level Gauge x1         serial  LG-00001
+                EJ-8   8" Expansion Joint x3  serials EJ-00001, EJ-00002, EJ-00003
+              Outgoing QIs: MAT-QA-2026-00003 (pump), -00004 (BFV-8, sample 2),
+              -00005 (LG-01), -00006 (EJ-8, sample 3) — all Accepted + submitted
+              and linked on their DN rows.
+              BOLT-M16 / NUT-M16 still exist as Items but are OUT of the kit.
+  Config     : print formats "Mercury Shipping Label" (Delivery Note) &
+              "Mercury Monthly Progress Report" (Project) · QI templates
+              "Mercury Steel Casting QC", "Mercury Pump Final QC",
+              "Mercury Accessory Final QC" (new) · Payment Terms Template
+              "Mercury 30/40/30 Milestones" · logo files in
+              apps/mercury/mercury/public/images/mercury_logo.png (+ .svg)
+  FIXTURES   : ALL of the above config is exported to apps/mercury/mercury/fixtures/
+              (workspace, workspace_sidebar, desktop_icon, workflow, workflow_state,
+              workflow_action_master, print_format, payment_terms_template,
+              quality_inspection_template, quality_inspection_parameter).
+              Verified reproducible: a bench migrate re-imported them and the
+              labels still rendered.
+
+--------------------------------------------------------------------------------
+STANDING RULES (see CLAUDE.md + .claude/rules.md)
+--------------------------------------------------------------------------------
+  - Answer v16 ONLY. VERIFY against the docs or the installed source under apps/
+    BEFORE stating where a field/button/setting lives. No trial-and-error.
+  - Any DocType/config change -> export to mercury fixtures and commit. JSON is the
+    source of truth, not the database.
+  - Prefer BACKEND scripts over UI walk-throughs — the user already knows the UI and
+    says so; they want the records created, not a tutorial.
+  - For UI/CSS problems: MEASURE the rendered page (ask the user for a DevTools
+    Computed/Styles reading) instead of inferring from stylesheets. Three apps
+    (frappe, hrms, quality_dms) override the same layout properties with
+    !important; reading the .scss alone repeatedly produced wrong diagnoses and
+    wasted a lot of the user's time.
+  - Do not push, and do not analyse the Mercury customer PDFs, until asked.
+
+--------------------------------------------------------------------------------
+OPEN ITEMS
+--------------------------------------------------------------------------------
+  [ ] bench migrate after the staging-deployment merge (item 1 above).
+  [ ] Management's "project report" suggestion — ask the user for the brief.
+  [ ] Mercury's 4 real customer PDFs — user hands them over one at a time.
+  [ ] Stage 6: Packing Slip(s) on MAT-DN-2026-00003, then submit the DN.
+  [ ] Push the 5 local commits when the user says "promote it".
+  [ ] RE-APPLY UI FIXES after any future pull/merge -> documents/PROJECT_UI_CHANGES.md.
+      (Verified intact after the staging-deployment merge; project.js was untouched.)
+  [ ] Consider fixing the UI defects AT SOURCE in hrms/quality_dms instead of
+      overriding them in mercury — see section 6 of that doc.
+  [ ] Nested "cockpit" sidebar (needs 2 user decisions — see TODO section below).
+  [ ] PHASE 2 (custom): Shipment Acknowledgement DocType + customer QR-scan portal.
+      The Phase-1 QR payload is already Phase-2 ready:
+      {site}/shipment-ack?dn=<DN>&item=<item_code>&sr=<serial>
+  [ ] PATH 2 (deferred): sbiqc_provisioning desk-access gate for real multi-user login.
+  [ ] "web docs/" is GITIGNORED (.gitignore:26) — the step-by-step guide lives only
+      on this machine. Decide whether to track it.
 ################################################################################
 
 GOAL
@@ -356,6 +463,82 @@ TODO TASKS
     4 items has an Outgoing Quality Inspection (all have "Inspection Required before
     Delivery"). Decide: raise 3 more QIs, or untick the flag on the accessories.
     Also not yet done: Packing Slips (the per-freight-box "Option B" grouping).
+
+[13] PROJECT MODULE + DESK UI FIXES  — 2026-08-04/05  DONE (pushed 38932a7b4)
+  Triggered by: the Mercury demo should not show a "Defects" panel on the Project
+  Summary tab (DMS/SBIQC vocabulary, always 0 on a manufacturing project). Grew into
+  fixing several real desk defects found along the way.
+  - COLLAPSIBLE Tasks/Defects accordions on the Project Summary tab, in
+    apps/erpnext/erpnext/projects/doctype/project/project.js
+    (function show_task_defect_summary_tab). Header = chevron + icon + title + count
+    badge + "View All"; grid-template-rows 0fr->1fr animation; keyboard accessible;
+    theme variables so dark mode is correct.
+    STATE RULE (took 3 attempts): Defects CLOSED on every login, stays open once the
+    user opens it, resets on logout->login. Implemented with sessionStorage keyed by
+    frappe.csrf_token.
+    *** DO NOT "SIMPLIFY" THAT KEY. localStorage outlives the session; plain
+    sessionStorage survives logout->login in the same tab; and keying on the sid
+    cookie CANNOT work because frappe/auth.py:394 sets sid httponly=True so JS can
+    never read it (the key silently degrades to a constant - it LOOKS right). Only
+    frappe.csrf_token (exposed in frappe/www/desk.html:56) is reissued per login. ***
+  - DESK SHELL FIXES, all as ADDITIVE CSS in our own app:
+    apps/mercury/mercury/public/css/mercury_desk.css, loaded via
+    hooks.app_include_css (bump the ?v= when editing; currently v=14).
+    NO frappe/erpnext/hrms file is patched - commenting out that one hook line
+    reverts everything. mercury_desk.css MUST stay LAST in app_include_css or its
+    !important overrides lose to hrms/quality_dms.
+    Fixed: 3 scrollbars -> 1; page head genuinely pinned; tab bar pinned flush with
+    no gap; right form sidebar no longer clipped.
+  - ROOT CAUSES (most of these are OUR OWN apps, not frappe):
+      * hrms/public/css/layout_global.css:137 forces overflow-y:auto !important on
+        .form-sidebar -> a 2nd scrollbar on every form. (Overriding the PARENT
+        .layout-side-section does nothing; it targets the child.)
+      * quality_dms/public/css/quality_dms.css:862 sets
+        body.dms-theme .page-head { position: relative } which outranks core's
+        position:sticky (0,2,1 vs 0,1,0) -> the page head scrolled away desk-wide.
+        LESSON: re-assert POSITION, not just TOP, when something will not stick.
+      * frappe form_sidebar.scss:281 sizes .form-sidebar to
+        var(--form-sidebar-width) = 277px while hrms forces the COLUMN to 250px ->
+        27px overflow clipped by .main-section overflow-x:hidden. Padding the column
+        cannot fix a fixed-width child; the CARD had to be told to fit.
+      * nothing sets overflow on html/body, so the document scrolled too (outer bar).
+      * position:sticky resolves against the nearest ancestor with a SCROLLING BOX,
+        and overflow:hidden counts as one (page.scss:105) -> sticky silently
+        re-parented and drifted.
+      * the "empty band" above the tabs was TWO things: the card's own top inset
+        (quality_dms padding/margin) AND a positive top offset, because the tab bar's
+        sticky container already starts below the head. Correct value is top: 0.
+  - MERGE PROTECTION added (colleagues resolve conflicts with Claude):
+      * CLAUDE.md has a "PROTECTED UI FIXES" section - Claude Code reads it
+        automatically in this repo, including during conflict resolution.
+      * a PROTECTED banner sits directly above show_task_defect_summary_tab, so the
+        warning appears inside the conflict hunk itself.
+      * a PROTECTED header in mercury_desk.css covering load order + ?v=.
+      * documents/PROJECT_UI_CHANGES.md = the re-apply guide: exposure per file, the
+        root-cause table with file:line, deliberate trade-offs, a 10-point
+        verification checklist, and cherry-pick commands.
+  - TRADE-OFFS accepted: the form sidebar is no longer sticky (price of one
+    scrollbar); scrollbars inside .page-container are hidden (scrolling still works).
+
+[14] MERGES + GIT CONSOLIDATION  — 2026-08-04/05
+  - Branch consolidation: paul-update2 -> paul-update (local + remote are now one
+    branch). Verified first that the old local paul-update was fully contained in
+    paul-update2, so no commits were lost.
+  - Merged hephzibah/DMS (2 commits: DMS sidebar relabel + Summary stat tiles).
+    Clean; verified our mercury files were byte-identical afterwards.
+  - Merged hephzibah/staging-deployment 2026-08-05 (4 commits: DMS versioning
+    workflow + Repository/Workbench split + Key Metrics restyle, SBIQC login page
+    redesign, gated production deploy job). CLEAN, no conflicts.
+    project.js was NOT touched by it, so the accordion work could not conflict.
+    Verified after the merge: git diff pre-staging-merge HEAD over project.js,
+    apps/mercury, CLAUDE.md and documents/ = EMPTY, plus a 22-point marker script
+    all OK, plus mercury_desk.css still LAST in app_include_css.
+    *** STILL NEEDS bench migrate *** (new DocType JSON, 2 new DMS Number Cards,
+    changed DMS sidebar, quality_dms/hooks.py changes).
+  - Rollback tags: pre-dms-merge (3c8dd4878), pre-staging-merge (38932a7b4).
+  - PRE-MERGE HABIT THAT PAID OFF: always scope first (rev-list --left-right --count,
+    merge-base, diff --name-only filtered to our protected files) and tag a rollback
+    point BEFORE merging. Both merges turned out far smaller than feared.
 
 --------------------------------------------------------------------------------
 NEXT UP  (post-Phase-1)
