@@ -223,12 +223,16 @@ frappe.ui.form.on("Project", {
 		// Whatever the user chooses is remembered per section per browser, so the
 		// chosen layout survives reloads and route changes.
 		const DEFAULT_COLLAPSED = { Tasks: false, Defects: true };
-		const collapse_key = (title) => `project_summary_collapsed::${title}`;
 
-		// sessionStorage, not localStorage: a section the user opens stays open across
-		// reloads and route changes, but the defaults come back on a fresh session
-		// (new login / new tab). So Defects is always folded to begin with and never
-		// silently stays open from days ago.
+		// The stored state is scoped to the CURRENT LOGIN, not just the tab.
+		// sessionStorage alone was not enough: it survives logout -> login in the
+		// same tab, so an open Defects section came back after re-logging in.
+		// Including the session id (which frappe reissues on every login) in the key
+		// means a fresh login can never see the previous session's keys, so the
+		// defaults always apply again: Tasks open, Defects closed.
+		const session_id = frappe.get_cookie ? frappe.get_cookie("sid") || "nosid" : "nosid";
+		const collapse_key = (title) => `project_summary_collapsed::${session_id}::${title}`;
+
 		const is_collapsed = (title) => {
 			const saved = sessionStorage.getItem(collapse_key(title));
 			if (saved !== null) return saved === "1";
@@ -236,9 +240,16 @@ frappe.ui.form.on("Project", {
 		};
 		const panel_id = (title) => `summary-panel-${frappe.scrub(title)}`;
 
-		// One-off cleanup: an earlier build persisted this in localStorage, which
-		// outlived the session and could leave Tasks folded shut on first load.
-		Object.keys(DEFAULT_COLLAPSED).forEach((t) => localStorage.removeItem(collapse_key(t)));
+		// Drop keys from earlier builds / previous logins so nothing stale survives:
+		// an old localStorage flag could otherwise pin Tasks shut, and old per-session
+		// keys would just accumulate.
+		Object.keys(DEFAULT_COLLAPSED).forEach((t) => {
+			localStorage.removeItem(`project_summary_collapsed::${t}`);
+			sessionStorage.removeItem(`project_summary_collapsed::${t}`);
+		});
+		Object.keys(sessionStorage)
+			.filter((k) => k.startsWith("project_summary_collapsed::") && !k.includes(session_id))
+			.forEach((k) => sessionStorage.removeItem(k));
 
 		const section = (title, icon, doctype, project, s, view_route) => {
 			const collapsed = is_collapsed(title);

@@ -65,23 +65,25 @@ body[data-route^="Form"] .layout-main {
 }
 
 /* ------------------------------------------------------------------------
- * Hide the .main-section scrollbar (the page still scrolls normally).
+ * ONE visible scrollbar: keep the inner content one, hide the OUTER window one.
  *
- * main.scss:37 makes .main-section a 100vh scroll container with
- * `scrollbar-gutter: stable`, which both paints a visible bar down the right
- * edge and permanently reserves space for it. Hiding it reclaims that space and
- * removes the bar the client would otherwise see next to the form sidebar.
+ * The desk paints two bars down the right edge:
+ *   1. the document / window bar (html) - nothing in frappe sets overflow on
+ *      html or body, so the document scrolls too; this is the OUTER bar, closest
+ *      to the window edge, and it is the redundant one.
+ *   2. .main-section's own bar (main.scss:37 - height 100vh + overflow scroll),
+ *      which is what actually scrolls the page content. This one is KEPT so
+ *      there is still a visible scroll position indicator.
  *
- * TRADE-OFF: no visual scroll-position indicator. Wheel, trackpad, keyboard and
- * touch scrolling are unaffected.
+ * Only the outer bar is hidden, and only visually - scrolling behaviour on both
+ * elements is untouched.
  * ------------------------------------------------------------------------ */
-.main-section {
+html {
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* legacy Edge */
-	scrollbar-gutter: auto;
 }
 
-.main-section::-webkit-scrollbar {
+html::-webkit-scrollbar {
 	width: 0;
 	height: 0;
 }
