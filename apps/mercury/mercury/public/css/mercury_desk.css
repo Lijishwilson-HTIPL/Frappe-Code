@@ -93,23 +93,31 @@ body[data-route^="Form"] .layout-main {
 	overflow: visible !important;
 }
 
+/* `position` must be re-asserted, not just `top`: quality_dms.css:862 sets
+ *     body.dms-theme .page-head { position: relative; }
+ * which outranks core's `.page-head { position: sticky }` on specificity
+ * (0,2,1 vs 0,1,0). That is why the head scrolled out of view while the tab bar
+ * stayed pinned - only the head's position was being overridden. DMS only needs
+ * a containing block for its ::after accent rule, and `sticky` provides one just
+ * as `relative` does, so their accent bar is unaffected. */
 .page-head {
+	position: sticky !important;
 	top: 0 !important;
 	z-index: 20 !important;
 }
 
-/* No top offset. Core's sticky classes set top: var(--navbar-height) (48px), which
- * pushed the tab bar down by a page-head's worth and left an empty band above it.
- * With top: 0 the bar pins flush to the top of the scrollport instead, and the
- * 6px core top margin is removed so nothing sits above it.
+/* Stack the tab bar directly beneath the (now genuinely sticky) page head.
  *
- * The page head keeps a higher z-index, so on scroll the tab bar tucks under the
- * head rather than colliding with it. */
+ * The "empty section on top" was a symptom of the bug above, not of this offset:
+ * with the head not sticky it scrolled away, so the tab bar pinned at 48px with
+ * nothing occupying those 48px. Now the head fills that space, so the offset is
+ * correct and both stay visible while scrolling. The 6px core top margin is still
+ * removed so the two sit flush. */
 .form-tabs-list,
 .form-tabs-sticky-up,
 .form-tabs-sticky-down,
 .form-tabs-sticky-down.show-navbar {
-	top: 0 !important;
+	top: var(--page-head-height) !important;
 	margin-top: 0 !important;
 	z-index: 19 !important;
 }
