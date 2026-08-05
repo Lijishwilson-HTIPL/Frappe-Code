@@ -106,13 +106,22 @@ body[data-route^="Form"] .layout-main {
 	z-index: 20 !important;
 }
 
-/* Tab bar: sticky, parked directly under the pinned page head. */
+/* Tab bar: sticky with NO offset.
+ *
+ * top must be 0, not var(--page-head-height). The bar's sticky container starts
+ * BELOW the page head already, so a 48px offset stacks a second head's worth of
+ * space on top of it - that is the gap that kept reappearing. Measured in
+ * DevTools the bar's own margin-top/padding-top are 0, so the space was the
+ * offset itself.
+ *
+ * With top: 0 it pins at the top of that container, i.e. flush under the head.
+ * z-index stays below the head so it can never paint over it. */
 .form-tabs-list,
 .form-tabs-sticky-up,
 .form-tabs-sticky-down,
 .form-tabs-sticky-down.show-navbar {
 	position: sticky !important;
-	top: var(--page-head-height) !important;
+	top: 0 !important;
 	margin-top: 0 !important;
 	z-index: 19 !important;
 	background-color: var(--card-bg) !important;
