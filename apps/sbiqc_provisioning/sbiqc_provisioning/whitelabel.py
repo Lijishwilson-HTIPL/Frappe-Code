@@ -36,7 +36,10 @@ def apply_branding():
 	for icon_name, new_label in _DESKTOP_ICON_LABELS.items():
 		if frappe.db.exists("Desktop Icon", icon_name):
 			current = frappe.db.get_value("Desktop Icon", icon_name, "label")
-			if current != new_label:
+			label_taken_elsewhere = frappe.db.exists(
+				"Desktop Icon", {"label": new_label, "name": ["!=", icon_name]}
+			)
+			if current != new_label and not label_taken_elsewhere:
 				frappe.db.set_value("Desktop Icon", icon_name, "label", new_label, update_modified=False)
 				# ERPNext Settings icon links to the workspace sidebar — update its link_to too
 				if icon_name == "ERPNext Settings":

@@ -8,6 +8,24 @@
 set -e
 cd /home/frappe/frappe-bench
 
+# The checked-in sites/common_site_config.json carries host-dev values (Redis on
+# 127.0.0.1, no db_host). Overwrite with the Docker-network settings every start,
+# same as the image's original CMD did before docker-compose.override.yml swapped
+# it for this script.
+python3 -c "
+import json, os
+cfg_path = 'sites/common_site_config.json'
+cfg = json.load(open(cfg_path)) if os.path.exists(cfg_path) else {}
+cfg.update({
+  'redis_cache':    'redis://' + os.environ.get('REDIS_CACHE',    'redis-cache:6379'),
+  'redis_queue':    'redis://' + os.environ.get('REDIS_QUEUE',    'redis-queue:6379'),
+  'redis_socketio': 'redis://' + os.environ.get('REDIS_SOCKETIO', 'redis-socketio:6379'),
+  'db_host': os.environ.get('DB_HOST', 'db'),
+  'db_port': int(os.environ.get('DB_PORT', 3306)),
+})
+json.dump(cfg, open(cfg_path, 'w'), indent=1)
+"
+
 echo "[docker-start] Waiting for database..."
 SITE="${FRAPPE_SITE_NAME:-mysite.local}"
 until bench --site "$SITE" execute frappe.ping >/dev/null 2>&1; do

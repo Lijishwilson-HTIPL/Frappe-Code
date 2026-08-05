@@ -26,7 +26,7 @@ USER frappe
 
 # Clone Frappe-Code — single repo, all apps included (no submodules)
 RUN git clone \
-    --branch version-migration \
+    --branch staging-deployment \
     --depth 1 \
     https://github.com/Lijishwilson-HTIPL/Frappe-Code.git \
     frappe-bench
@@ -47,7 +47,8 @@ RUN bench setup env && \
     env/bin/pip install -e apps/helpdesk && \
     env/bin/pip install -e apps/telephony && \
     env/bin/pip install -e apps/sbiqc_provisioning && \
-    env/bin/pip install -e apps/quality_dms
+    env/bin/pip install -e apps/quality_dms && \
+    env/bin/pip install -e apps/crm_unify
 
 # Install frontend dependencies for all apps
 RUN cd apps/frappe   && yarn install --frozen-lockfile && cd ../.. && \
