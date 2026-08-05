@@ -48,6 +48,20 @@ body[data-route^="Form"] .layout-side-section {
 	box-sizing: border-box !important;
 }
 
+/* THE actual clipping cause: the sidebar CARD carries its own fixed width.
+ *   frappe form_sidebar.scss:281  .form-sidebar { width: var(--form-sidebar-width) }
+ * which is 277px, while hrms layout_global.css:126 forces the COLUMN to 250px.
+ * A 277px card in a 250px column overflows by 27px and .main-section's
+ * overflow-x: hidden cuts it off. Padding on the column cannot fix that, because
+ * the child's width is fixed - the card has to be told to fit its column. */
+body[data-route^="Form"] .layout-side-section .form-sidebar,
+body[data-route^="Form"] .form-sidebar {
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+
 /* Both columns are flex children of .row.layout-main - align their tops so the
  * form sidebar and the main section always begin on the same horizontal level. */
 body[data-route^="Form"] .layout-main {
