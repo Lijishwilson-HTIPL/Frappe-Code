@@ -18,17 +18,19 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest push:** `015e556ae` — "proj module ui defects fixed + task module dynamic
-delivered status dropdown added" (2026-08-05)
+**Latest push:** `96eda0dd3` — "docs: log the Delivered task status and rewrite the
+handoff for the next session" (2026-08-05)
 
-**Local-only (NOT yet pushed):** nothing. `paul-update` is 0 ahead / 0 behind
-`hephzibah/paul-update`.
+**Local-only (NOT yet pushed):** `fa134009b` — the second `staging-deployment` merge
+(DMS training analytics + login CSS). Merged and migrated locally, **awaiting
+"promote it"**.
 
 **Rollback targets (newest first):**
 
 | Tag / commit | What it is |
 |---|---|
-| `38932a7b4` — tag **`pre-staging-merge`** | last state before the `staging-deployment` merge |
+| `96eda0dd3` — tag **`pre-staging-merge-2`** | last state before the *second* `staging-deployment` merge |
+| `38932a7b4` — tag **`pre-staging-merge`** | last state before the first `staging-deployment` merge |
 | `3c8dd4878` — tag **`pre-dms-merge`** | last state before the `DMS` merge |
 | `b5583b40d` (2026-07-22) | Mercury baseline, before any Mercury work |
 
@@ -42,6 +44,8 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 | # | Commit | Date | Pushed | Summary |
 |---|--------|------|--------|---------|
+| 11 | `fa134009b` | 2026-08-05 | **no** | merge: `staging-deployment` #2 — DMS training analytics, login CSS fixes, CRLF pinning |
+| 10 | `96eda0dd3` | 2026-08-05 | yes | docs: log the Delivered task status, rewrite the handoff |
 | 9 | `015e556ae` | 2026-08-05 | yes | proj module UI defects fixed + Task "Delivered" status, gated per company |
 | 8 | `80be0a9a2` | 2026-08-05 | yes | docs: rewrite the Mercury handoff block for the next session |
 | 7 | `03a8a49b5` | 2026-08-05 | yes | merge: `staging-deployment` (DMS versioning/metrics, SBIQC login redesign, prod deploy job) |
@@ -72,6 +76,31 @@ app as additive overrides and no frappe/erpnext/hrms file is patched.
 Rollback-before-this: `3db8740fd`
 
 ## Features by commit
+
+### `fa134009b` — second `staging-deployment` merge (2026-08-05) · NOT PUSHED
+5 commits, merge base `cb1875648`, **clean — no conflicts**: DMS training score
+history + self-service dashboards + analytics, two login CSS fixes, and CRLF pinning
+for shell scripts.
+
+Scoped before merging. **None of the protected files are touched by the incoming
+side** — `project.js`, all of `apps/mercury/`, `CLAUDE.md`, `documents/` and
+`workprogress_mercury.txt` are byte-identical to `pre-staging-merge-2`.
+
+Two things that looked risky and were checked rather than assumed:
+
+- `quality_dms/hooks.py` **is** in the diff, and it owns `app_include_css` — but the
+  change is only a `?v=` bump 26→31 plus two permission-hook entries for the new
+  doctype. `mercury_desk.css` still loads **last** (slot 7), so its `!important`
+  overrides still win.
+- `quality_dms.css` is **not** in the diff. The `body.dms-theme .page-head
+  { position: relative }` rule at :862 that we override is untouched.
+
+Post-merge verified: 20/20 protected UI markers pass, `bench migrate` clean (new
+DocType `DMS Training Score History`, Pages `my-training-dashboard` and
+`training-analytics` all created), Task options still include `Delivered`, Mercury
+still ticked, PROJ-0001 still 78.57%, `MAT-DN-2026-00003` still draft.
+
+Rollback-before-this: `96eda0dd3` (tag `pre-staging-merge-2`)
 
 ### `015e556ae` — Task "Delivered" status, gated per company (2026-08-05) · PUSHED
 - **Why:** management asked for a `Delivered` status on Task, but only for the Mercury

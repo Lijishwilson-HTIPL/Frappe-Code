@@ -25,7 +25,9 @@ WHERE WE ARE
   - staging-deployment merged AND MIGRATED 2026-08-05. Migrate ran clean (zero
     errors, zero failed patches). This is DONE - do not run it again "just in case".
   - TASK "DELIVERED" STATUS = DONE 2026-08-05 evening, gated per company. See [15].
-  - EVERYTHING IS PUSHED. Remote tip = local HEAD = 015e556ae.
+  - SECOND staging-deployment MERGE = DONE 2026-08-05 evening (fa134009b). Clean,
+    migrated, 20/20 protected UI markers verified. See [16]. NOT PUSHED YET.
+  - Remote tip = 96eda0dd3. Local HEAD = fa134009b => LOCAL IS 1 AHEAD (the merge).
 
 --------------------------------------------------------------------------------
 THE VERY NEXT THINGS TO DO (in this order)
@@ -55,9 +57,10 @@ GIT — CURRENT STATE (verified 2026-08-05 evening)
   - Remote: "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
     ("origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED — never push there.)
   - ONE branch: paul-update (local AND remote), upstream = hephzibah/paul-update.
-  - HEAD = remote = 015e556ae "proj module ui defects fixed + task module dynamic
-    delivered status dropdown added". 0 AHEAD / 0 BEHIND — fully pushed.
-  - ROLLBACK TAGS: pre-staging-merge (=38932a7b4), pre-dms-merge (=3c8dd4878).
+  - Remote tip = 96eda0dd3 (docs). Local HEAD = fa134009b (the 2nd staging-deployment
+    merge) => LOCAL IS 1 AHEAD, UNPUSHED. Push it when the user says "promote it".
+  - ROLLBACK TAGS: pre-staging-merge-2 (=96eda0dd3), pre-staging-merge (=38932a7b4),
+    pre-dms-merge (=3c8dd4878).
   - GIT RULES: Paul Sahaya Doss is the SOLE author — NEVER add a Claude/Anthropic
     co-author trailer. Commit locally after each step; PUSH ONLY when the user says
     "promote it". Credentials ARE stored (~/.git-credentials, helper=store), so
@@ -628,6 +631,42 @@ TODO TASKS
     check the instance, not just the code path.)
   - Project % rollup is unaffected: project.py:235 counts only Cancelled/Completed,
     but PROJ-0001 uses the "Task Progress" method, not "Task Completion".
+
+[16] SECOND staging-deployment MERGE  — 2026-08-05 evening  DONE (fa134009b, UNPUSHED)
+  - 5 commits, merge base cb1875648, CLEAN (no conflicts):
+      4645e2236 fix(login): button colors win over frappe core CSS
+      fb6aaa66d fix(login): cache-bust the login page CSS link
+      e42dfdadf merge origin/staging-deployment
+      7b03508b7 feat(dms): training score history, self-service dashboards, analytics
+      8f1a13727 fix(infra): pin CRLF for shell scripts, guard duplicate icon labels
+  - SCOPED FIRST (the habit that has now paid off three times): diff --name-only over
+    the incoming range showed it touches ONLY quality_dms, sbiqc_provisioning and
+    infra (Dockerfile, .gitattributes, docker-start.sh). NO protected file is in it.
+    Tagged pre-staging-merge-2 (=96eda0dd3) before merging.
+  - TWO THINGS THAT LOOKED RISKY AND WERE CHECKED, NOT ASSUMED:
+      * quality_dms/hooks.py IS in the diff and it owns app_include_css - but the
+        change is only ?v= 26 -> 31 plus two permission-hook entries for the new
+        doctype. mercury_desk.css still loads LAST (slot 7 of 8), so the !important
+        overrides still win. VERIFIED after migrate, not assumed.
+      * quality_dms.css is NOT in the diff, so the body.dms-theme .page-head
+        { position: relative } rule at :862 that we override is untouched.
+  - POST-MERGE VERIFICATION (all green):
+      * git diff pre-staging-merge-2 over project.js, apps/mercury, CLAUDE.md,
+        documents/ and workprogress_mercury.txt = EMPTY.
+      * 20/20 protected UI marker checks pass (/tmp/verify_markers.py).
+      * bench migrate clean - zero errors, zero failed patches. New DocType
+        "DMS Training Score History" + Pages my-training-dashboard and
+        training-analytics all created.
+      * Delivered gate intact after the fixture re-import: Property Setter, Custom
+        Field, Client Script, doc_events hook all present; Mercury still ticked.
+      * Mercury demo data untouched: PROJ-0001 78.57%, MAT-DN-2026-00003 still
+        draft (docstatus 0), both Mercury print formats and the workspace present.
+  - MARKER-SCRIPT GOTCHA: a naive "is the string localStorage present in project.js"
+    check FAILS as a false positive. project.js legitimately contains localStorage
+    in (a) the two warning comments and (b) a deliberate localStorage.removeItem()
+    that clears the stale flag from the first implementation. Only a
+    localStorage.getItem/setItem is an actual regression. The corrected script also
+    positively asserts sessionStorage.getItem/setItem(collapse_key(...)).
 
 --------------------------------------------------------------------------------
 NEXT UP  (post-Phase-1)
