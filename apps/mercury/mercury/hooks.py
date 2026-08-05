@@ -146,13 +146,15 @@ jinja = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+# The custom "Delivered" Task status is added DocType-wide by a Property Setter
+# (Select options are metadata - they cannot be per-record). The Client Script on Task
+# only hides it in the UI; this hook is what actually enforces the company gate for
+# REST / Data Import / db.set_value writes. See mercury/task_status.py.
+doc_events = {
+	"Task": {
+		"validate": "mercury.task_status.validate",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
@@ -305,8 +307,15 @@ fixtures = [
 		"Leak / Hydro Test", "Performance Check", "Paint / Finish",
 		"Visual / Surface Finish", "Dimensional / Flange Fit", "Marking / Tag Present"]]]},
 	{"dt": "Quality Inspection Template", "filters": [["name", "like", "Mercury%"]]},
-	# Added as later Phase 1 stages are built:
-	# {"dt": "Custom Field", "filters": [["module", "=", "Mercury"]]},
-	# {"dt": "Property Setter", "filters": [["module", "=", "Mercury"]]},
+	# Custom "Delivered" Task status (mgmt request, 2026-08-05). Three records:
+	#   Property Setter  - appends "Delivered" to Task.status options (DocType-wide;
+	#                      Select options are metadata and cannot be per-record).
+	#   Custom Field     - Company.allow_delivered_task_status, the opt-in checkbox.
+	#   Client Script    - hides the option unless the task's company has opted in.
+	# Server-side enforcement is code, not config: mercury/task_status.py via doc_events.
+	# Filtered by module so only records this app owns are exported.
+	{"dt": "Custom Field", "filters": [["module", "=", "Mercury"]]},
+	{"dt": "Property Setter", "filters": [["module", "=", "Mercury"]]},
+	{"dt": "Client Script", "filters": [["module", "=", "Mercury"]]},
 ]
 
