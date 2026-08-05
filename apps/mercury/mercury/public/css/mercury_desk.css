@@ -33,6 +33,21 @@ body[data-route^="Form"] .layout-side-section {
 	top: auto;
 }
 
+/* The right form sidebar had no right inset, so its card ran straight into the
+ * viewport edge and .main-section's overflow-x: hidden clipped it.
+ * Every other column gets an inset from somewhere - hrms gives .page-body 15px,
+ * quality_dms gives .layout-main-section-wrapper margin: 4px 16px 24px - but
+ * nothing ever insets .layout-side-section on the right. Also cap its width so it
+ * can never be sized wider than the space available: frappe asks for
+ * min-width: var(--form-sidebar-width) (277px, form_sidebar.scss:292) while hrms
+ * forces 250px, and min-width outranks width. */
+body[data-route^="Form"] .layout-side-section.right,
+body[data-route^="Form"] .layout-side-section {
+	padding-right: 16px !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+
 /* Both columns are flex children of .row.layout-main - align their tops so the
  * form sidebar and the main section always begin on the same horizontal level. */
 body[data-route^="Form"] .layout-main {
