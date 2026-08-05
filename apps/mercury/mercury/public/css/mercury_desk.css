@@ -76,15 +76,37 @@ body[data-route^="Form"] .layout-main {
  *
  * Pin both unconditionally, with the tab bar sitting directly under the head.
  * ------------------------------------------------------------------------ */
-.page-head {
-	top: 0 !important;
+/* position:sticky resolves against the nearest ancestor that has a SCROLLING BOX -
+ * and `overflow: hidden` counts as one. Several ancestors of .form-tabs-list can
+ * carry overflow (e.g. page.scss:105 `.layout-main-section.frappe-card {
+ * overflow: hidden }`), which silently re-parents the sticky element to a box that
+ * never scrolls - so the tab bar drifts with the content instead of pinning, and
+ * its `top` offset lands in the wrong place. Clearing overflow along the chain
+ * forces sticky to resolve against .main-section, the real scroller. */
+.layout-main-section,
+.layout-main-section.frappe-card,
+.layout-main-section-wrapper,
+.std-form-layout,
+.form-layout,
+.form-page,
+.form-tab-content {
+	overflow: visible !important;
 }
 
+.page-head {
+	top: 0 !important;
+	z-index: 20 !important;
+}
+
+/* Sit flush under the head. The 6px top margin core gives the tab bar is what
+ * showed up as "some top space" once it was pinned. */
 .form-tabs-list,
 .form-tabs-sticky-up,
 .form-tabs-sticky-down,
 .form-tabs-sticky-down.show-navbar {
 	top: var(--page-head-height) !important;
+	margin-top: 0 !important;
+	z-index: 19 !important;
 }
 
 /* ------------------------------------------------------------------------
@@ -111,4 +133,30 @@ body[data-route^="Form"] .layout-main {
 html,
 body {
 	overflow: hidden;
+}
+
+/* Belt and braces: .main-section is OUTSIDE .page-container, so this suppresses
+ * every other scrollbar inside the page shell while leaving .main-section's own
+ * bar as the single visible one. Without this, any app that later sets overflow
+ * on a shell element (hrms already does on .form-sidebar) reintroduces a second
+ * bar. Scrolling still works everywhere - only the indicator is suppressed. */
+.page-container,
+.page-container * {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* legacy Edge */
+}
+
+.page-container::-webkit-scrollbar,
+.page-container *::-webkit-scrollbar {
+	width: 0 !important;
+	height: 0 !important;
+}
+
+/* Keep the one we want, and make it slim. */
+.main-section {
+	scrollbar-width: thin;
+}
+
+.main-section::-webkit-scrollbar {
+	width: 8px;
 }
