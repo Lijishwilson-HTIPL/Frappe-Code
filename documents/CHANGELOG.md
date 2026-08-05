@@ -18,13 +18,19 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest push:** `3c8dd4878` — "mercury: rename QI template … without trailing period" (2026-08-04)
+**Latest push:** `015e556ae` — "proj module ui defects fixed + task module dynamic
+delivered status dropdown added" (2026-08-05)
 
-**Local-only (NOT yet pushed):** `c23b650eb` (DMS merge) and this changelog.
+**Local-only (NOT yet pushed):** nothing. `paul-update` is 0 ahead / 0 behind
+`hephzibah/paul-update`.
 
-**Last known-good rollback target:** `3c8dd4878` — also tagged **`pre-dms-merge`**
-(last state that is pushed *and* pre-DMS-merge).
-**Mercury baseline (before any Mercury work):** `b5583b40d` (2026-07-22)
+**Rollback targets (newest first):**
+
+| Tag / commit | What it is |
+|---|---|
+| `38932a7b4` — tag **`pre-staging-merge`** | last state before the `staging-deployment` merge |
+| `3c8dd4878` — tag **`pre-dms-merge`** | last state before the `DMS` merge |
+| `b5583b40d` (2026-07-22) | Mercury baseline, before any Mercury work |
 
 **Phase status:** Phase 1 = COMPLETE (all 8 stages, config-only; only custom code is the
 ~3-line QR jinja helper in `apps/mercury/mercury/utils.py`). Management feedback item #1
@@ -36,7 +42,12 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 | # | Commit | Date | Pushed | Summary |
 |---|--------|------|--------|---------|
-| 4 | `c23b650eb` | 2026-08-04 | **no** | merge: DMS project-module UI updates (sidebar relabel + status-accented stat tiles) |
+| 9 | `015e556ae` | 2026-08-05 | yes | proj module UI defects fixed + Task "Delivered" status, gated per company |
+| 8 | `80be0a9a2` | 2026-08-05 | yes | docs: rewrite the Mercury handoff block for the next session |
+| 7 | `03a8a49b5` | 2026-08-05 | yes | merge: `staging-deployment` (DMS versioning/metrics, SBIQC login redesign, prod deploy job) |
+| 6 | `38932a7b4` | 2026-08-05 | yes | docs: protect the Project/desk UI fixes from being lost in a merge — tag `pre-staging-merge` |
+| 5 | `01ea91644` | 2026-08-04 | yes | merge: `DMS` — sidebar relabel + Summary tab stat tile styling |
+| 4 | `c23b650eb` | 2026-08-04 | yes | merge: DMS project-module UI updates (sidebar relabel + status-accented stat tiles) |
 | 3 | `3c8dd4878` | 2026-08-04 | yes | mercury: rename QI template `Mercury Steel Casting QC.` → without trailing period |
 | 2 | `a609a8cef` | 2026-08-04 | yes | mercury: per-component QR shipping labels + logo, export phase-1 fixtures |
 | 1 | `03c7f0d68` | 2026-08-03 | yes | mercury thin app phase 1 — configurable 8 stages |
@@ -44,7 +55,7 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ---
 
-### `5cbb13884` … `7f7776ce1` — Project module + desk form-shell UI fixes (2026-08-04/05) · NOT PUSHED
+### `5cbb13884` … `7f7776ce1` — Project module + desk form-shell UI fixes (2026-08-04/05) · PUSHED
 17 commits fixing UI defects on the Project Summary tab and the desk form shell:
 collapsible Tasks/Defects accordions (Defects closed on every login), a single
 scrollbar instead of three, a genuinely pinned page head, a pinned tab bar with no gap
@@ -62,7 +73,49 @@ Rollback-before-this: `3db8740fd`
 
 ## Features by commit
 
-### `<pending>` — collapsible Tasks/Defects sections on the Project Summary tab (2026-08-04) · NOT PUSHED
+### `015e556ae` — Task "Delivered" status, gated per company (2026-08-05) · PUSHED
+- **Why:** management asked for a `Delivered` status on Task, but only for the Mercury
+  work — not for the DMS/SBIQC projects that share this Task doctype.
+- **The constraint:** Frappe `Select` options are **DocType metadata**, so an option
+  cannot be offered to only some records. There is no per-record variant in v16. The
+  option is therefore added DocType-wide and scoped by two separate mechanisms:
+
+  | Layer | Record / file | What it does |
+  |---|---|---|
+  | Option | Property Setter `Task-status-options` | appends `Delivered` between `Completed` and `Cancelled` |
+  | Gate (config) | Custom Field `Company.allow_delivered_task_status` | the opt-in checkbox — ticked on **Mercury** only |
+  | Scope (UI) | Client Script `Mercury - Delivered Task Status` | removes the option from the dropdown when the company hasn't opted in |
+  | Scope (real) | `mercury/task_status.py` via `doc_events` | **rejects the write** — this is the actual control |
+
+- **The Client Script is cosmetic; the `validate` hook is the enforcement.** A REST call,
+  a Data Import or `frappe.db.set_value` never runs client JS. Both are required — the
+  script alone is not a permission boundary. A warning to that effect is in the script
+  header so nobody deletes the hook as redundant.
+- **Gated on a checkbox, not a company name.** `Company` is a Link field, so its value is
+  always the exact record name and `company == "Mercury"` would work today — but it would
+  also match a future *"Mercury Freight Ltd"*, and enabling a second company would mean a
+  code change instead of a click. Case-insensitive matching was considered and rejected
+  for the same reason: link values cannot vary in case.
+- **Known trade-off:** the checkbox **value** lives on the Company record, which is master
+  data and *not* a fixture. On a fresh machine the field imports **unticked**, so
+  `Delivered` stays hidden on Mercury tasks until someone ticks it. Either document the
+  step or add an `after_migrate` hook — not yet decided.
+- **Latent issue, not currently reachable:** `set_tasks_as_overdue`
+  (`erpnext/hooks.py`, `daily_maintenance`) flips any task **not** in
+  `("Cancelled", "Completed")` with a past `exp_end_date` to `Overdue` — which would
+  silently un-deliver a Delivered task. Every PROJ-0001 task has `exp_end_date = None`,
+  so it cannot fire today. **If end dates are ever added, this must be handled** (override
+  `update_status` from the mercury app; do not patch erpnext core).
+- Also cosmetic: `task_list.js` has a hardcoded status→colour map with no `Delivered`
+  key, so the list-view indicator renders without a colour.
+- Fixtures exported (`.claude/rules.md`): `custom_field.json`, `property_setter.json`,
+  `client_script.json`, all filtered by `module = Mercury`.
+- **Verified:** `Delivered` saves on a Mercury task; blocked with a validation error on a
+  *Hephzibah Technologies India* task. Both tests rolled back — PROJ-0001 untouched at
+  78.57%.
+- Rollback-before-this: `80be0a9a2`
+
+### `<pending>` — collapsible Tasks/Defects sections on the Project Summary tab (2026-08-04) · PUSHED in `015e556ae` and earlier
 - **Why:** the Mercury demo shouldn't show a "Defects" panel (DMS/SBIQC terminology,
   always 0 for a manufacturing project). Rather than hard-hide it, both sections on the
   Project Summary tab are now **accordions**, so it can be folded away for the demo and
@@ -85,7 +138,7 @@ Rollback-before-this: `3db8740fd`
   just `bench clear-cache` + hard reload.
 Rollback-before-this: `3db8740fd`
 
-### `<pending>` — Outgoing QIs for the whole kit + Stage 6 guide rewrite (2026-08-04) · NOT PUSHED
+### `<pending>` — Outgoing QIs for the whole kit + Stage 6 guide rewrite (2026-08-04) · PUSHED
 - **Unblocked `MAT-DN-2026-00003` for submission.** All 4 kit items carry *Inspection
   Required before Delivery*, and erpnext (`stock_controller.py:1463`) requires a
   **submitted QI on every row** (`Delivery Note Item.quality_inspection`), not one per
@@ -109,7 +162,7 @@ Rollback-before-this: `3db8740fd`
   exact-match non-numeric readings, wkhtmltopdf/PATH). Guide 643 → 776 lines.
 Rollback-before-this: `733f94aba`
 
-### `c23b650eb` — merge DMS project-module UI updates (2026-08-04) · NOT PUSHED
+### `c23b650eb` — merge DMS project-module UI updates (2026-08-04) · PUSHED
 - Merged `hephzibah/DMS` into `paul-update` with `--no-ff` (explicit, revertable merge point).
 - Only **2 commits** were actually new — DMS's heavy project rework was already in our
   branch (merge base `65e41eb82`, which includes `90f263546` "rebuild overview home page,

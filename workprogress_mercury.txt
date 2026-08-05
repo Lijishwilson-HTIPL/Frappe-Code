@@ -6,65 +6,57 @@
 ================================================================================
 
 ################################################################################
-## >>> HANDOFF FOR NEXT CHAT (read this WHOLE block first) — updated 2026-08-05 <<<
+## >>> HANDOFF FOR NEXT CHAT (read this WHOLE block first) — updated 2026-08-05 (evening) <<<
 ################################################################################
 You are picking up the Mercury ERP demo mid-project. Read this block, then
 "web docs/mercury_phase1_stepbystep_guide.txt" (Stage 6 was REWRITTEN 2026-08-04)
 and "documents/PROJECT_UI_CHANGES.md" if anything UI-related comes up.
-Nothing is broken. Do NOT re-do finished work.
+Nothing is broken. Nothing is unpushed. Do NOT re-do finished work.
 
 --------------------------------------------------------------------------------
 WHERE WE ARE
 --------------------------------------------------------------------------------
-  - PHASE 1 = COMPLETE (all 8 stages, config-only; the ONLY custom code is the
-    ~3-line QR jinja helper in apps/mercury/mercury/utils.py).
+  - PHASE 1 = COMPLETE (all 8 stages, config-only).
   - Management demo delivered 2026-07-29; management gave suggestions.
   - MGMT FEEDBACK #1 = DONE (2026-08-04/05): per-UNIT QR shipping labels + logo.
-    7 physical units => 7 labels, each with its own unique QR. See [12] below.
-  - PROJECT MODULE / DESK UI FIXES = DONE (2026-08-04/05), pushed + protected.
-    See [13] below and documents/PROJECT_UI_CHANGES.md.
-  - staging-deployment MERGED into local 2026-08-05 (clean, unpushed).
+    7 physical units => 7 labels, each with its own unique QR. See [12].
+  - PROJECT MODULE / DESK UI FIXES = DONE, pushed + protected. See [13] and
+    documents/PROJECT_UI_CHANGES.md.
+  - staging-deployment merged AND MIGRATED 2026-08-05. Migrate ran clean (zero
+    errors, zero failed patches). This is DONE - do not run it again "just in case".
+  - TASK "DELIVERED" STATUS = DONE 2026-08-05 evening, gated per company. See [15].
+  - EVERYTHING IS PUSHED. Remote tip = local HEAD = 015e556ae.
 
 --------------------------------------------------------------------------------
 THE VERY NEXT THINGS TO DO (in this order)
 --------------------------------------------------------------------------------
-  1. *** RUN bench migrate *** The staging-deployment merge brought new DocType
-     JSON, 2 new DMS Number Cards, a changed DMS sidebar and quality_dms/hooks.py
-     changes. Not yet migrated:
-         cd ~/frappe-bench
-         bench --site mysite.local migrate
-         bench --site mysite.local clear-cache
-         bench start          (FULL restart - see MACHINE-LOCAL below)
-     Then hard-reload the browser (Ctrl+Shift+R) and run the checklist in
-     documents/PROJECT_UI_CHANGES.md section 4.
-  2. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — the user was about to brief this
-     when the session ended. ASK THEM FOR IT; do not guess what it is.
-  3. MERCURY'S REAL CUSTOMER DOCUMENTS — 4 PDFs are on disk at
+  1. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — still not briefed. The user has
+     been about to explain this for two sessions running. ASK THEM FOR IT; do not
+     guess what it is. It probably reshapes Stage 8 (Monthly Progress Report).
+  2. MERCURY'S REAL CUSTOMER DOCUMENTS — 4 PDFs on disk at
      C:\Users\Paul Sahaya Doss\Downloads\ :
          103-1105VS10 Pump Project Schedule 01-12-26.pdf
          1105VS10 Customer Inspection Notice LRVP FAT.pdf
          1105VS10-PL3 Pump Freight Box Packing List.pdf
          1105VS10-PR-250623-EVP Pump Progress Report.pdf
-     *** THE USER SAID: DO NOT ANALYSE THESE UNTIL ASKED. *** They will hand them
-     over ONE AT A TIME. They will reshape Stage 8 (progress report) and Stage 6
-     (label / packing-list fields), so do not redesign those before reading them.
-  4. STAGE 6 STILL OPEN: Packing Slip(s) for MAT-DN-2026-00003, THEN submit the DN.
+     *** THE USER SAID: DO NOT ANALYSE THESE UNTIL ASKED. *** They hand them over
+     ONE AT A TIME. They reshape Stage 8 (progress report) and Stage 6 (label /
+     packing-list fields), so do not redesign those before reading them.
+  3. STAGE 6 STILL OPEN: Packing Slip(s) for MAT-DN-2026-00003, THEN submit the DN.
      The DN is deliberately still DRAFT because a Packing Slip can only be attached
      to a draft Delivery Note. The freight-box grouping is waiting on the
      "1105VS10-PL3 Pump Freight Box Packing List" PDF above. All 4 Outgoing QIs are
      already done, so the DN WILL submit cleanly whenever you choose to.
+  4. DECIDE the "Delivered" fresh-machine gap — see [15] "known trade-off".
 
 --------------------------------------------------------------------------------
-GIT — CURRENT STATE (verified 2026-08-05)
+GIT — CURRENT STATE (verified 2026-08-05 evening)
 --------------------------------------------------------------------------------
   - Remote: "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
     ("origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED — never push there.)
-  - ONE branch now: paul-update (local AND remote). paul-update2 was consolidated
-    away 2026-08-04 (it was a superset; old local paul-update was fully contained
-    in it, so nothing was lost). Upstream is set to hephzibah/paul-update.
-  - Remote tip = 38932a7b4 "docs: protect the Project/desk UI fixes ..."
-  - Local HEAD  = 03a8a49b5 "merge: bring in staging-deployment ..."
-    => LOCAL IS 5 AHEAD, UNPUSHED (the merge commit + the 4 staging commits).
+  - ONE branch: paul-update (local AND remote), upstream = hephzibah/paul-update.
+  - HEAD = remote = 015e556ae "proj module ui defects fixed + task module dynamic
+    delivered status dropdown added". 0 AHEAD / 0 BEHIND — fully pushed.
   - ROLLBACK TAGS: pre-staging-merge (=38932a7b4), pre-dms-merge (=3c8dd4878).
   - GIT RULES: Paul Sahaya Doss is the SOLE author — NEVER add a Claude/Anthropic
     co-author trailer. Commit locally after each step; PUSH ONLY when the user says
@@ -74,6 +66,12 @@ GIT — CURRENT STATE (verified 2026-08-05)
   - Commit messages: plain, explain the ROOT CAUSE and the trade-off. Multi-line
     messages: write to a temp file and use `git commit -F file` — heredocs through
     the WSL bridge break on quotes/backticks.
+  - CORRECTION to an earlier handoff: the "Hold" task status and the Issue->"Defect"
+    relabel in apps/erpnext/.../task/task.json are NOT unprotected. They are
+    COMMITTED AND PUSHED in the bench repo (90f263546, James, 2026-07-27). The file
+    only shows as " M" when you run git status INSIDE apps/erpnext, because that is
+    a separate nested repo comparing against erpnext upstream. There is nothing to
+    rescue. Do not "fix" this.
 
 --------------------------------------------------------------------------------
 ENVIRONMENT / HOW TO RUN COMMANDS (this bites every new session)
@@ -82,7 +80,11 @@ ENVIRONMENT / HOW TO RUN COMMANDS (this bites every new session)
     `/home/paul` do NOT exist there. Prefix everything:
         wsl -d Ubuntu-22.04 -- bash -c 'cd ~/frappe-bench && <command>'
   - $(command substitution) and $? often come back EMPTY through that bridge.
-    Use direct commands, not substitution, when the value matters.
+    Use direct commands, not substitution, when the value matters. This bit again
+    2026-08-05: a `for` loop using $(...) inside silently did nothing at all.
+  - HEREDOCS THROUGH THE BRIDGE BREAK on // comments, quotes and parentheses. To
+    run a python script against the site, WRITE THE FILE with the Write tool to
+    \\wsl.localhost\Ubuntu-22.04\tmp\foo.py and then run it. Do not use <<EOF.
   - For python against the site, avoid `bench console` (interactive). Use:
         cd ~/frappe-bench/sites && ../env/bin/python /tmp/script.py
     with frappe.init(site="mysite.local"); frappe.connect().
@@ -103,13 +105,32 @@ MACHINE-LOCAL SETUP (NOT in git — redo on any other machine):
     You must fully stop `bench start` (Ctrl+C) and run `bench start` again. ***
   - If the "Invalid wkhtmltopdf version" dialog persists, delete the redis key
     "wkhtmltopdf_version" (frappe.cache.delete_key).
+  - *** ORPHANED HONCHO CHILDREN (hit 2026-08-05, cost ~20 min) ***
+    Ctrl+C can kill the honcho PARENT while its children survive and reparent to
+    PID 1. They keep redis bound to 11000/13000, so every later `bench start`
+    dies instantly with:
+        redis_cache.1 | Could not create server TCP listening socket
+                        127.0.0.1:13000: bind: Address already in use
+        system        | redis_cache.1 stopped (rc=1)
+    Honcho is all-or-nothing: one child fails, it SIGTERMs the whole set within
+    the same second. Symptom is a half-running bench (watch/worker/schedule alive,
+    NOTHING on port 8000). Diagnose with `pgrep -a honcho` (empty = orphans) and
+    `ss -ltn | grep -E ":11000|:13000|:8000"`. Fix:
+        pkill -f "frappe-bench"; pkill -f "redis-server 127.0.0.1:1[13]000"
+    Do NOT kill the SYSTEM redis on 6379 — that is a different, unrelated server.
+  - CACHE GOTCHA (still true): `bench clear-cache` does NOT flush the
+    "desktop_icons" / "bootinfo" redis hashes. Delete them with
+    frappe.cache.delete_key when desk navigation looks stale.
 
 --------------------------------------------------------------------------------
-KEY RECORDS (current, after mgmt feedback #1)
+KEY RECORDS (current)
 --------------------------------------------------------------------------------
   Site mysite.local · login Administrator (bypasses the sbiqc desk gate).
-  Company=Mercury (abbr JR) · Customer=Joel · Project PROJ-0001 (now ~78%, the
-  user updated the tasks themselves — do not "fix" it).
+  Company=Mercury (abbr JR) · Customer=Joel · Project PROJ-0001 at 78.57%
+  (5 tasks Completed, Packaging Working 50%, Shipping Preparation Open 0%).
+  THE USER SET THAT PROGRESS THEMSELVES — do not "fix" it.
+  NOTE: every PROJ-0001 task has exp_end_date = None. This is load-bearing —
+  see the Overdue caveat in [15].
   Stage 1-5 : SO SAL-ORD-2026-00002 · Workflow "Mercury RTM Approval" ·
               MR MAT-MR-2026-00001 -> PO PUR-ORD-2026-00001 -> PR MAT-PRE-2026-00001 ·
               incoming QI MAT-QA-2026-00001
@@ -127,18 +148,19 @@ KEY RECORDS (current, after mgmt feedback #1)
               -00005 (LG-01), -00006 (EJ-8, sample 3) — all Accepted + submitted
               and linked on their DN rows.
               BOLT-M16 / NUT-M16 still exist as Items but are OUT of the kit.
+  Companies  : Mercury (allow_delivered_task_status = 1),
+              Hephzibah Technologies India (0), Hephzibah Technologies Inc (0).
   Config     : print formats "Mercury Shipping Label" (Delivery Note) &
               "Mercury Monthly Progress Report" (Project) · QI templates
               "Mercury Steel Casting QC", "Mercury Pump Final QC",
-              "Mercury Accessory Final QC" (new) · Payment Terms Template
+              "Mercury Accessory Final QC" · Payment Terms Template
               "Mercury 30/40/30 Milestones" · logo files in
               apps/mercury/mercury/public/images/mercury_logo.png (+ .svg)
-  FIXTURES   : ALL of the above config is exported to apps/mercury/mercury/fixtures/
+  FIXTURES   : ALL config is exported to apps/mercury/mercury/fixtures/
               (workspace, workspace_sidebar, desktop_icon, workflow, workflow_state,
               workflow_action_master, print_format, payment_terms_template,
-              quality_inspection_template, quality_inspection_parameter).
-              Verified reproducible: a bench migrate re-imported them and the
-              labels still rendered.
+              quality_inspection_template, quality_inspection_parameter,
+              custom_field, property_setter, client_script).
 
 --------------------------------------------------------------------------------
 STANDING RULES (see CLAUDE.md + .claude/rules.md)
@@ -154,18 +176,28 @@ STANDING RULES (see CLAUDE.md + .claude/rules.md)
     (frappe, hrms, quality_dms) override the same layout properties with
     !important; reading the .scss alone repeatedly produced wrong diagnoses and
     wasted a lot of the user's time.
+  - VERIFY BEFORE WARNING. Two claims this session turned out to be wrong on closer
+    inspection (the "unprotected" task.json, and an Overdue risk that cannot
+    actually fire because exp_end_date is null). Check the specific instance
+    before telling the user something is at risk.
   - Do not push, and do not analyse the Mercury customer PDFs, until asked.
 
 --------------------------------------------------------------------------------
 OPEN ITEMS
 --------------------------------------------------------------------------------
-  [ ] bench migrate after the staging-deployment merge (item 1 above).
   [ ] Management's "project report" suggestion — ask the user for the brief.
   [ ] Mercury's 4 real customer PDFs — user hands them over one at a time.
   [ ] Stage 6: Packing Slip(s) on MAT-DN-2026-00003, then submit the DN.
-  [ ] Push the 5 local commits when the user says "promote it".
+  [ ] "Delivered" on a fresh machine: the Custom Field imports UNTICKED because the
+      checkbox VALUE lives on the Company record (master data, not a fixture).
+      Decide: document the manual tick, or add an after_migrate hook in mercury.
+  [ ] "Delivered" list-view badge has no colour (task_list.js colour map is
+      hardcoded and has no Delivered key). Cosmetic. Fix with a listview override
+      in mercury if anyone cares.
+  [ ] IF exp_end_date is ever set on Mercury tasks: set_tasks_as_overdue will flip
+      Delivered -> Overdue nightly. Override update_status from the mercury app;
+      do NOT patch erpnext core. Cannot fire today (all end dates are null).
   [ ] RE-APPLY UI FIXES after any future pull/merge -> documents/PROJECT_UI_CHANGES.md.
-      (Verified intact after the staging-deployment merge; project.js was untouched.)
   [ ] Consider fixing the UI defects AT SOURCE in hrms/quality_dms instead of
       overriding them in mercury — see section 6 of that doc.
   [ ] Nested "cockpit" sidebar (needs 2 user decisions — see TODO section below).
@@ -533,12 +565,69 @@ TODO TASKS
     Verified after the merge: git diff pre-staging-merge HEAD over project.js,
     apps/mercury, CLAUDE.md and documents/ = EMPTY, plus a 22-point marker script
     all OK, plus mercury_desk.css still LAST in app_include_css.
-    *** STILL NEEDS bench migrate *** (new DocType JSON, 2 new DMS Number Cards,
-    changed DMS sidebar, quality_dms/hooks.py changes).
+    MIGRATED 2026-08-05 (clean: zero errors, zero failed patches). Also flushed the
+    desktop_icons / bootinfo / wkhtmltopdf_version redis keys by hand, because
+    `bench clear-cache` does not touch those hashes and the merge changed the DMS
+    sidebar. Verified mercury_desk.css is still LAST in app_include_css (slot 7).
   - Rollback tags: pre-dms-merge (3c8dd4878), pre-staging-merge (38932a7b4).
   - PRE-MERGE HABIT THAT PAID OFF: always scope first (rev-list --left-right --count,
     merge-base, diff --name-only filtered to our protected files) and tag a rollback
     point BEFORE merging. Both merges turned out far smaller than feared.
+
+[15] TASK "DELIVERED" STATUS, GATED PER COMPANY  — 2026-08-05  DONE (pushed 015e556ae)
+  ASK: add a "Delivered" option to the Task status dropdown, but only for the Mercury
+  work — not for the DMS/SBIQC projects that share the same Task doctype.
+  - FIRST FINDING (worth knowing): the statuses on this bench are NOT all stock v16.
+    Upstream v16 ships  Open / Working / Pending Review / Overdue / TEMPLATE /
+    Completed / Cancelled.  This bench shows "Hold" instead of "Template", and the
+    Issue field relabelled to "Defect" — both from commit 90f263546 (James,
+    2026-07-27), which edited the erpnext core task.json directly. That IS committed
+    and pushed in the bench repo; it only looks unstaged if you run git status inside
+    apps/erpnext (a separate nested repo). Nothing to fix.
+  - THE CONSTRAINT: Frappe Select options are DOCTYPE METADATA. There is no
+    per-record / per-project variant in v16. So the option must be added doctype-wide
+    and then scoped by other means. Four pieces:
+        Property Setter "Task-status-options"
+            appends Delivered between Completed and Cancelled.
+        Custom Field    "Company.allow_delivered_task_status"  (Check)
+            the opt-in gate. Renders on the Company form, Details tab, top section,
+            between "Company" and "Abbr". Ticked on Mercury ONLY.
+        Client Script   "Mercury - Delivered Task Status"  (Task, Form)
+            strips Delivered from the dropdown unless the task's company opted in.
+            Never strips it when the SAVED record already is Delivered, or the
+            control renders blank and an ordinary save silently clears the status.
+        mercury/task_status.py via hooks doc_events["Task"]["validate"]
+            throws if the company has not opted in.
+  - *** THE CLIENT SCRIPT IS COSMETIC. THE validate HOOK IS THE CONTROL. *** A REST
+    call, a Data Import or frappe.db.set_value never runs client JS. Both are needed;
+    the script alone is not a permission boundary. That warning is written into the
+    script header so nobody deletes the hook as redundant.
+  - WHY A CHECKBOX AND NOT A COMPANY NAME: the user first suggested matching
+    "Mercury"/"MERCURY"/"mercury" case-insensitively. Rejected — Company is a LINK
+    field, so its value is always the exact record name and case variants cannot
+    exist; fuzzy matching buys nothing and WOULD also catch a future "Mercury Freight
+    Ltd". The checkbox also means enabling a second company is a click, not a code
+    edit, and both the client and server read the same flag.
+  - VERIFIED: Delivered saves on a Mercury task (TASK-2026-00007); blocked with a
+    validation error on a Hephzibah Technologies India task. Both tests wrapped in a
+    transaction and rolled back — PROJ-0001 untouched at 78.57%, no stray test records.
+  - FIXTURES: custom_field.json, property_setter.json, client_script.json, all
+    filtered by module = Mercury. hooks.py fixtures list updated.
+  - KNOWN GAP (open): the checkbox VALUE lives on the Company record, which is master
+    data and NOT a fixture. On a fresh machine the field imports UNTICKED, so
+    Delivered stays hidden until someone ticks it. Decide: document the step, or add
+    an after_migrate hook in mercury.
+  - COSMETIC (open): task_list.js:24 has a hardcoded status->colour map with no
+    Delivered key, so the list-view indicator has no colour.
+  - LATENT, CANNOT FIRE TODAY: set_tasks_as_overdue (erpnext hooks.py:467,
+    daily_maintenance) flips any task NOT in ("Cancelled","Completed") with a PAST
+    exp_end_date to Overdue — it would un-deliver a Delivered task overnight. Every
+    PROJ-0001 task has exp_end_date = None, so it cannot trigger. If end dates are
+    ever added, override update_status FROM THE MERCURY APP; do not patch core.
+    (I initially reported this as a live risk before checking the actual records —
+    check the instance, not just the code path.)
+  - Project % rollup is unaffected: project.py:235 counts only Cancelled/Completed,
+    but PROJ-0001 uses the "Task Progress" method, not "Task Completion".
 
 --------------------------------------------------------------------------------
 NEXT UP  (post-Phase-1)
