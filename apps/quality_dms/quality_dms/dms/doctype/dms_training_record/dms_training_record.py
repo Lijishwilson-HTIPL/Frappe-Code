@@ -439,6 +439,10 @@ class DMSTrainingRecord(Document):
             row.assessment_score = assessment_score
         self.save(ignore_permissions=True)
 
+        if assessment_score is not None:
+            from quality_dms.dms.doctype.dms_training_score_history.dms_training_score_history import record_score
+            record_score(row.employee, self.name, assessment_score, row.quiz_passed, self.document)
+
     def _row_for_current_user(self, row_name):
         """Resolve a training row and enforce that the caller may act on it —
         either it's their own row, or they're a manager. Shared by the quiz
@@ -558,6 +562,10 @@ class DMSTrainingRecord(Document):
         row.quiz_passed = 0
         row.status = "Failed"
         self.save(ignore_permissions=True)
+
+        from quality_dms.dms.doctype.dms_training_score_history.dms_training_score_history import record_score
+        record_score(row.employee, self.name, score, False, self.document)
+
         return {
             "passed": False,
             "score": score,

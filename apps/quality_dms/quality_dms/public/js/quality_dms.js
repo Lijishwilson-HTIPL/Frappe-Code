@@ -19,6 +19,7 @@
 		"DMS Quiz Question",
 		"DMS Training Assignment Rule",
 		"DMS Training Record",
+		"DMS Training Score History",
 		"DMS Training Session",
 		"DMS Training Session Attendee",
 		"Training Settings",
@@ -34,6 +35,12 @@
 		"Overdue Training Report",
 		"Training Compliance Report",
 		"Training Matrix Report",
+	]);
+	// Custom Pages (not a DocType view or Report) -- frappe.get_route() for
+	// these is just [page_name], so they need their own check below.
+	const DMS_PAGES = new Set([
+		"my-training-dashboard",
+		"training-analytics",
 	]);
 
 	// The ERPNext Projects module reuses the same navy/blue theme so its
@@ -91,6 +98,9 @@
 		// any view of a DMS doctype: List, Form, Tree, Report, Kanban,
 		// Calendar, Dashboard, Image, print…
 		if (DMS_DOCTYPES.has(target)) return true;
+		// custom Pages: frappe.get_route() is just [page_name] here, so `view`
+		// itself (route[0]) is the page name, not a view-type keyword.
+		if (DMS_PAGES.has(view)) return true;
 		return false;
 	}
 
@@ -117,8 +127,8 @@
 	// scoped to when the ONLY active filter is exactly one of these curated
 	// ones, so a user's own manual filtering elsewhere is completely unaffected.
 	const LOCKED_FILTER_SIGNATURES = [
-		{ fieldname: "is_in_progress", value: "1" },
-		{ fieldname: "workflow_state", value: "Published" },
+		{ fieldname: "is_in_progress", value: "1", title: "Workbench" },
+		{ fieldname: "workflow_state", value: "Published", title: "Repository" },
 	];
 
 	function apply_locked_filter_ui() {
@@ -131,12 +141,18 @@
 		setTimeout(() => {
 			try {
 				const filters = (cur_list && cur_list.filter_area && cur_list.filter_area.get()) || [];
-				const locked =
+				const match =
 					filters.length === 1 &&
-					LOCKED_FILTER_SIGNATURES.some(
+					LOCKED_FILTER_SIGNATURES.find(
 						(sig) => filters[0][1] === sig.fieldname && String(filters[0][3]) === sig.value
 					);
-				document.body.classList.toggle("dms-locked-filter", locked);
+				document.body.classList.toggle("dms-locked-filter", !!match);
+				// Rename the page title/breadcrumb away from "Document Library" so
+				// the curated view reads as its own page (Repository/Workbench),
+				// matching the sidebar label the user actually clicked.
+				if (match && cur_list && cur_list.page && cur_list.page.set_title) {
+					cur_list.page.set_title(__(match.title));
+				}
 			} catch (e) {
 				document.body.classList.remove("dms-locked-filter");
 			}

@@ -25,8 +25,8 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/quality_dms/css/quality_dms.css?v=26"
-app_include_js = "/assets/quality_dms/js/quality_dms.js?v=26"
+app_include_css = "/assets/quality_dms/css/quality_dms.css?v=31"
+app_include_js = "/assets/quality_dms/js/quality_dms.js?v=31"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/quality_dms/css/quality_dms.css"
@@ -129,12 +129,14 @@ app_include_js = "/assets/quality_dms/js/quality_dms.js?v=26"
 permission_query_conditions = {
 	"Document Library": "quality_dms.dms.api.get_permission_query_conditions",
 	"DMS Training Record": "quality_dms.dms.doctype.dms_training_record.dms_training_record.get_permission_query_conditions",
+	"DMS Training Score History": "quality_dms.dms.doctype.dms_training_score_history.dms_training_score_history.get_permission_query_conditions",
 	"File": "quality_dms.dms.api.file_permission_query_conditions",
 }
 
 has_permission = {
 	"Document Library": "quality_dms.dms.api.has_permission",
 	"DMS Training Record": "quality_dms.dms.doctype.dms_training_record.dms_training_record.has_permission",
+	"DMS Training Score History": "quality_dms.dms.doctype.dms_training_score_history.dms_training_score_history.has_permission",
 	"File": "quality_dms.dms.api.file_has_permission",
 }
 

@@ -503,3 +503,396 @@ def verify_and_log_signature(doctype, docname, password, meaning, position=None)
     # even if a later step fails, leaving the DB in a partial state.
 
     return {"status": "success", "message": "Electronic signature verified and logged successfully."}
+
+
+# ---- My Training Dashboard ----
+# Self-service dashboard (score gauge, pending trainings, completion %,
+# leaderboard) shown to the logged-in employee. Admin roles get an
+# `employee` param to preview any employee's own gauge/todo/completion --
+# the leaderboard is always company-wide (ranking is the point of a
+# leaderboard; it doesn't leak individual course-level scores).
+_SCORE_BAND_THRESHOLDS = (60, 80)  # < 60 Poor, 60-79 Fair, >= 80 Good
+
+
+def _score_band(score):
+    if score is None:
+        return None
+    if score >= _SCORE_BAND_THRESHOLDS[1]:
+        return "Good"
+    if score >= _SCORE_BAND_THRESHOLDS[0]:
+        return "Fair"
+    return "Poor"
+
+
+def _is_admin_user(user=None):
+    user = user or frappe.session.user
+    return user == "Administrator" or bool(
+        set(frappe.get_roles(user)) & {"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"}
+    )
+
+
+def _resolve_dashboard_employee(employee=None):
+    """Which employee's own data to show: admins may pass `employee` to look
+    up anyone; everyone else is locked to their own linked Employee record."""
+    user = frappe.session.user
+    if _is_admin_user(user) and employee:
+        return employee
+    return frappe.db.get_value("Employee", {"user_id": user}, "name")
+
+
+@frappe.whitelist()
+def get_my_training_dashboard(employee=None):
+    target_employee = _resolve_dashboard_employee(employee)
+
+    todo = []
+    completed_scores = []
+    total_assigned = 0
+    total_completed = 0
+
+    if target_employee:
+        rows = frappe.db.sql(
+            """
+            SELECT
+                da.name AS name,
+                da.status AS status,
+                da.assessment_score AS assessment_score,
+                da.due_date AS due_date,
+                trn.document AS document,
+                trn.name AS training_record
+            FROM `tabDocument Acknowledgement` da
+            INNER JOIN `tabDMS Training Record` trn ON trn.name = da.parent AND da.parenttype = 'DMS Training Record'
+            WHERE da.employee = %(employee)s
+                AND da.status NOT IN ('Suggested', 'Excused')
+            ORDER BY da.due_date ASC
+            """,
+            {"employee": target_employee},
+            as_dict=True,
+        )
+
+        total_assigned = len(rows)
+        for row in rows:
+            if row.status == "Completed":
+                total_completed += 1
+                if row.assessment_score is not None:
+                    completed_scores.append(row.assessment_score)
+            else:
+                todo.append({
+                    "document": row.document,
+                    "status": row.status,
+                    "due_date": row.due_date,
+                    "training_record": row.training_record,
+                })
+
+    overall_score = round(sum(completed_scores) / len(completed_scores), 1) if completed_scores else None
+    completion_pct = round(total_completed / total_assigned * 100, 1) if total_assigned else 0.0
+
+    # Leaderboard: every employee's own average completed-training score,
+    # ranked highest to lowest. Company-wide by design (see docstring above).
+    leaderboard_rows = frappe.db.sql(
+        """
+        SELECT
+            da.employee AS employee,
+            emp.employee_name AS employee_name,
+            da.assessment_score AS assessment_score
+        FROM `tabDocument Acknowledgement` da
+        INNER JOIN `tabEmployee` emp ON emp.name = da.employee
+        WHERE da.status = 'Completed' AND da.assessment_score IS NOT NULL
+        """,
+        as_dict=True,
+    )
+    by_employee = {}
+    for row in leaderboard_rows:
+        bucket = by_employee.setdefault(row.employee, {"employee_name": row.employee_name, "scores": []})
+        bucket["scores"].append(row.assessment_score)
+
+    leaderboard = [
+        {
+            "employee": emp,
+            "employee_name": data["employee_name"],
+            "score": round(sum(data["scores"]) / len(data["scores"]), 1),
+        }
+        for emp, data in by_employee.items()
+    ]
+    leaderboard.sort(key=lambda r: r["score"], reverse=True)
+    for i, row in enumerate(leaderboard, start=1):
+        row["rank"] = i
+
+    return {
+        "employee": target_employee,
+        "overall_score": overall_score,
+        "score_band": _score_band(overall_score),
+        "completion_pct": completion_pct,
+        "total_assigned": total_assigned,
+        "total_completed": total_completed,
+        "todo": todo,
+        "leaderboard": leaderboard[:20],
+    }
+
+
+# ---- Employee Training Transcript ----
+# A single consolidated PDF of every training an employee has ever completed
+# (across all DMS Training Records), for audit/inspection requests -- the
+# certificate PDF is per-training; this is the "whole history" document.
+# Built as ad-hoc HTML -> PDF (not a bound Print Format) because the source
+# rows span many different DMS Training Record parents, which a Print Format
+# tied to one doctype record can't aggregate across.
+
+
+@frappe.whitelist()
+def generate_training_transcript(employee=None):
+    """Render and save (as a private file owned by the employee) a PDF
+    listing every Completed training for that employee. Self-service: a
+    non-admin caller may only ever generate their own. Idempotent per call --
+    always regenerates, so it reflects training completed since the last run."""
+    # _resolve_dashboard_employee already enforces the self-service boundary:
+    # a non-admin's `employee` argument is ignored outright, always resolving
+    # to their own linked Employee record (same guarantee get_my_training_dashboard
+    # relies on) -- no separate check is reachable or needed here.
+    target_employee = _resolve_dashboard_employee(employee)
+    if not target_employee:
+        frappe.throw("No Employee record is linked to your user account.")
+
+    employee_doc = frappe.db.get_value(
+        "Employee", target_employee, ["employee_name", "department", "designation"], as_dict=True
+    )
+    if not employee_doc:
+        frappe.throw("Employee record not found.")
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            trn.name AS training_record,
+            trn.document AS document,
+            doc.title AS document_title,
+            trn.version AS version,
+            da.status AS status,
+            da.assessment_score AS assessment_score,
+            da.quiz_passed AS quiz_passed,
+            da.completion_date AS completion_date,
+            da.acknowledged_on AS acknowledged_on
+        FROM `tabDocument Acknowledgement` da
+        INNER JOIN `tabDMS Training Record` trn ON trn.name = da.parent AND da.parenttype = 'DMS Training Record'
+        LEFT JOIN `tabDocument Library` doc ON doc.name = trn.document
+        WHERE da.employee = %(employee)s AND da.status = 'Completed'
+        ORDER BY da.completion_date ASC, trn.name ASC
+        """,
+        {"employee": target_employee},
+        as_dict=True,
+    )
+
+    html = _render_transcript_html(employee_doc, target_employee, rows)
+
+    from frappe.utils.pdf import get_pdf
+    pdf_content = get_pdf(html)
+
+    file_name = f"{target_employee}-training-transcript.pdf"
+    # Idempotent: replace any previous transcript file for this employee
+    # rather than accumulating one per generation.
+    existing = frappe.db.get_value(
+        "File", {"attached_to_doctype": "Employee", "attached_to_name": target_employee,
+                 "file_name": file_name},
+        "name",
+    )
+    if existing:
+        frappe.delete_doc("File", existing, force=True, ignore_permissions=True)
+
+    file_doc = frappe.get_doc({
+        "doctype": "File",
+        "file_name": file_name,
+        "content": pdf_content,
+        "is_private": 1,
+        "attached_to_doctype": "Employee",
+        "attached_to_name": target_employee,
+    })
+    file_doc.save(ignore_permissions=True)
+
+    employee_user = frappe.db.get_value("Employee", target_employee, "user_id")
+    if employee_user:
+        frappe.db.set_value("File", file_doc.name, "owner", employee_user, update_modified=False)
+
+    frappe.db.commit()
+    return {"file_url": file_doc.file_url, "training_count": len(rows)}
+
+
+def _render_transcript_html(employee_doc, employee_id, rows):
+    generated_on = frappe.utils.now_datetime().strftime("%d-%b-%Y %H:%M")
+    row_html = "".join(
+        f"""
+        <tr>
+            <td>{frappe.utils.escape_html(r.document_title or r.document or "")}</td>
+            <td>{frappe.utils.escape_html(r.version or "")}</td>
+            <td>{frappe.utils.escape_html(str(r.assessment_score) if r.assessment_score is not None else "-")}</td>
+            <td>{"Yes" if r.quiz_passed else "-"}</td>
+            <td>{frappe.utils.format_date(r.completion_date) if r.completion_date else "-"}</td>
+        </tr>
+        """
+        for r in rows
+    )
+    if not rows:
+        row_html = '<tr><td colspan="5" style="text-align:center;color:#888;">No completed trainings on record.</td></tr>'
+
+    return f"""
+    <html>
+    <head>
+    <style>
+        body {{ font-family: Arial, sans-serif; font-size: 12px; color: #17212b; }}
+        h1 {{ font-size: 18px; margin-bottom: 2px; }}
+        .meta {{ color: #52514e; font-size: 11px; margin-bottom: 18px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 12px; }}
+        th, td {{ border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 11px; }}
+        th {{ background: #f4f6f9; }}
+    </style>
+    </head>
+    <body>
+        <h1>Employee Training Transcript</h1>
+        <div class="meta">
+            Employee: {frappe.utils.escape_html(employee_doc.employee_name or employee_id)} ({frappe.utils.escape_html(employee_id)})<br>
+            Department: {frappe.utils.escape_html(employee_doc.department or "-")} &nbsp;|&nbsp;
+            Designation: {frappe.utils.escape_html(employee_doc.designation or "-")}<br>
+            Generated: {generated_on}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Document / Course</th>
+                    <th>Version</th>
+                    <th>Score</th>
+                    <th>Passed</th>
+                    <th>Completion Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {row_html}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    """
+
+
+# ---- Score trend ----
+# Backed by DMS Training Score History -- one immutable row per grading event
+# (pass or fail), written by DMSTrainingRecord._do_sign_acknowledgement /
+# submit_quiz_and_sign. Powers the trend chart on My Training Dashboard.
+
+
+@frappe.whitelist()
+def get_my_score_trend(employee=None, limit=20):
+    """Chronological list of {date, score, passed} for the employee's last
+    `limit` graded attempts (pass or fail) -- self-service, same boundary as
+    the rest of My Training Dashboard."""
+    target_employee = _resolve_dashboard_employee(employee)
+    if not target_employee:
+        return {"employee": None, "trend": []}
+
+    rows = frappe.db.sql(
+        """
+        SELECT recorded_on, score, quiz_passed
+        FROM `tabDMS Training Score History`
+        WHERE employee = %(employee)s
+        ORDER BY recorded_on DESC
+        LIMIT %(limit)s
+        """,
+        {"employee": target_employee, "limit": int(limit)},
+        as_dict=True,
+    )
+    rows.reverse()  # chronological (oldest first) for a left-to-right chart
+
+    return {
+        "employee": target_employee,
+        "trend": [
+            {
+                "date": frappe.utils.format_date(r.recorded_on),
+                "score": r.score,
+                "passed": bool(r.quiz_passed),
+            }
+            for r in rows
+        ],
+    }
+
+
+# ---- Manager Training Analytics ----
+# Org-level counterpart to My Training Dashboard: score trend over time
+# (monthly average, across everyone), score distribution buckets, and
+# completion rate by department. Admin-only -- this is aggregate data, not
+# self-service, so it doesn't need a per-employee resolve step.
+
+_SCORE_BUCKETS = [
+    ("0-59", 0, 60),
+    ("60-69", 60, 70),
+    ("70-79", 70, 80),
+    ("80-89", 80, 90),
+    ("90-100", 90, 101),
+]
+
+
+@frappe.whitelist()
+def get_training_analytics():
+    if not _is_admin_user():
+        frappe.throw("Only managers can view training analytics.", frappe.PermissionError)
+
+    # Monthly average score trend, across every graded attempt org-wide.
+    monthly_rows = frappe.db.sql(
+        """
+        SELECT DATE_FORMAT(recorded_on, '%%Y-%%m') AS month, AVG(score) AS avg_score, COUNT(*) AS attempts
+        FROM `tabDMS Training Score History`
+        GROUP BY month
+        ORDER BY month ASC
+        """,
+        {},
+        as_dict=True,
+    )
+    score_trend = [
+        {"month": r.month, "avg_score": round(r.avg_score, 1), "attempts": r.attempts}
+        for r in monthly_rows
+    ]
+
+    # Score distribution across every graded attempt on record.
+    all_scores = [
+        r.score for r in frappe.db.sql(
+            "SELECT score FROM `tabDMS Training Score History`", as_dict=True
+        )
+    ]
+    distribution = []
+    for label, lo, hi in _SCORE_BUCKETS:
+        count = sum(1 for s in all_scores if lo <= s < hi)
+        distribution.append({"label": label, "count": count})
+
+    # Completion rate by department, from Document Acknowledgement (same
+    # source as Training Matrix Report), excluding non-real assignment rows.
+    dept_rows = frappe.db.sql(
+        """
+        SELECT
+            emp.department AS department,
+            da.status AS status
+        FROM `tabDocument Acknowledgement` da
+        LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
+        WHERE da.status NOT IN ('Suggested', 'Excused')
+        """,
+        as_dict=True,
+    )
+    by_dept = {}
+    for row in dept_rows:
+        dept = row.department or "Unassigned"
+        bucket = by_dept.setdefault(dept, {"total": 0, "completed": 0})
+        bucket["total"] += 1
+        if row.status == "Completed":
+            bucket["completed"] += 1
+
+    completion_by_department = [
+        {
+            "department": dept,
+            "total": data["total"],
+            "completed": data["completed"],
+            "completion_pct": round(data["completed"] / data["total"] * 100, 1) if data["total"] else 0.0,
+        }
+        for dept, data in by_dept.items()
+    ]
+    completion_by_department.sort(key=lambda r: r["completion_pct"], reverse=True)
+
+    return {
+        "score_trend": score_trend,
+        "distribution": distribution,
+        "completion_by_department": completion_by_department,
+        "total_attempts": len(all_scores),
+    }
