@@ -335,9 +335,18 @@ body[data-route="Workspaces/Projects"] .layout-main-section-wrapper {
 	margin-top: 0;
 }
 
+/* Board inset, the mock's 28px expressed as a ratio so it scales with the
+ * viewport instead of pinning to one screen width. Percentage padding resolves
+ * against the CONTAINER'S WIDTH on all four sides - vertical included - so a
+ * single value keeps the inset visually square. ~3% of the ~900px content
+ * column is ~27px.
+ *
+ * Overrides quality_dms.css:412 (padding: 8px 12px). The wrapper's margin-top
+ * stays 0 above, so this adds room INSIDE the board without pushing the board
+ * back down away from the page head. */
 body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
 body[data-route="Workspaces/Projects"] .layout-main-section {
-	padding-top: 0;
+	padding: 3%;
 }
 
 body[data-route="Workspaces/Projects"] .codex-editor__redactor > .ce-block:first-child,
