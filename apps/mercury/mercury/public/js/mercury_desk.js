@@ -39,12 +39,6 @@ frappe.provide("mercury.breadcrumbs");
  *      "Projects" -> the Project list
  *      "Task"     -> the Task list  (already correct in core, left alone)
  *
- * ...and on LIST routes the workspace crumb is dropped entirely. On /desk/project
- * the crumbs read "Projects" (workspace) then "Project" (doctype): two words that
- * differ by one letter, and once the home icon points at the workspace home the
- * workspace crumb earns nothing. It is kept on FORM routes, where it is the only
- * one-click route from a Task back to the Project list.
- *
  * We do not re-implement the breadcrumbs: we let core build them, then rewrite
  * two hrefs. That way any upstream change to labels, translation, ordering or
  * the Custom-breadcrumb path keeps working.
@@ -82,19 +76,7 @@ mercury.breadcrumbs.retarget = function () {
 			$home.attr("href", workspace_route);
 		}
 
-		// 2. On a list route, drop the workspace crumb as a duplicate of the
-		//    doctype crumb next to it ("Projects" / "Project"). frappe.get_route()[0]
-		//    is "List" for list, report, kanban and calendar views alike, so all of
-		//    them are covered. Tree views ("Tree") keep the crumb - a tree IS the
-		//    module's own hierarchy, so the extra level still reads correctly.
-		const view = (frappe.get_route()[0] || "").toLowerCase();
-		if (view === "list") {
-			$workspace_crumb.parent().remove();
-			return;
-		}
-
-		// 3. Otherwise (form, print, dashboard-view) retarget the workspace crumb to
-		//    the module's list page, where one is mapped.
+		// 2. Workspace crumb -> the module's list page, where one is mapped.
 		const target = mercury.breadcrumbs.CRUMB_TARGETS[workspace_route];
 		if (target) {
 			$workspace_crumb.attr("href", target);
