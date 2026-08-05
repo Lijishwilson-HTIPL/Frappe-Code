@@ -106,20 +106,26 @@ body[data-route^="Form"] .layout-main {
 	z-index: 20 !important;
 }
 
-/* Stack the tab bar directly beneath the (now genuinely sticky) page head.
+/* Tab bar: NOT sticky.
  *
- * The "empty section on top" was a symptom of the bug above, not of this offset:
- * with the head not sticky it scrolled away, so the tab bar pinned at 48px with
- * nothing occupying those 48px. Now the head fills that space, so the offset is
- * correct and both stay visible while scrolling. The 6px core top margin is still
- * removed so the two sit flush. */
+ * .form-tabs-list is nested deep inside the card
+ * (.layout-main-section > div > .std-form-layout > .form-layout > .form-page),
+ * NOT at the top of the scroll area. Sticking it with any `top` offset displaces
+ * it downwards into the middle of its own tab content, which renders as an empty
+ * band above the tabs with the tab content showing through above them. Every
+ * offset value just relocates that artifact; only taking sticky off removes it.
+ *
+ * Core itself only makes it sticky opportunistically - form/layout.js adds
+ * .form-tabs-sticky-up/-down on first scroll - so switching it off restores plain
+ * in-flow behaviour: the tabs scroll with the content, no gap, no overlap.
+ * The page head above stays pinned, so the record context is always on screen. */
 .form-tabs-list,
 .form-tabs-sticky-up,
 .form-tabs-sticky-down,
 .form-tabs-sticky-down.show-navbar {
-	top: var(--page-head-height) !important;
+	position: static !important;
+	top: auto !important;
 	margin-top: 0 !important;
-	z-index: 19 !important;
 }
 
 /* ------------------------------------------------------------------------
