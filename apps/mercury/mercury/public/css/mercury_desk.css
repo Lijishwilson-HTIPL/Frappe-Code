@@ -65,25 +65,27 @@ body[data-route^="Form"] .layout-main {
 }
 
 /* ------------------------------------------------------------------------
- * ONE visible scrollbar: keep the inner content one, hide the OUTER window one.
+ * ONE vertical scrollbar on the desk.
  *
- * The desk paints two bars down the right edge:
- *   1. the document / window bar (html) - nothing in frappe sets overflow on
- *      html or body, so the document scrolls too; this is the OUTER bar, closest
- *      to the window edge, and it is the redundant one.
- *   2. .main-section's own bar (main.scss:37 - height 100vh + overflow scroll),
- *      which is what actually scrolls the page content. This one is KEPT so
- *      there is still a visible scroll position indicator.
+ * Two scroll containers exist by default:
+ *   1. the document itself - nothing in frappe sets overflow on html/body, so
+ *      the window scrolls and paints the OUTER bar at the window edge;
+ *   2. .main-section (main.scss:37 - height 100vh + overflow scroll), which is
+ *      what actually scrolls the page content and paints the INNER bar.
  *
- * Only the outer bar is hidden, and only visually - scrolling behaviour on both
- * elements is untouched.
+ * Trying to merely *hide* the outer bar was unreliable (the viewport scrollbar
+ * is not consistently styleable via html/body). Instead, stop the document
+ * scrolling at all: .main-section is already a full-viewport scroller, so the
+ * document has nothing useful to scroll. That leaves exactly ONE scrollbar -
+ * .main-section's - which stays visible as the scroll-position indicator.
+ *
+ * Safe because this stylesheet is desk-only (hooks.app_include_css) and every
+ * desk view scrolls inside .main-section. Dialogs/modals are position:fixed and
+ * unaffected. The only side effect is that document.documentElement.scrollTop
+ * stays 0, which merely no-ops frappe's scroll-away header handlers - and those
+ * are already overridden above to keep the head pinned.
  * ------------------------------------------------------------------------ */
-html {
-	scrollbar-width: none; /* Firefox */
-	-ms-overflow-style: none; /* legacy Edge */
-}
-
-html::-webkit-scrollbar {
-	width: 0;
-	height: 0;
+html,
+body {
+	overflow: hidden;
 }

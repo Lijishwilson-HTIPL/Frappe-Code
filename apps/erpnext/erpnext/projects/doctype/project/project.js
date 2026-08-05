@@ -224,13 +224,20 @@ frappe.ui.form.on("Project", {
 		// chosen layout survives reloads and route changes.
 		const DEFAULT_COLLAPSED = { Tasks: false, Defects: true };
 
-		// The stored state is scoped to the CURRENT LOGIN, not just the tab.
-		// sessionStorage alone was not enough: it survives logout -> login in the
-		// same tab, so an open Defects section came back after re-logging in.
-		// Including the session id (which frappe reissues on every login) in the key
-		// means a fresh login can never see the previous session's keys, so the
-		// defaults always apply again: Tasks open, Defects closed.
-		const session_id = frappe.get_cookie ? frappe.get_cookie("sid") || "nosid" : "nosid";
+		// The stored state is scoped to the CURRENT LOGIN, so logging out always
+		// resets Defects to closed.
+		//
+		// Two earlier attempts failed:
+		//   - localStorage     -> outlived the session entirely.
+		//   - sessionStorage   -> survives logout -> login in the same tab.
+		//   - keying on the sid cookie -> frappe sets `sid` with httponly=True
+		//     (auth.py:394), so JS can never read it; the key silently degraded to a
+		//     constant and behaved exactly like plain sessionStorage.
+		//
+		// frappe.csrf_token (set per session in www/desk.html) IS readable from JS
+		// and is reissued on every login, so a fresh login cannot match the previous
+		// session's keys and the defaults apply again: Tasks open, Defects closed.
+		const session_id = frappe.csrf_token || frappe.session?.user || "nosession";
 		const collapse_key = (title) => `project_summary_collapsed::${session_id}::${title}`;
 
 		const is_collapsed = (title) => {
