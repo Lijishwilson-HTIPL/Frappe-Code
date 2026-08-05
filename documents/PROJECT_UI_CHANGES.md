@@ -133,6 +133,7 @@ Then open the **Task list** (`/desk/task`) and a **Task form** (`/desk/task/TASK
 
 - [ ] `% PROGRESS` column header sits level with `PRIORITY` / `COMPLETED BY` — not clipped above its cell
 - [ ] Progress bars in the rows still have their grey track (proves the fix stayed scoped to the header)
+- [ ] On the **Project list** the breadcrumb reads 🏠 / Project — **no** "Projects" crumb (it is a duplicate there)
 - [ ] On a Task form the breadcrumb reads 🏠 / Projects / Task / *Subject*
 - [ ] 🏠 → **Projects workspace home**, from any browser (not "last visited workspace")
 - [ ] `Projects` → **Project list**
@@ -149,6 +150,7 @@ Then open the **Task list** (`/desk/task`) and a **Task form** (`/desk/task/TASK
 | `% PROGRESS` header text clipped above its cell | `list_view.js:774` stamps the **fieldname** on the header cell as a CSS class. Task's field is named `progress`, so it matches Bootstrap's progress-bar component (`bootstrap.css:5492`: `line-height:0`, `overflow:hidden`) with height clamped to 10px by `list.scss:312` | `mercury_desk.css`, scoped to `.list-row-head` **only** — the body cell needs that class, it is the bar's track |
 | 🏠 and `Projects` went to the same page | `clear()` :278 points 🏠 at `/desk`, which `workspace.js:137-155` resolves to `localStorage.current_page` — the last workspace *that browser* visited | `mercury_desk.js` retargets 🏠 to the workspace route, so it is stable across machines |
 | No way to reach the Project list from a Task form | crumb 2 is the workspace, crumb 3 is the doctype | `mercury.breadcrumbs.CRUMB_TARGETS` maps `/desk/projects` → `/desk/project` |
+| "Projects / Project" on the Project list read as a duplicate | crumb 2 is the workspace (plural), crumb 3 the doctype (singular); once 🏠 points at the workspace, crumb 2 adds nothing on a list | workspace crumb removed on `List` routes only, kept on form routes where it is the sole route back to the Project list |
 
 Traps in that JS:
 
