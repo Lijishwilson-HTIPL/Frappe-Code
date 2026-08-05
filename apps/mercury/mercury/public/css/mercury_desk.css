@@ -238,3 +238,33 @@ body {
 .main-section::-webkit-scrollbar {
 	width: 8px;
 }
+
+/* ------------------------------------------------------------------------
+ * List-view header: "% PROGRESS" label rendered above its cell and clipped.
+ *
+ * NOT a layout bug - a CSS class-name collision. frappe builds each list
+ * header cell with the FIELDNAME as a class:
+ *   list_view.js:774   col.df?.fieldname   (header)
+ *   list_view.js:1030  fieldname           (body cell, same collision)
+ * Task's percent field is literally named "progress", so the header cell
+ * matches Bootstrap's progress-bar component:
+ *   bootstrap.css:5492  .progress { display:flex; overflow:hidden;
+ *                                   line-height:0; background:#e9ecef; }
+ *   list.scss:312       .progress { height: 10px; }
+ * line-height:0 in a 10px overflow:hidden box pushes the text out of the
+ * top of the cell. Any doctype with a Percent field named "progress" hits
+ * this (Task, Project); no other fieldname collides with a Bootstrap class.
+ *
+ * Scoped to the HEADER only. The body cell needs .progress-the-component
+ * (it is the bar's track), so do NOT widen these selectors to .list-row-col.
+ * ------------------------------------------------------------------------ */
+.list-row-head .list-row-col.progress,
+.list-row-head .list-row-col.progress > span {
+	display: block;
+	height: auto;
+	overflow: visible;
+	line-height: inherit;
+	font-size: inherit;
+	background-color: transparent;
+	border-radius: 0;
+}
