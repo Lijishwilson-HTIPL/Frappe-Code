@@ -18,7 +18,8 @@ that regressed.
 |---|---|---|
 | `apps/erpnext/erpnext/projects/doctype/project/project.js` | **erpnext core** | 🔴 **HIGH** — a newer erpnext or a branch that also edited this file will conflict or silently replace our accordion work |
 | `apps/mercury/mercury/public/css/mercury_desk.css` | mercury (ours) | 🟢 low — nobody else touches our app |
-| `apps/mercury/mercury/hooks.py` (`app_include_css`) | mercury (ours) | 🟢 low |
+| `apps/mercury/mercury/public/js/mercury_desk.js` | mercury (ours) | 🟢 low |
+| `apps/mercury/mercury/hooks.py` (`app_include_css`, `app_include_js`) | mercury (ours) | 🟢 low |
 
 > The desk CSS deliberately lives in **our** app as additive overrides. **No frappe,
 > erpnext or hrms CSS file is patched.** Commenting out the single `app_include_css`
@@ -127,6 +128,37 @@ cache-busted by `?v=`, `project.js` needs `bench clear-cache` + hard reload):
 - [ ] `View All Tasks` / `View All Defects` same width, aligned on both edges
 - [ ] Clicking `View All …` opens the filtered list and does **not** collapse the section
 - [ ] Dark mode still correct
+
+Then open the **Task list** (`/desk/task`) and a **Task form** (`/desk/task/TASK-2026-00007`):
+
+- [ ] `% PROGRESS` column header sits level with `PRIORITY` / `COMPLETED BY` — not clipped above its cell
+- [ ] Progress bars in the rows still have their grey track (proves the fix stayed scoped to the header)
+- [ ] On a Task form the breadcrumb reads 🏠 / Projects / Task / *Subject*
+- [ ] 🏠 → **Projects workspace home**, from any browser (not "last visited workspace")
+- [ ] `Projects` → **Project list**
+- [ ] `Task` → **Task list**
+- [ ] *Subject* is the current doc and not a link
+- [ ] Actual Start/End Date labels read without "(via Timesheet)"; the form shows the description instead
+
+---
+
+## 4a. Change C — Task list headers and breadcrumb destinations
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `% PROGRESS` header text clipped above its cell | `list_view.js:774` stamps the **fieldname** on the header cell as a CSS class. Task's field is named `progress`, so it matches Bootstrap's progress-bar component (`bootstrap.css:5492`: `line-height:0`, `overflow:hidden`) with height clamped to 10px by `list.scss:312` | `mercury_desk.css`, scoped to `.list-row-head` **only** — the body cell needs that class, it is the bar's track |
+| 🏠 and `Projects` went to the same page | `clear()` :278 points 🏠 at `/desk`, which `workspace.js:137-155` resolves to `localStorage.current_page` — the last workspace *that browser* visited | `mercury_desk.js` retargets 🏠 to the workspace route, so it is stable across machines |
+| No way to reach the Project list from a Task form | crumb 2 is the workspace, crumb 3 is the doctype | `mercury.breadcrumbs.CRUMB_TARGETS` maps `/desk/projects` → `/desk/project` |
+
+Traps in that JS:
+
+- The core class is misspelled **`worksapce-breadcrumb`** (`breadcrumbs.js:140`). "Correcting" the
+  selector in `mercury_desk.js` makes the lookup silently miss and the fix stops working.
+- `CRUMB_TARGETS` is keyed on the workspace **route**, not the visible label — the label goes
+  through `__()` and changes under a non-English locale.
+- The override **wraps** `frappe.breadcrumbs.update`; it does not re-implement breadcrumbs. Keep it
+  that way so upstream changes to labels/ordering/the Custom-breadcrumb path keep working.
+- `app_include_js` in `mercury/hooks.py` must stay **uncommented**, and its `?v=` bumped on edit.
 
 ---
 

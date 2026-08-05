@@ -5,10 +5,12 @@ import re
 BENCH = "/home/paul/frappe-bench/"
 PROJECT_JS = BENCH + "apps/erpnext/erpnext/projects/doctype/project/project.js"
 MERCURY_CSS = BENCH + "apps/mercury/mercury/public/css/mercury_desk.css"
+MERCURY_JS = BENCH + "apps/mercury/mercury/public/js/mercury_desk.js"
 HOOKS = BENCH + "apps/mercury/mercury/hooks.py"
 
 js = open(PROJECT_JS, encoding="utf-8").read()
 css = open(MERCURY_CSS, encoding="utf-8").read()
+mjs = open(MERCURY_JS, encoding="utf-8").read()
 hooks = open(HOOKS, encoding="utf-8").read()
 
 CHECKS = [
@@ -23,7 +25,17 @@ CHECKS = [
     ("project.js", js, "summary-view-all"),
     ("project.js", js, "PROTECTED"),
     ("mercury_desk.css", css, "PROTECTED"),
+    # % Progress list header: fieldname/Bootstrap class collision (see the CSS block).
+    ("mercury_desk.css", css, ".list-row-head .list-row-col.progress"),
+    # Breadcrumb retarget: home icon -> workspace, workspace crumb -> list.
+    ("mercury_desk.js", mjs, "PROTECTED"),
+    ("mercury_desk.js", mjs, "mercury.breadcrumbs.CRUMB_TARGETS"),
+    ("mercury_desk.js", mjs, "mercury.breadcrumbs.retarget"),
+    # Core misspells this class; "fixing" the selector silently breaks the lookup.
+    ("mercury_desk.js", mjs, "a.worksapce-breadcrumb"),
     ("hooks.py", hooks, "app_include_css"),
+    ("hooks.py", hooks, "app_include_js"),
+    ("hooks.py", hooks, "mercury_desk.js"),
     ("hooks.py", hooks, "mercury.task_status.validate"),
 ]
 
@@ -62,6 +74,13 @@ for pattern, why in FORBIDDEN:
     if hit:
         fails += 1
     print(f"  {'FAIL' if hit else 'OK  '}  project.js         no {pattern}  ({why})")
+
+# app_include_js must stay COMMENTED-OUT nowhere: an uncommented hook is required,
+# or the breadcrumb override never loads and the fix silently disappears.
+hook_live = re.search(r"^app_include_js\s*=", hooks, re.M)
+if not hook_live:
+    fails += 1
+print(f"  {'OK  ' if hook_live else 'FAIL'}  hooks.py           app_include_js is uncommented")
 
 # Positive check: the state must be read AND written through collapse_key().
 for op in ("getItem", "setItem"):
