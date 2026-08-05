@@ -90,7 +90,8 @@
    "fieldname": "assessment_score",
    "fieldtype": "Float",
    "label": "Assessment Score",
-   "description": "Score out of 100 (optional)"
+   "description": "Score out of 100 (optional)",
+   "in_list_view": 1
   },
   {
    "default": "0",
@@ -98,7 +99,8 @@
    "fieldname": "quiz_passed",
    "fieldtype": "Check",
    "label": "Quiz Passed",
-   "read_only": 1
+   "read_only": 1,
+   "in_list_view": 1
   },
   {
    "default": "0",
