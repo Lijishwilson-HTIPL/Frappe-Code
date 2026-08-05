@@ -2,6 +2,23 @@
  *
  * Loaded on every desk page via hooks.app_include_css. Additive only - we do not
  * patch frappe/erpnext core CSS, so removing the hook line reverts everything.
+ *
+ * =========================================================================
+ * PROTECTED - DO NOT DELETE OR "CLEAN UP" WHEN MERGING.
+ *
+ * These rules fix real desk defects: three vertical scrollbars instead of one,
+ * a page head that scrolled out of view, a tab bar that never pinned, and the
+ * right form sidebar clipped at the viewport edge. Each block documents the
+ * exact core/hrms/quality_dms rule it works around, with file:line.
+ *
+ * Two things must hold or the overrides silently stop working:
+ *   1. this file must stay LAST in frappe.get_hooks("app_include_css") - it
+ *      overrides !important rules in hrms/layout_global.css and quality_dms.css;
+ *   2. bump the ?v= on the app_include_css path in mercury/hooks.py whenever you
+ *      edit this file, or browsers serve a stale copy.
+ *
+ * Full rationale + verification checklist: documents/PROJECT_UI_CHANGES.md
+ * =========================================================================
  */
 
 /* ------------------------------------------------------------------------

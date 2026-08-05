@@ -140,6 +140,26 @@ frappe.ui.form.on("Project", {
 		});
 	},
 
+	// ===========================================================================
+	// ⚠️  PROTECTED — DO NOT DROP THIS WHEN RESOLVING A MERGE CONFLICT.
+	//
+	// This function carries deliberate UI fixes (collapsible Tasks/Defects
+	// accordions, Defects closed on every login). project.js is an erpnext core
+	// file, so it conflicts often. On conflict: KEEP OUR SIDE OF THIS FUNCTION and
+	// take the incoming side elsewhere in the file — merge both, don't pick one
+	// whole file.
+	//
+	// Must survive the merge: DEFAULT_COLLAPSED, the frappe.csrf_token-namespaced
+	// collapse_key(), the .summary-accordion* markup, and the click + keydown
+	// handlers on .summary-accordion-header.
+	//
+	// Do NOT "simplify" the collapsed-state storage to localStorage, to plain
+	// sessionStorage, or to the sid cookie — all three have been tried and are
+	// broken (sid is httponly, so JS cannot read it and the key degrades to a
+	// constant). Only frappe.csrf_token resets per login.
+	//
+	// Full rationale + verification checklist: documents/PROJECT_UI_CHANGES.md
+	// ===========================================================================
 	show_task_defect_summary_tab: function (frm) {
 		// Full Task + Defect (Issue) summary report on the form's own "Summary"
 		// tab — same numbers as the sidebar panel, plus a per-status breakdown.
