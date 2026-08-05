@@ -231,16 +231,23 @@ body:has(.sbiqc-login-shell) {
 	font-size: 12.5px;
 }
 
+/* !important here is deliberate: Frappe core's login.bundle.css ships a
+   higher-specificity compound selector (.for-login .page-card
+   .page-card-actions .btn-login, chained across for-login/for-forgot/
+   for-login-with-email-link) that otherwise wins over this 2-class
+   selector on some core-version builds, even though this file loads
+   after it -- specificity beats source order. */
 .sbiqc-form-panel .btn-login,
 .sbiqc-form-panel .btn-forgot,
 .sbiqc-form-panel .btn-login-with-email-link {
-	background: linear-gradient(90deg, #1f4e79 0%, #4a86b8 100%);
-	border: none;
-	border-radius: 8px;
-	padding: 11px 18px;
-	font-weight: 700;
-	letter-spacing: 0.03em;
-	box-shadow: 0 8px 20px -8px rgba(31, 78, 121, 0.6);
+	background: linear-gradient(90deg, #1f4e79 0%, #4a86b8 100%) !important;
+	border: none !important;
+	border-radius: 8px !important;
+	padding: 11px 18px !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.03em !important;
+	box-shadow: 0 8px 20px -8px rgba(31, 78, 121, 0.6) !important;
+	color: #ffffff !important;
 }
 
 .sbiqc-form-panel .login-divider {
