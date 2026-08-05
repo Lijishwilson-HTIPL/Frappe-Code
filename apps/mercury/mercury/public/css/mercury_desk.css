@@ -293,19 +293,60 @@ body {
  * ======================================================================== */
 
 /* The aurora wash. The mock puts it on a .board wrapper; the workspace has no
- * such element, so it goes on the section that already backs the whole canvas. */
+ * such element, so it goes on the section that already backs the whole canvas.
+ *
+ * .dms-theme is REQUIRED in this selector, and !important with it. quality_dms.css
+ * :399-405 has
+ *     body.dms-theme[data-route^="Workspaces"] .layout-main-section {
+ *         background: transparent; }
+ * at specificity (0,3,1). Without .dms-theme ours is (0,2,1) and LOSES no matter
+ * how late the file loads - which is exactly how the first attempt at this block
+ * silently did nothing. Note theirs is the `background` SHORTHAND, so it also
+ * resets background-image: setting background-image alone is not enough, the
+ * declarations have to out-rank it outright.
+ *
+ * The no-.dms-theme copy below keeps the wash working if quality_dms ever stops
+ * theming this route (quality_dms.js:107-117). */
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
 body[data-route="Workspaces/Projects"] .layout-main-section {
-	background-color: #fbfcff;
+	background-color: #fbfcff !important;
 	background-image: radial-gradient(70% 90% at 12% 0%, rgba(244, 114, 160, 0.28), transparent 55%),
 		radial-gradient(70% 90% at 88% 8%, rgba(129, 140, 248, 0.28), transparent 55%),
-		radial-gradient(90% 90% at 55% 120%, rgba(45, 212, 191, 0.18), transparent 50%);
-	background-repeat: no-repeat;
+		radial-gradient(90% 90% at 55% 120%, rgba(45, 212, 191, 0.18), transparent 50%) !important;
+	background-repeat: no-repeat !important;
 	border-radius: 24px;
+	border: none;
 }
 
 /* Mock gap is 16px; core gives each block 7px of padding (desktop.scss ~1100). */
 body[data-route="Workspaces/Projects"] .ce-block__content {
 	padding: 8px;
+}
+
+/* Trim the dead space between the page head and "Project Overview".
+ *
+ * Pre-existing, not caused by the aurora block: the heading sits at the same
+ * y-offset in screenshots taken before any of this work. It is the sum of
+ * quality_dms.css:415 (.layout-main-section-wrapper margin-top) + :412
+ * (.layout-main-section padding) + the first editor block's own padding.
+ * Reclaimed on this route only. */
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section-wrapper,
+body[data-route="Workspaces/Projects"] .layout-main-section-wrapper {
+	margin-top: 0;
+}
+
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
+body[data-route="Workspaces/Projects"] .layout-main-section {
+	padding-top: 0;
+}
+
+body[data-route="Workspaces/Projects"] .codex-editor__redactor > .ce-block:first-child,
+body[data-route="Workspaces/Projects"]
+	.codex-editor__redactor
+	> .ce-block:first-child
+	.ce-block__content {
+	padding-top: 0;
+	margin-top: 0;
 }
 
 /* Glass card shell, shared by the KPI cards and the two chart cards so the
@@ -327,9 +368,11 @@ body[data-route="Workspaces/Projects"] .widget.number-widget-box {
 	min-height: 118px;
 }
 
-body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
-	padding: 24px;
-}
+/* NOTE: no padding override on .dashboard-widget-box. desktop.scss:189 gives it
+ * none of its own, so the mock's 24px came straight off the plot area - enough
+ * that frappe-charts truncated its x-labels ("Compl ...", "Deliv ...") and
+ * collided the two trend dates. The glass shell above is the whole treatment
+ * these cards get. */
 
 body[data-route="Workspaces/Projects"] .widget.number-widget-box:hover,
 body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box:hover {
