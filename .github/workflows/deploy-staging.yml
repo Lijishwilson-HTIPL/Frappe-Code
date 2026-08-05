@@ -1,9 +1,10 @@
-name: Deploy to Staging
+name: Deploy to Staging & Production
 
 on:
   push:
     branches:
       - staging-deployment   # fixed typo (was "stagging-deployment" — never matched the real branch)
+      - production           # promoted here via merge from staging-deployment only, after staging verification
 
 env:
   REGISTRY: ghcr.io
@@ -100,6 +101,7 @@ jobs:
     name: Deploy to crm-docker-build (72.167.140.185)
     needs: build-custom
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging-deployment'
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -175,5 +177,88 @@ jobs:
             sudo docker images crm-deploy --format '{{.Tag}}' \
               | grep -v "^${IMAGE_TAG}\$" \
               | xargs -r -I{} sudo docker rmi crm-deploy:{} || true
+
+            echo "=== Deployment complete: ${IMAGE} ==="
+
+  deploy-production:
+    name: Deploy to frappe-crm (208.109.38.159 — production)
+    needs: build-custom
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}              # 208.109.38.159
+          username: ${{ secrets.PROD_USER }}           # david
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          port: 22
+          command_timeout: 20m
+          script: |
+            set -e
+            IMAGE_TAG="${{ needs.build-custom.outputs.image_tag }}"
+            IMAGE="ghcr.io/hephzibahtechnologies/frappe-code:${IMAGE_TAG}"
+            cd /home/david/frappe-crm
+
+            echo "=== Logging in to GHCR ==="
+            echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.STAGING_USER }}" --password-stdin
+
+            echo "=== Pulling ${IMAGE} ==="
+            docker pull "${IMAGE}"
+            docker tag "${IMAGE}" crm-deploy:${IMAGE_TAG}
+
+            echo "=== Updating .env — same folder, same volumes, no data touched ==="
+            sed -i "s/^CUSTOM_TAG=.*/CUSTOM_TAG=${IMAGE_TAG}/" .env
+
+            echo "=== Recreating all app-tier services from the new tag ==="
+            docker-compose up -d
+
+            echo "=== Waiting for backend to become healthy before migrating ==="
+            for i in $(seq 1 30); do
+              if docker exec crm-backend-1 curl -sf -H "Host: mysite.local" http://localhost:8000/api/method/ping >/dev/null 2>&1; then
+                echo "Backend is up."
+                break
+              fi
+              echo "Backend not ready yet, waiting... ($i/30)"
+              sleep 5
+              if [ "$i" -eq 30 ]; then
+                echo "Backend never became healthy — aborting before migrate."
+                exit 1
+              fi
+            done
+
+            echo "=== Running bench migrate (schema/patches — do NOT skip, do NOT run manually on the server) ==="
+            docker exec crm-backend-1 bench --site all migrate
+
+            echo "=== Force-reimporting DMS Workspace/Number Card/Dashboard Chart/Sidebar fixtures ==="
+            echo "=== (bench migrate does NOT overwrite these once they exist in the DB — see quality_dms dashboard incident 2026-07-28) ==="
+            for f in \
+              apps/quality_dms/quality_dms/dms/workspace/dms/dms.json \
+              apps/quality_dms/quality_dms/dms/number_card/pending_revision_requests/pending_revision_requests.json \
+              apps/quality_dms/quality_dms/dms/number_card/total_revisions/total_revisions.json \
+              apps/quality_dms/quality_dms/dms/number_card/total_documents/total_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/draft_documents/draft_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/published_documents/published_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/documents_in_review/documents_in_review.json \
+              apps/quality_dms/quality_dms/dms/number_card/obsolete_documents/obsolete_documents.json \
+              apps/quality_dms/quality_dms/dms/number_card/approved_documents/approved_documents.json \
+              apps/quality_dms/quality_dms/dms/dashboard_chart/training_compliance_by_department/training_compliance_by_department.json \
+              apps/quality_dms/quality_dms/dms/dashboard_chart/documents_by_status/documents_by_status.json \
+              apps/quality_dms/quality_dms/workspace_sidebar/dms.json \
+            ; do
+              full="/home/frappe/frappe-bench/${f}"
+              echo "--- reimporting ${full} ---"
+              docker exec crm-backend-1 bench --site mysite.local execute frappe.modules.import_file.import_file_by_path \
+                --kwargs "{\"path\": \"${full}\", \"force\": True, \"ignore_version\": True}" || echo "WARNING: reimport failed for ${full}, continuing"
+            done
+
+            echo "=== Clearing Frappe cache (avoid stale asset-hash HTML) ==="
+            docker exec crm-backend-1 bench --site all clear-cache || true
+            docker exec crm-backend-1 bench --site all clear-website-cache || true
+
+            echo "=== Pruning old crm-deploy tags (keep current) ==="
+            docker images crm-deploy --format '{{.Tag}}' \
+              | grep -v "^${IMAGE_TAG}\$" \
+              | xargs -r -I{} docker rmi crm-deploy:{} || true
 
             echo "=== Deployment complete: ${IMAGE} ==="
