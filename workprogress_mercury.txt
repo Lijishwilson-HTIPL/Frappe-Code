@@ -52,6 +52,16 @@ RULES: answer v16 ONLY (verify against docs/source, no guessing) — see CLAUDE.
   .claude/rules.md. Any DocType/config change -> export to mercury fixtures + note it.
 
 OPEN ITEMS (also see NEXT UP + TODO sections below):
+  [ ] *** ACTION ITEM (deferred, do later) *** RE-APPLY THE PROJECT/DESK UI FIXES after
+      any pull/merge of newer code (DMS, staging-deployment, upstream erpnext). The
+      accordion work lives in apps/erpnext/.../project/project.js - an ERPNEXT CORE FILE
+      that a merge can clobber. Full re-apply guide, root causes and verification
+      checklist: documents/PROJECT_UI_CHANGES.md. The desk CSS is safe (it lives in the
+      mercury app as additive overrides; no core file patched).
+      NOTE: most of these defects come from OUR OWN apps overriding core layout with
+      !important - hrms/layout_global.css:137 (2nd scrollbar on .form-sidebar) and
+      quality_dms.css:862 (position:relative on .page-head breaks the sticky header
+      desk-wide). Worth fixing at source instead; see section 6 of that doc.
   [x] DONE 2026-08-04: exported remaining config to mercury fixtures (rules.md) — the 2
       Print Formats, Payment Terms Template and both QI Templates are now fixtures.
   [ ] Apply remaining MANAGEMENT FEEDBACK items (the current focus).

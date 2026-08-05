@@ -44,6 +44,22 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ---
 
+### `5cbb13884` … `7f7776ce1` — Project module + desk form-shell UI fixes (2026-08-04/05) · NOT PUSHED
+17 commits fixing UI defects on the Project Summary tab and the desk form shell:
+collapsible Tasks/Defects accordions (Defects closed on every login), a single
+scrollbar instead of three, a genuinely pinned page head, a pinned tab bar with no gap
+above it, and the right form sidebar no longer clipped at the viewport edge.
+
+**Documented separately in [`PROJECT_UI_CHANGES.md`](PROJECT_UI_CHANGES.md)** — that file
+is the re-apply guide, because `project.js` is an **erpnext core file** that a future
+pull/merge can clobber. It records the root cause of each defect (most trace to
+`hrms/layout_global.css` and `quality_dms.css` overriding core layout with
+`!important`), the verification checklist, and the exact cherry-pick commands.
+
+Only `apps/erpnext/.../project/project.js` is at risk; the desk CSS lives in the mercury
+app as additive overrides and no frappe/erpnext/hrms file is patched.
+Rollback-before-this: `3db8740fd`
+
 ## Features by commit
 
 ### `<pending>` — collapsible Tasks/Defects sections on the Project Summary tab (2026-08-04) · NOT PUSHED
