@@ -1,15 +1,15 @@
-name: Deploy to Staging
+name: Deploy to Production
 
 # Manual-only, on purpose: this never runs on push. Pulls whatever image
 # tag was already built/pushed by the "Build & Push Images" workflow and
-# recreates the stack on 72.167.140.185. No rebuild happens here.
+# recreates the stack on 208.109.38.159. No rebuild happens here.
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (defaults to latest-staging)"
+        description: "Image tag to deploy (defaults to latest-production)"
         required: false
-        default: "latest-staging"
+        default: "latest-production"
 
 env:
   REGISTRY: ghcr.io
@@ -17,39 +17,39 @@ env:
 
 jobs:
   deploy:
-    name: Deploy to crm-docker-build (72.167.140.185)
+    name: Deploy to frappe-crm (208.109.38.159 — production)
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.STAGING_HOST }}          # 72.167.140.185
-          username: ${{ secrets.STAGING_USER }}       # htipladmin
-          key: ${{ secrets.STAGING_SSH_KEY }}
+          host: ${{ secrets.PROD_HOST }}              # 208.109.38.159
+          username: ${{ secrets.PROD_USER }}           # david
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
           port: 22
           command_timeout: 20m
           script: |
             set -e
             IMAGE_TAG="${{ inputs.image_tag }}"
             IMAGE="${{ env.REGISTRY }}/${{ env.APP_IMAGE_NAME }}:${IMAGE_TAG}"
-            cd /home/htipladmin/crm-docker-build
+            cd /home/david/frappe-crm
 
             echo "=== Logging in to GHCR ==="
-            echo "${{ secrets.GHCR_PULL_TOKEN }}" | sudo docker login ${{ env.REGISTRY }} -u "${{ secrets.STAGING_USER }}" --password-stdin
+            echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ secrets.STAGING_USER }}" --password-stdin
 
             echo "=== Pulling ${IMAGE} ==="
-            sudo docker pull "${IMAGE}"
-            sudo docker tag "${IMAGE}" crm-deploy:${IMAGE_TAG}
+            docker pull "${IMAGE}"
+            docker tag "${IMAGE}" crm-deploy:${IMAGE_TAG}
 
             echo "=== Updating .env — same folder, same volumes, no data touched ==="
             sed -i "s/^CUSTOM_TAG=.*/CUSTOM_TAG=${IMAGE_TAG}/" .env
 
             echo "=== Recreating all app-tier services from the new tag ==="
-            sudo docker compose up -d
+            docker-compose up -d
 
             echo "=== Waiting for backend to become healthy before migrating ==="
             for i in $(seq 1 30); do
-              if sudo docker exec crm-backend-1 curl -sf -H "Host: mysite.local" http://localhost:8000/api/method/ping >/dev/null 2>&1; then
+              if docker exec crm-backend-1 curl -sf -H "Host: mysite.local" http://localhost:8000/api/method/ping >/dev/null 2>&1; then
                 echo "Backend is up."
                 break
               fi
@@ -62,7 +62,7 @@ jobs:
             done
 
             echo "=== Running bench migrate (schema/patches — do NOT skip, do NOT run manually on the server) ==="
-            sudo docker exec crm-backend-1 bench --site all migrate
+            docker exec crm-backend-1 bench --site all migrate
 
             echo "=== Force-reimporting DMS Workspace/Number Card/Dashboard Chart/Sidebar fixtures ==="
             echo "=== (bench migrate does NOT overwrite these once they exist in the DB — see quality_dms dashboard incident 2026-07-28) ==="
@@ -82,17 +82,17 @@ jobs:
             ; do
               full="/home/frappe/frappe-bench/${f}"
               echo "--- reimporting ${full} ---"
-              sudo docker exec crm-backend-1 bench --site mysite.local execute frappe.modules.import_file.import_file_by_path \
+              docker exec crm-backend-1 bench --site mysite.local execute frappe.modules.import_file.import_file_by_path \
                 --kwargs "{\"path\": \"${full}\", \"force\": True, \"ignore_version\": True}" || echo "WARNING: reimport failed for ${full}, continuing"
             done
 
             echo "=== Clearing Frappe cache (avoid stale asset-hash HTML) ==="
-            sudo docker exec crm-backend-1 bench --site all clear-cache || true
-            sudo docker exec crm-backend-1 bench --site all clear-website-cache || true
+            docker exec crm-backend-1 bench --site all clear-cache || true
+            docker exec crm-backend-1 bench --site all clear-website-cache || true
 
             echo "=== Pruning old crm-deploy tags (keep current) ==="
-            sudo docker images crm-deploy --format '{{.Tag}}' \
+            docker images crm-deploy --format '{{.Tag}}' \
               | grep -v "^${IMAGE_TAG}\$" \
-              | xargs -r -I{} sudo docker rmi crm-deploy:{} || true
+              | xargs -r -I{} docker rmi crm-deploy:{} || true
 
             echo "=== Deployment complete: ${IMAGE} ==="
