@@ -40,9 +40,11 @@ WHERE WE ARE
 --------------------------------------------------------------------------------
 THE VERY NEXT THINGS TO DO (in this order)
 --------------------------------------------------------------------------------
-  0. CLEAR THE TWO DEMO BLOCKERS IN [17.1] FIRST — the past project end date and
-     the Delivered->Overdue nightly flip. Both are one script + one mercury
-     override; both surface in front of management if left.
+  0. NOTICE — TWO KNOWN BLOCKERS, CONSCIOUSLY LEFT UNFIXED (see [17.1] and [17.10]).
+     Paul tested the demo path on 2026-08-06, it works for him, and he chose not to
+     change anything the night before the demo. DO NOT "fix" them unprompted. They
+     are latent, not cosmetic - each has a definite trigger, both written up in
+     [17.10]. Offer them, do not apply them.
   1. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — still not briefed. The user has
      been about to explain this for two sessions running. ASK THEM FOR IT; do not
      guess what it is. It probably reshapes Stage 8 (Monthly Progress Report).
@@ -879,6 +881,59 @@ failure mode where the file exists but never loads). ALL CHECKS PASSED.
 Asset versions now: mercury_desk.css ?v=19, mercury_desk.js ?v=1,
 quality_dms.css ?v=32. mercury_desk.css must stay LAST in app_include_css
 (verified 8 of 8) or the aurora block and the DMS overrides silently lose.
+
+17.10 TEMPLATE TASKS EXEMPT FROM THE MANDATORY ASSIGNEE     [51887868a]
+--------------------------------------------------------------------------------
+A template Task is a blueprint, never worked on, so there is nobody to assign it
+to - an unconditional reqd blocked template creation outright.
+  Custom Field : reqd = 0, mandatory_depends_on = "eval:!doc.is_template"
+  Server hook  : mercury.task_assign.validate_assignee on Task.validate
+*** BOTH HALVES ARE REQUIRED. mandatory_depends_on IS EVALUATED ONLY IN JS
+(frappe/public/js/frappe/form/save.js and form/layout.js). There is NO python
+implementation anywhere in frappe. Set it alone and a probe proves the hole: a
+NON-template Task with no assignee inserts happily, and so does a template
+flipped back to normal. REST / Data Import / db.set_value all bypass it. ***
+Same split as the Delivered gate in task_status.py: field flag = UI, hook =
+control. Task.validate is now a LIST of two hooks; frappe runs every entry.
+Verified server-side: template+no assignee saves · normal+no assignee rejected ·
+normal+assignee saves and still creates the ToDo · template flipped to normal
+with no assignee rejected. 9 real Tasks unaffected.
+
+================================================================================
+[17.11] *** NOTICE — TWO KNOWN BLOCKERS, LEFT UNFIXED ON PURPOSE ***
+================================================================================
+Found 2026-08-06 while answering how to populate the Task date columns. Paul
+tested the demo path, it works for him, and he decided NOT to change these the
+night before the demo. That is a deliberate call, not an oversight.
+
+DO NOT fix them unprompted. Offer, then wait. They are LATENT, not cosmetic -
+each has a precise trigger, and each is a small fix when the time is right.
+
+BLOCKER 1 — PROJ-0001.expected_end_date = 2026-08-03, i.e. IN THE PAST.
+  Mechanism : task.py:120-136 validate_parent_project_dates throws if ANY task
+              date - expected OR actual - falls after the project's expected end
+              date.
+  Triggers  : typing an Expected Start/End Date on any Mercury task; AND
+              submitting a Timesheet, because timesheet.py:182 saves the Task and
+              re-runs the same validation. The Timesheet SUBMIT itself fails.
+  Blast     : both Actual date columns can never be populated while this stands,
+              because Timesheets are the only way to fill them.
+  Fix       : move PROJ-0001's Expected End Date into the future. One field.
+
+BLOCKER 2 — Delivered flips to Overdue overnight.
+  Mechanism : task.py:319-325 update_status, run nightly by set_tasks_as_overdue
+              (erpnext/hooks.py daily_maintenance), flips anything whose status is
+              not Cancelled/Completed and whose exp_end_date is past. "Delivered"
+              is NOT on that safe list. TASK-2026-00001 is Delivered.
+  Triggers  : the first night after ANY exp_end_date is set on a Mercury task.
+              Cannot fire while they are all NULL - which is exactly why blocker 1
+              has been masking blocker 2.
+  Fix       : override update_status FROM THE MERCURY APP. Do NOT patch erpnext
+              core. Add "Delivered" to the terminal set.
+
+RELATED, same area: timesheet.py:178-181 force-sets a Task to Completed/Working
+on Timesheet submit, which DESTROYS a Delivered status. Do not log a Timesheet
+against TASK-2026-00001.
 
 ================================================================================
 END — MERCURY WORK PROGRESS

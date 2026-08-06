@@ -18,17 +18,41 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest push:** `96eda0dd3` — "docs: log the Delivered task status and rewrite the
-handoff for the next session" (2026-08-05)
+**Latest push:** `51887868a` — "Task: exempt template tasks from the mandatory
+assignee" (2026-08-06). Everything below is pushed; nothing is local-only.
 
-**Local-only (NOT yet pushed):** `fa134009b` — the second `staging-deployment` merge
-(DMS training analytics + login CSS). Merged and migrated locally, **awaiting
-"promote it"**.
+> ### ⚠️ NOTICE — two known blockers, deliberately NOT fixed
+>
+> Both were found on 2026-08-06 while answering how to fill the Task date columns.
+> Paul tested the demo path and it works for him, so these were left alone rather
+> than changed the night before. They are **latent, not cosmetic** — each has a
+> definite trigger:
+>
+> **1. `PROJ-0001.expected_end_date = 2026-08-03` — in the past.**
+> `task.py:120-136 validate_parent_project_dates` throws if *any* task date
+> (expected **or** actual) is after the project's expected end date. Triggers when
+> someone types an Expected Start/End Date on a Mercury task, **or submits a
+> Timesheet** — `timesheet.py:182` saves the Task and re-runs the same validation.
+> *Fix:* push PROJ-0001's Expected End Date into the future. One field.
+>
+> **2. `Delivered` → `Overdue`, overnight.**
+> `task.py:319-325 update_status` (nightly `set_tasks_as_overdue`) flips anything
+> not `Cancelled`/`Completed` with a past `exp_end_date`. **`Delivered` is not on
+> that safe list**, and `TASK-2026-00001` is Delivered. Cannot fire today because
+> every Mercury task has `exp_end_date = NULL`; fires the first night after any
+> end date is set. *Fix:* override `update_status` **from the mercury app** — do
+> not patch erpnext core.
+>
+> Related: `timesheet.py:178-181` force-sets a Task to `Completed`/`Working` on
+> Timesheet submit, which **destroys a Delivered status**. Do not log a Timesheet
+> against `TASK-2026-00001`.
 
 **Rollback targets (newest first):**
 
 | Tag / commit | What it is |
 |---|---|
+| `b8d5110cc` | last state before the template-assignee exemption |
+| `2f2e3d065` | last state before the 2026-08-06 Project/Task UI round |
 | `96eda0dd3` — tag **`pre-staging-merge-2`** | last state before the *second* `staging-deployment` merge |
 | `38932a7b4` — tag **`pre-staging-merge`** | last state before the first `staging-deployment` merge |
 | `3c8dd4878` — tag **`pre-dms-merge`** | last state before the `DMS` merge |
@@ -44,7 +68,22 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 | # | Commit | Date | Pushed | Summary |
 |---|--------|------|--------|---------|
-| 11 | `fa134009b` | 2026-08-05 | **no** | merge: `staging-deployment` #2 — DMS training analytics, login CSS fixes, CRLF pinning |
+| 24 | `51887868a` | 2026-08-06 | yes | Task: exempt template tasks from the mandatory assignee |
+| 23 | `b8d5110cc` | 2026-08-06 | yes | docs: log the Project/Task UI round in `workprogress_mercury.txt` §17 |
+| 22 | `6bfd4f123` | 2026-08-06 | yes | revert the DMS drift fix (files **and** DB) at the user's request |
+| 21 | `1d97ef045` | 2026-08-06 | yes | quality_dms: bump 9 stale `modified` stamps — *reverted by 22* |
+| 20 | `36619b420` | 2026-08-06 | yes | quality_dms: DMS sidebar stamp bump — restores My Training Dashboard + Training Analytics |
+| 19 | `d315b0199` | 2026-08-06 | yes | Task "Assign" tab between Dependencies and More Info, assignee mandatory |
+| 18 | `56207b6f4` | 2026-08-06 | yes | Projects workspace: cut the top inset above "Project Overview" |
+| 17 | `6c8ca9c78` | 2026-08-06 | yes | Projects workspace: 3% board inset |
+| 16 | `6b423ec90` | 2026-08-06 | yes | Projects workspace: make the aurora wash actually apply; undo chart padding |
+| 15 | `b09330592` | 2026-08-06 | yes | Projects workspace: "Light Aurora" glass card design |
+| 14 | `94d6516fd` | 2026-08-06 | yes | quality_dms: number cards share the row instead of a hardcoded 12.5% |
+| 13 | `bb7a58eca` | 2026-08-06 | yes | revert: keep the workspace crumb on list routes |
+| 12b | `f260af6b1` | 2026-08-06 | yes | breadcrumbs: drop the duplicate crumb on list routes — *reverted by 13* |
+| 12a | `af1e2d9a2` | 2026-08-06 | yes | breadcrumbs: each crumb goes somewhere distinct and stable |
+| 12 | `7c748dc33` | 2026-08-06 | yes | task list: clean actual-date labels, fix the clipped % Progress header |
+| 11 | `fa134009b` | 2026-08-05 | yes | merge: `staging-deployment` #2 — DMS training analytics, login CSS fixes, CRLF pinning |
 | 10 | `96eda0dd3` | 2026-08-05 | yes | docs: log the Delivered task status, rewrite the handoff |
 | 9 | `015e556ae` | 2026-08-05 | yes | proj module UI defects fixed + Task "Delivered" status, gated per company |
 | 8 | `80be0a9a2` | 2026-08-05 | yes | docs: rewrite the Mercury handoff block for the next session |
@@ -77,7 +116,36 @@ Rollback-before-this: `3db8740fd`
 
 ## Features by commit
 
-### `fa134009b` — second `staging-deployment` merge (2026-08-05) · NOT PUSHED
+### `7c748dc33` … `51887868a` — Project/Task module UI round (2026-08-06) · PUSHED
+
+Boss-requested changes ahead of the Project-module demo. All config or files under
+`apps/` — **no frappe/erpnext core file is patched**. Full detail with root causes in
+`workprogress_mercury.txt` §17.
+
+| Change | Root cause worth remembering |
+|---|---|
+| "(via Timesheet)" off the actual-date labels | list-header-only is impossible — `list_view.js:782` renders the header *from* `df.label`. Changed doctype-wide via Property Setter; meaning moved to a field description |
+| `% PROGRESS` header clipped | class-name **collision**, not layout: `list_view.js:774` stamps the fieldname as a CSS class and Task's field is named `progress`, matching Bootstrap's progress-bar (`line-height:0`, 10px, clipped) |
+| Breadcrumbs | home icon pointed at `/desk` → `localStorage.current_page`, i.e. *the last workspace that browser visited* — unstable across machines. Now the module workspace; "Projects" → Project list |
+| KPI cards filled half the row | **our own** `quality_dms.css` forced `flex: 0 0 12.5%` — right for DMS's 8 cards, wrong for Projects' 4. Fixed at source with `flex: 1 1 0` (N cards → 100/N) |
+| "Light Aurora" card design | first attempt silently did nothing: `quality_dms.css:399` `background: transparent` is **(0,3,1)** and out-ranks a (0,2,1) selector *regardless of load order* — and the `background` shorthand resets `background-image` |
+| Task **Assign** tab + mandatory assignee | the "Add to ToDo" popup can't be moved — it writes a **ToDo**, not Task fields — and can't be made mandatory (needs a saved doc ⇒ deadlock). Rebuilt as Custom Fields + `task_assign.py` mirroring to a real assignment |
+| Template tasks exempt from the assignee | **`mandatory_depends_on` is JS-only.** No python implementation exists in frappe, so it is bypassed by REST / Data Import / `db.set_value`. Proven by probe. Needs the server hook alongside it |
+| DMS training pages "missing" | they were never missing — the *sidebar links* were. `import_file` **skips** a standard record whose JSON `modified` stamp isn't newer than the DB row, and migrate still reports success |
+
+**Reverted within the round (deliberate, both kept in history):** `f260af6b1` → `bb7a58eca`
+(hiding the duplicate crumb on list routes) and `1d97ef045` → `6bfd4f123` (the wider DMS
+drift fix — reverted in **both** the files and the database, since the migrate had already
+written to it).
+
+**Still unapplied and real:** the DMS drift sweep found **nine** standard records whose JSON
+has never reached any database — the DMS workspace's 4th KPI card, 7 number-card labels, and
+the `Documents by Status` chart palette. Findings are recorded in `1d97ef045`'s message.
+Raise with James rather than re-applying unasked.
+
+Rollback-before-this: `2f2e3d065`
+
+### `fa134009b` — second `staging-deployment` merge (2026-08-05) · PUSHED
 5 commits, merge base `cb1875648`, **clean — no conflicts**: DMS training score
 history + self-service dashboards + analytics, two login CSS fixes, and CRLF pinning
 for shell scripts.
