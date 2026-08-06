@@ -259,12 +259,31 @@ body.dms-theme .widget.number-widget-box {
    each block's width comes from Bootstrap classes (col-xs-12/col-sm-6/
    col-md-4/col-lg-3) on its .ce-block wrapper -- NOT from .number-widget-box
    itself, and NOT from a CSS Grid. :has(.number-widget-box) uniquely
-   selects only the 8 Key Metrics blocks (no other block type contains that
-   class), so header/spacer/chart/shortcut blocks elsewhere are untouched. */
+   selects only number-card blocks (no other block type contains that class),
+   so header/spacer/chart/shortcut blocks elsewhere are untouched.
+   !important is required to beat Bootstrap's col-* flex/max-width.
+
+   Cards SHARE the row instead of taking a fixed 12.5% each.
+
+   This was `flex: 0 0 12.5%` -- correct for the DMS workspace, which has
+   exactly 8 Key Metrics cards (8 x 12.5% = one full row), but wrong the moment
+   any other workspace reuses the theme. quality_dms.js:120 applies .dms-theme
+   to the ERPNext PROJECTS workspace as well (is_projects_route(), :107-117), and
+   Projects has only 4 number cards -- so they filled exactly half the row while
+   the charts under them spanned the full width, and every card label was
+   truncated ("Active ...", "Comple...") in the narrow box.
+
+   `flex: 1 1 0` makes each card an equal share of whatever row it lands in:
+   8 cards -> 12.5% each (DMS is pixel-identical to before), 4 cards -> 25%
+   (Projects now fills the row), N cards -> 100/N. Header and spacer blocks are
+   col-12, so they still force the line breaks that group the cards.
+
+   Do NOT add a min-width here: 8 DMS cards on a ~845px row are ~105px each, so
+   any min-width above that would wrap the DMS Key Metrics onto a second row. */
 body.dms-theme .ce-block:has(.number-widget-box) {
-	flex: 0 0 12.5% !important;
-	max-width: 12.5% !important;
-	width: 12.5% !important;
+	flex: 1 1 0 !important;
+	max-width: none !important;
+	width: auto !important;
 }
 body.dms-theme .widget.number-widget-box:hover {
 	box-shadow: 0 4px 10px rgba(30, 58, 95, 0.14);

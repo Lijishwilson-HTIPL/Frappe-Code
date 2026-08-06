@@ -1,0 +1,13 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Task",
+  "enabled": 1,
+  "modified": "2026-08-05 17:40:31.544557",
+  "module": "Mercury",
+  "name": "Mercury - Delivered Task Status",
+  "script": "\n// Mercury: gate the custom \"Delivered\" Task status.\n//\n// \"Delivered\" is added to Task.status by a Property Setter, which is DocType-wide -\n// Frappe Select options are metadata, so an option cannot be offered to only some\n// records. This script removes it from the dropdown unless the task's company has\n// ticked \"Allow Delivered Task Status\".\n//\n// THIS IS COSMETIC. The real enforcement is server-side in mercury/task_status.py\n// (doc_events -> Task.validate), because a REST call, a Data Import or\n// frappe.db.set_value never runs this file. Do not delete that hook and rely on this.\n\nconst MERCURY_DELIVERED = \"Delivered\";\n\nfunction mercury_apply_delivered_option(frm) {\n    const field = frm.get_field(\"status\");\n    if (!field) return;\n\n    const meta_field = frappe.get_meta(\"Task\").fields.find(\n        (f) => f.fieldname === \"status\"\n    );\n    const base = (meta_field.options || \"\").split(\"\\n\");\n\n    const show = () => {\n        field.df.options = base.join(\"\\n\");\n        frm.refresh_field(\"status\");\n    };\n\n    const hide = () => {\n        // Never strip the option when the saved record already uses it - the control\n        // would render blank and an ordinary save would silently clear the status.\n        if (frm.doc.status === MERCURY_DELIVERED) return show();\n        field.df.options = base\n            .filter((o) => o !== MERCURY_DELIVERED)\n            .join(\"\\n\");\n        frm.refresh_field(\"status\");\n    };\n\n    if (!frm.doc.company && !frm.doc.project) return hide();\n\n    frappe.call({\n        method: \"mercury.task_status.is_delivered_allowed\",\n        args: { company: frm.doc.company, project: frm.doc.project },\n        callback: (r) => (r.message ? show() : hide()),\n    });\n}\n\nfrappe.ui.form.on(\"Task\", {\n    refresh: mercury_apply_delivered_option,\n    project: mercury_apply_delivered_option,\n    company: mercury_apply_delivered_option,\n});\n",
+  "view": "Form"
+ }
+]

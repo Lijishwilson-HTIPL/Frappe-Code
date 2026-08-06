@@ -37,5 +37,12 @@
         "required": [],
         "idx": 4,
         "version": "0.0.1"
+    },
+    "mercury": {
+        "is_repo": false,
+        "resolution": "not a repo",
+        "required": [],
+        "idx": 5,
+        "version": "0.0.1"
     }
 }

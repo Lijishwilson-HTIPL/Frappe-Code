@@ -1,0 +1,940 @@
+================================================================================
+  MERCURY ERP DEMO — WORK PROGRESS LOG
+  Client: Mercury (Engineer-to-Order manufacturer)
+  Platform: ERPNext v16 / Frappe v16 (erpnext 16.23.1, frappe 16.23.0)
+  Site: mysite.local | Login: Administrator | Started: 2026-07-23
+================================================================================
+
+################################################################################
+## >>> HANDOFF FOR NEXT CHAT (read this WHOLE block first) — updated 2026-08-05 (evening) <<<
+################################################################################
+You are picking up the Mercury ERP demo mid-project. Read this block, then
+"web docs/mercury_phase1_stepbystep_guide.txt" (Stage 6 was REWRITTEN 2026-08-04)
+and "documents/PROJECT_UI_CHANGES.md" if anything UI-related comes up.
+Nothing is broken. Nothing is unpushed. Do NOT re-do finished work.
+
+--------------------------------------------------------------------------------
+WHERE WE ARE
+--------------------------------------------------------------------------------
+  - PHASE 1 = COMPLETE (all 8 stages, config-only).
+  - Management demo delivered 2026-07-29; management gave suggestions.
+  - MGMT FEEDBACK #1 = DONE (2026-08-04/05): per-UNIT QR shipping labels + logo.
+    7 physical units => 7 labels, each with its own unique QR. See [12].
+  - PROJECT MODULE / DESK UI FIXES = DONE, pushed + protected. See [13] and
+    documents/PROJECT_UI_CHANGES.md.
+  - staging-deployment merged AND MIGRATED 2026-08-05. Migrate ran clean (zero
+    errors, zero failed patches). This is DONE - do not run it again "just in case".
+  - TASK "DELIVERED" STATUS = DONE 2026-08-05 evening, gated per company. See [15].
+  - SECOND staging-deployment MERGE = DONE 2026-08-05 evening (fa134009b). Clean,
+    migrated, 20/20 protected UI markers verified. See [16].
+  - PROJECT/TASK MODULE UI ROUND = DONE 2026-08-06, PUSHED. See [17]. Covers:
+    actual-date labels, % Progress header, breadcrumbs, Projects workspace
+    "Light Aurora" cards, the Task "Assign" tab, and the DMS sidebar fix.
+  - *** DEMOS RUN ON THE QA SERVER, NOT LOCAL. *** Paul practises locally, pushes,
+    pulls on QA, migrates, then demos there. Anything DB-only does not exist on QA.
+  - TWO OPEN BLOCKERS THAT WILL FIRE IN A DEMO - see [17.1]:
+      PROJ-0001.expected_end_date = 2026-08-03 (past) blocks EVERY task-date entry
+      and every Timesheet submit; and Delivered flips to Overdue overnight once
+      any exp_end_date is set. Neither is fixed yet.
+
+--------------------------------------------------------------------------------
+THE VERY NEXT THINGS TO DO (in this order)
+--------------------------------------------------------------------------------
+  0. NOTICE — TWO KNOWN BLOCKERS, CONSCIOUSLY LEFT UNFIXED (see [17.1] and [17.10]).
+     Paul tested the demo path on 2026-08-06, it works for him, and he chose not to
+     change anything the night before the demo. DO NOT "fix" them unprompted. They
+     are latent, not cosmetic - each has a definite trigger, both written up in
+     [17.10]. Offer them, do not apply them.
+  1. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — still not briefed. The user has
+     been about to explain this for two sessions running. ASK THEM FOR IT; do not
+     guess what it is. It probably reshapes Stage 8 (Monthly Progress Report).
+  2. MERCURY'S REAL CUSTOMER DOCUMENTS — 4 PDFs on disk at
+     C:\Users\Paul Sahaya Doss\Downloads\ :
+         103-1105VS10 Pump Project Schedule 01-12-26.pdf
+         1105VS10 Customer Inspection Notice LRVP FAT.pdf
+         1105VS10-PL3 Pump Freight Box Packing List.pdf
+         1105VS10-PR-250623-EVP Pump Progress Report.pdf
+     *** THE USER SAID: DO NOT ANALYSE THESE UNTIL ASKED. *** They hand them over
+     ONE AT A TIME. They reshape Stage 8 (progress report) and Stage 6 (label /
+     packing-list fields), so do not redesign those before reading them.
+  3. STAGE 6 STILL OPEN: Packing Slip(s) for MAT-DN-2026-00003, THEN submit the DN.
+     The DN is deliberately still DRAFT because a Packing Slip can only be attached
+     to a draft Delivery Note. The freight-box grouping is waiting on the
+     "1105VS10-PL3 Pump Freight Box Packing List" PDF above. All 4 Outgoing QIs are
+     already done, so the DN WILL submit cleanly whenever you choose to.
+  4. DECIDE the "Delivered" fresh-machine gap — see [15] "known trade-off".
+
+--------------------------------------------------------------------------------
+GIT — CURRENT STATE (verified 2026-08-05 evening)
+--------------------------------------------------------------------------------
+  - Remote: "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code
+    ("origin" = Lijishwilson-HTIPL/Frappe-Code is DEPRECATED — never push there.)
+  - ONE branch: paul-update (local AND remote), upstream = hephzibah/paul-update.
+  - Remote tip = 96eda0dd3 (docs). Local HEAD = fa134009b (the 2nd staging-deployment
+    merge) => LOCAL IS 1 AHEAD, UNPUSHED. Push it when the user says "promote it".
+  - ROLLBACK TAGS: pre-staging-merge-2 (=96eda0dd3), pre-staging-merge (=38932a7b4),
+    pre-dms-merge (=3c8dd4878).
+  - GIT RULES: Paul Sahaya Doss is the SOLE author — NEVER add a Claude/Anthropic
+    co-author trailer. Commit locally after each step; PUSH ONLY when the user says
+    "promote it". Credentials ARE stored (~/.git-credentials, helper=store), so
+    push works without prompting — which makes it MORE important not to push
+    unasked. Never print or read that file.
+  - Commit messages: plain, explain the ROOT CAUSE and the trade-off. Multi-line
+    messages: write to a temp file and use `git commit -F file` — heredocs through
+    the WSL bridge break on quotes/backticks.
+  - CORRECTION to an earlier handoff: the "Hold" task status and the Issue->"Defect"
+    relabel in apps/erpnext/.../task/task.json are NOT unprotected. They are
+    COMMITTED AND PUSHED in the bench repo (90f263546, James, 2026-07-27). The file
+    only shows as " M" when you run git status INSIDE apps/erpnext, because that is
+    a separate nested repo comparing against erpnext upstream. There is nothing to
+    rescue. Do not "fix" this.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT / HOW TO RUN COMMANDS (this bites every new session)
+--------------------------------------------------------------------------------
+  - The bench lives in WSL. The Bash tool runs WINDOWS Git Bash, so `bench` and
+    `/home/paul` do NOT exist there. Prefix everything:
+        wsl -d Ubuntu-22.04 -- bash -c 'cd ~/frappe-bench && <command>'
+  - $(command substitution) and $? often come back EMPTY through that bridge.
+    Use direct commands, not substitution, when the value matters. This bit again
+    2026-08-05: a `for` loop using $(...) inside silently did nothing at all.
+  - HEREDOCS THROUGH THE BRIDGE BREAK on // comments, quotes and parentheses. To
+    run a python script against the site, WRITE THE FILE with the Write tool to
+    \\wsl.localhost\Ubuntu-22.04\tmp\foo.py and then run it. Do not use <<EOF.
+  - For python against the site, avoid `bench console` (interactive). Use:
+        cd ~/frappe-bench/sites && ../env/bin/python /tmp/script.py
+    with frappe.init(site="mysite.local"); frappe.connect().
+  - Anything needing PDF generation must run under the honcho env:
+        cd ~/frappe-bench && honcho run bash -c "cd sites && ../env/bin/python ..."
+
+MACHINE-LOCAL SETUP (NOT in git — redo on any other machine):
+  - wkhtmltopdf 0.12.6.1 (WITH PATCHED QT — the plain apt build is rejected by
+    frappe) installed WITHOUT root at ~/opt/wkhtmltox (official jammy .deb
+    extracted with dpkg-deb -x; no missing shared libs). sudo is NOT available in
+    this WSL (password prompt), and /usr/local/bin needs root.
+  - frappe calls `wkhtmltopdf` by bare name (frappe/utils/pdf.py) and there is NO
+    site_config override, so it MUST be on the PATH of the bench processes. The
+    bench PATH has neither env/bin nor ~/.local/bin. Solved with
+    ~/frappe-bench/.env — honcho reads it on `bench start` and applies it to every
+    Procfile process. .env is gitignored (hardcodes /home/paul/...).
+  - *** `bench restart` does NOT re-launch honcho, so it will NOT pick .env up.
+    You must fully stop `bench start` (Ctrl+C) and run `bench start` again. ***
+  - If the "Invalid wkhtmltopdf version" dialog persists, delete the redis key
+    "wkhtmltopdf_version" (frappe.cache.delete_key).
+  - *** ORPHANED HONCHO CHILDREN (hit 2026-08-05, cost ~20 min) ***
+    Ctrl+C can kill the honcho PARENT while its children survive and reparent to
+    PID 1. They keep redis bound to 11000/13000, so every later `bench start`
+    dies instantly with:
+        redis_cache.1 | Could not create server TCP listening socket
+                        127.0.0.1:13000: bind: Address already in use
+        system        | redis_cache.1 stopped (rc=1)
+    Honcho is all-or-nothing: one child fails, it SIGTERMs the whole set within
+    the same second. Symptom is a half-running bench (watch/worker/schedule alive,
+    NOTHING on port 8000). Diagnose with `pgrep -a honcho` (empty = orphans) and
+    `ss -ltn | grep -E ":11000|:13000|:8000"`. Fix:
+        pkill -f "frappe-bench"; pkill -f "redis-server 127.0.0.1:1[13]000"
+    Do NOT kill the SYSTEM redis on 6379 — that is a different, unrelated server.
+  - CACHE GOTCHA (still true): `bench clear-cache` does NOT flush the
+    "desktop_icons" / "bootinfo" redis hashes. Delete them with
+    frappe.cache.delete_key when desk navigation looks stale.
+
+--------------------------------------------------------------------------------
+KEY RECORDS (current)
+--------------------------------------------------------------------------------
+  Site mysite.local · login Administrator (bypasses the sbiqc desk gate).
+  Company=Mercury (abbr JR) · Customer=Joel · Project PROJ-0001 at 78.57%
+  (5 tasks Completed, Packaging Working 50%, Shipping Preparation Open 0%).
+  THE USER SET THAT PROGRESS THEMSELVES — do not "fix" it.
+  NOTE: every PROJ-0001 task has exp_end_date = None. This is load-bearing —
+  see the Overdue caveat in [15].
+  Stage 1-5 : SO SAL-ORD-2026-00002 · Workflow "Mercury RTM Approval" ·
+              MR MAT-MR-2026-00001 -> PO PUR-ORD-2026-00001 -> PR MAT-PRE-2026-00001 ·
+              incoming QI MAT-QA-2026-00001
+  Stage 6 v1 (KEPT as evidence, do not touch): DN MAT-DN-2026-00002-1 (submitted)
+              + Packing Slip MAT-PAC-2026-00001 + outgoing QI MAT-QA-2026-00002
+  Stage 7    : SI ACC-SINV-2026-00065 (submitted, 30/40/30) — built on that v1 DN,
+              which is WHY v2 needed a new DN instead of editing the old one.
+  Stage 6 v2 (CURRENT): Stock Entry MAT-STE-2026-00004 (ONE receipt, 7 rows) ->
+              DN MAT-DN-2026-00003 (STILL DRAFT, $18,800) with 4 lines / 7 units:
+                MERCURY-001 x1  serial MP-00002
+                BFV-8  8" Butterfly Valve x2  serials BV-00001, BV-00002
+                LG-01  Level Gauge x1         serial  LG-00001
+                EJ-8   8" Expansion Joint x3  serials EJ-00001, EJ-00002, EJ-00003
+              Outgoing QIs: MAT-QA-2026-00003 (pump), -00004 (BFV-8, sample 2),
+              -00005 (LG-01), -00006 (EJ-8, sample 3) — all Accepted + submitted
+              and linked on their DN rows.
+              BOLT-M16 / NUT-M16 still exist as Items but are OUT of the kit.
+  Companies  : Mercury (allow_delivered_task_status = 1),
+              Hephzibah Technologies India (0), Hephzibah Technologies Inc (0).
+  Config     : print formats "Mercury Shipping Label" (Delivery Note) &
+              "Mercury Monthly Progress Report" (Project) · QI templates
+              "Mercury Steel Casting QC", "Mercury Pump Final QC",
+              "Mercury Accessory Final QC" · Payment Terms Template
+              "Mercury 30/40/30 Milestones" · logo files in
+              apps/mercury/mercury/public/images/mercury_logo.png (+ .svg)
+  FIXTURES   : ALL config is exported to apps/mercury/mercury/fixtures/
+              (workspace, workspace_sidebar, desktop_icon, workflow, workflow_state,
+              workflow_action_master, print_format, payment_terms_template,
+              quality_inspection_template, quality_inspection_parameter,
+              custom_field, property_setter, client_script).
+
+--------------------------------------------------------------------------------
+STANDING RULES (see CLAUDE.md + .claude/rules.md)
+--------------------------------------------------------------------------------
+  - Answer v16 ONLY. VERIFY against the docs or the installed source under apps/
+    BEFORE stating where a field/button/setting lives. No trial-and-error.
+  - Any DocType/config change -> export to mercury fixtures and commit. JSON is the
+    source of truth, not the database.
+  - Prefer BACKEND scripts over UI walk-throughs — the user already knows the UI and
+    says so; they want the records created, not a tutorial.
+  - For UI/CSS problems: MEASURE the rendered page (ask the user for a DevTools
+    Computed/Styles reading) instead of inferring from stylesheets. Three apps
+    (frappe, hrms, quality_dms) override the same layout properties with
+    !important; reading the .scss alone repeatedly produced wrong diagnoses and
+    wasted a lot of the user's time.
+  - VERIFY BEFORE WARNING. Two claims this session turned out to be wrong on closer
+    inspection (the "unprotected" task.json, and an Overdue risk that cannot
+    actually fire because exp_end_date is null). Check the specific instance
+    before telling the user something is at risk.
+  - Do not push, and do not analyse the Mercury customer PDFs, until asked.
+
+--------------------------------------------------------------------------------
+OPEN ITEMS
+--------------------------------------------------------------------------------
+  [ ] Management's "project report" suggestion — ask the user for the brief.
+  [ ] Mercury's 4 real customer PDFs — user hands them over one at a time.
+  [ ] Stage 6: Packing Slip(s) on MAT-DN-2026-00003, then submit the DN.
+  [ ] "Delivered" on a fresh machine: the Custom Field imports UNTICKED because the
+      checkbox VALUE lives on the Company record (master data, not a fixture).
+      Decide: document the manual tick, or add an after_migrate hook in mercury.
+  [ ] "Delivered" list-view badge has no colour (task_list.js colour map is
+      hardcoded and has no Delivered key). Cosmetic. Fix with a listview override
+      in mercury if anyone cares.
+  [ ] IF exp_end_date is ever set on Mercury tasks: set_tasks_as_overdue will flip
+      Delivered -> Overdue nightly. Override update_status from the mercury app;
+      do NOT patch erpnext core. Cannot fire today (all end dates are null).
+  [ ] RE-APPLY UI FIXES after any future pull/merge -> documents/PROJECT_UI_CHANGES.md.
+  [ ] Consider fixing the UI defects AT SOURCE in hrms/quality_dms instead of
+      overriding them in mercury — see section 6 of that doc.
+  [ ] Nested "cockpit" sidebar (needs 2 user decisions — see TODO section below).
+  [ ] PHASE 2 (custom): Shipment Acknowledgement DocType + customer QR-scan portal.
+      The Phase-1 QR payload is already Phase-2 ready:
+      {site}/shipment-ack?dn=<DN>&item=<item_code>&sr=<serial>
+  [ ] PATH 2 (deferred): sbiqc_provisioning desk-access gate for real multi-user login.
+  [ ] "web docs/" is GITIGNORED (.gitignore:26) — the step-by-step guide lives only
+      on this machine. Decide whether to track it.
+################################################################################
+
+GOAL
+----
+Show Alex (Mercury) a working ERPNext demo covering the manufacturing workflow
+using standard modules (config only, no code). Phase 1 = 8 stages. Phase 2 =
+small custom shipment-acknowledgement add-on.
+
+Reference docs (in "web docs/"):
+  - Mercury_ERP_Feasibility_Report.docx
+  - Mercury_ERP_Phase1_Phase2_Build_Plan.md
+  - Workspace_Replication_Guide_UI.md
+  - mercury_phase1_stepbystep_guide.txt   (stage-by-stage, filled as we go)
+
+The 8 stages -> modules:
+  1 PO intake            -> Selling (Sales Order)
+  2 Design review / RTM  -> Workflow on Sales Order
+  3 Raw material         -> Buying (Material Request -> PO -> Purchase Receipt)
+  4 Fabrication/assembly -> Projects (Task 0/50/100%) [+ Manufacturing optional]
+  5 Inspection           -> Quality Management (Quality Inspection)
+  6 Packaging/QR/serials -> Stock (Packing Slip, Delivery Note, Serial No)
+  7 Milestone invoicing  -> Accounts (Payment Terms Template)
+  8 Progress % + report  -> Projects + Print Format
+
+--------------------------------------------------------------------------------
+COMPLETED SO FAR
+--------------------------------------------------------------------------------
+
+[1] THIN "mercury" APP (config container, git-tracked)  — 2026-07-23
+  - Created via: bench new-app mercury --no-git ; bench --site mysite.local install-app mercury
+  - Purpose: hold Mercury config as fixtures per .claude/rules.md (JSON = source of truth).
+    NOT a product like quality_dms; near-empty; Alex never sees it.
+  - hooks.py fixtures = [Workspace, Workspace Sidebar, Desktop Icon] (filtered to Mercury).
+  - Exported: apps/mercury/mercury/fixtures/{workspace,workspace_sidebar,desktop_icon}.json
+
+[2] "Mercury" WORKSPACE + navigation  — 2026-07-23
+  - Public workspace "Mercury" titled "Mercury — Manufacturing Journey" with 7 tiles:
+    Sales Order, Purchase Order, Project, Quality Inspection, Packing Slip,
+    Delivery Note, Sales Invoice (each a DocType-list shortcut, colour-coded).
+  - KEY v16 LEARNINGS (why it kept not showing):
+     * Desk groups workspaces into apps by module -> Module Def.app_name (NOT the
+       workspace "app" field). Set workspace module = "Setup" so it groups under ERPNext.
+     * The Workspaces FLYOUT is built from Desktop Icon records (each links to a
+       Workspace Sidebar). Had to create: a Workspace Sidebar "Mercury" (Overview
+       item first, then the 7 stage links) + a Desktop Icon "Mercury"
+       (link_type=Workspace Sidebar, parent_icon=ERPNext, app=erpnext, icon_type=Link).
+     * Left Home sidebar = items of the "Home" Workspace Sidebar -> added a "Mercury"
+       item there too.
+     * CACHE GOTCHA: get_desktop_icons caches in a "desktop_icons" Redis hash that
+       `bench clear-cache` does NOT flush. Must delete keys "desktop_icons" + "bootinfo"
+       (done via console) OR make the change through the UI (UI clears it per-session).
+     * The Workspace "public" field is READ-ONLY in the v16 form by core design; public
+       workspaces are made via the desk "Create Workspace" dialog (has Public toggle for
+       Workspace Managers) — that dialog/button is hidden in this SBIQC-customized desk.
+  - Result: Mercury shows in the ERPNext Workspaces flyout AND the left Home sidebar,
+    and clicking it opens the Mercury journey page. CONFIRMED WORKING.
+
+[3] STAGE 1 — PO INTAKE (Sales Order)  — 2026-07-23  DONE
+  - Step 0 masters created by user: Company "Joel Refineries", Customer "Joel",
+    Item "MERCURY-001 / Mercury Vacuum Pump", warehouse auto-created.
+  - Created Sales Order SAL-ORD-2026-00002 (Draft): item qty 1 @ 12,000;
+    Customer's Purchase Order = PO-JOEL-2026-0723 (More Info tab).
+  - Documented in mercury_phase1_stepbystep_guide.txt (purpose, prerequisites, steps,
+    field table w/ tab locations, expected outcome, gotchas).
+  - Correct that it stays in DRAFT — Stage 2 workflow moves it out.
+
+[4] INSTANCE BUG FIXED — Sales Order "is_subcontracted"  — 2026-07-23
+  - Saving Sales Order threw: AttributeError 'SalesOrder' has no attribute 'is_subcontracted'.
+  - Cause: working-copy apps/erpnext/.../sales_order/sales_order.json had been locally
+    modified with many standard v16 fields stripped (127 ins / 194 del vs release).
+  - Fix: git checkout -- that file (restored is_subcontracted etc.) + bench migrate.
+  - Audited 5 other modified erpnext doctype JSONs (contract, project, task,
+    purchase_receipt, issue): all had 0 net fields missing vs release -> NOT damaged.
+    sales_order.json was the only broken one.
+
+--------------------------------------------------------------------------------
+TODO TASKS
+--------------------------------------------------------------------------------
+
+[ ] PATH 2 — Fix sbiqc_provisioning desk-access gate for demo users
+    - manager@joel.com (Sales Manager) + engineer@joel.com (Sales User) created,
+      System User, enabled, password set. Login POST = 200 (succeeds) but every desk
+      page returns "Not Permitted"/403, incl. /desk/mercury; forced landing is
+      /app/sbiqc-provisioning which 403s.
+    - Cause: sbiqc_provisioning gates desk access + forces its page as home; new users
+      not whitelisted.
+    - Action: investigate (read-only) sbiqc_provisioning desk-access logic + home-page
+      setting, then whitelist demo users so real role-based login works.
+    - Status: DEFERRED. Demo runs as Administrator (all roles, bypasses gate); role
+      separation explained verbally + shown via Workflow "Allowed Role" config.
+
+[5] STAGE 2 — RTM APPROVAL WORKFLOW (Sales Order)  — 2026-07-24  DONE
+  - Workflow "Mercury RTM Approval" (Active) on Sales Order. States: Draft(0),
+    Submittal Under Customer Review(0), Revision Requested(0), RTM Approved(1=Submitted).
+    Transitions: Send for Customer Review / Approve RTM / Request Revision /
+    Resubmit for Review (roles: Sales User / Sales Manager).
+  - TESTED end-to-end on SAL-ORD-2026-00002 (customer Hilton): Draft -> Customer Review
+    -> RTM Approved (order submitted). Actions menu shows the allowed buttons.
+  - Exported to mercury fixtures: workflow.json, workflow_state.json,
+    workflow_action_master.json (per rules.md).
+  - Note: a leftover inactive "Sales Order RTM Approval" workflow exists (pre-existing,
+    harmless; only one Active per doctype). Can be deleted later.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 2 section).
+
+[6] STAGE 3 — RAW MATERIAL PROCUREMENT (Buying)  — 2026-07-24  DONE
+  - Prereqs: Supplier "Steel & Alloys Co." (Raw Material grp, USD); raw-material Item
+    "Steel Casting" (RM-STEEL, Stock, Purchase).
+  - Chain built + submitted: Material Request MAT-MR-2026-00001 (Received) ->
+    Purchase Order PUR-ORD-2026-00001 ($2,120, fully received) ->
+    Purchase Receipt MAT-PRE-2026-00001. Raw material received into Stores - JR.
+  - "To Bill" status = supplier invoice not entered (out of scope; receipt is what matters).
+  - Also this session: renamed stray warehouse "Joel-Primary warehouse - JR" ->
+    "Mercury Finished Goods - JR" (SO auto-updated). Company already named "Mercury"
+    (abbr stays JR - cosmetic, not worth changing). Customer display name fixed to "Joel".
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 3 section).
+
+[7] STAGE 4 — FABRICATION/ASSEMBLY PROGRESS 0/50/100% (Projects)  — 2026-07-27  DONE
+  - Project PROJ-0001 "Mercury Vacuum Pump - Joel (SAL-ORD-2026-00002)", Customer Joel,
+    % Complete Method = Task Progress, Type External.
+  - 7 Tasks (manufacturing stages): Raw Material Procurement 100, Fabrication 50,
+    Assembly/Inspection/Cleaning/Packaging/Shipping Prep 0. Task field = "% Progress"
+    (Timeline section).
+  - Project % Completed rolls up to 21% (150/7). Matches Mercury's simple 0/50/100 model.
+  - Gotcha: default method "Task Completion" showed 14% (counts only fully-done tasks);
+    switched to "Task Progress" -> 21%.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 4 section).
+
+[8] STAGE 5 — INSPECTION (Quality Management)  — 2026-07-27  DONE
+  - Template "Mercury Steel Casting QC" (Surface Finish, Hardness HB 180-220,
+    Dimensional Tolerance).
+  - QI MAT-QA-2026-00001 (Accepted, submitted): Incoming, Reference = Purchase Receipt
+    MAT-PRE-2026-00001, Item RM-STEEL, Sample 1.
+  - v16 constraints learned: (a) QI needs a mandatory reference doc (no standalone) —
+    so this is INCOMING on raw material; finished-pump QI = OUTGOING vs Delivery Note
+    in Stage 6. (b) Item needs "Inspection Required before Purchase" ticked to appear
+    in the QI item dropdown (item_query filters on it). (c) Non-numeric reading passes
+    only if Reading Value == Acceptance Criteria Value (exact match), else auto-Rejected
+    and forces overall Rejected; used "Manual Inspection" toggle to accept.
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 5 section).
+
+  - NOTE: fund-raising feasibility detour done 2026-07-27 (see workprogress_fundraising.txt);
+    Mercury resumed 2026-07-29.
+
+[9] STAGE 6 — PACKAGING + QR LABEL + COMPONENT TRACKING (Stock)  — 2026-07-29  DONE
+    (all sub-parts 6a-6e complete)
+  - Requirement expanded: deliverable is a KIT (pump + accessories that vary pump-to-pump).
+    Decision: KEEP the existing pump order (SAL-ORD-2026-00002); add accessories as extra
+    lines on the Delivery Note (not a Product Bundle / not a new SO). Tradeoff: accessories
+    are delivered-but-not-ordered — acceptable for "ships with the pump".
+  - Component items created: BOLT-M16 (qty-tracked), NUT-M16 (qty-tracked),
+    FUSE-10A (serial-tracked). Pump MERCURY-001 now serial-tracked. Mixed tracking:
+    pump+fuse = Serial No; bolts+nuts = quantity. (Electrical parts like a fuse -> serial
+    or batch for traceability; commodity parts -> qty.)
+  - v16 GOTCHA: "Has Serial No" was disabled until Stock Settings -> Serial & Batch Item
+    -> "Activate Serial / Batch No for Item" was turned ON (off by default). Then serial
+    series set: pump MP-.#####, fuse FU-.#####.
+  - Stock Entry (Material Receipt) MAT-STE-2026-00002: pump MP-00001 x1 (8000), fuse
+    FU-00001 x1 (50), bolt x4 (5), nut x4 (2) -> Mercury Finished Goods - JR.
+    v16 GOTCHA: zero valuation rate blocks receipt -> gave nominal Basic Rates (valuation,
+    != Item Price/selling price). Serials entered via row "Use Serial No / Batch Fields".
+  - Delivery Note MAT-DN-2026-00002-1 (amended): pump line from SO + added FUSE-10A x1,
+    BOLT-M16 x4, NUT-M16 x4. Submitted.
+    v16 GOTCHA: Packing Slip can ONLY be made for a DRAFT Delivery Note. We had submitted
+    the DN, so: Cancel -> Amend (-> new draft "-1", the "-N" suffix = amendment number,
+    normal) -> create Packing Slip -> submit DN. (Lesson: make Packing Slip BEFORE submit.)
+  - QR SHIPPING LABEL (headline) DONE: Print Format "Mercury Shipping Label" (Delivery Note,
+    Custom Format). Shows MERCURY header + QR + Customer/PO/DN/date + component table with
+    serials. LIGHT CUSTOM: v16 has no built-in QR-in-print -> added jinja helper
+    mercury.utils.qr_base64 (uses pre-installed pyqrcode) + hooks jinja={"methods":[...]}.
+    Requires bench restart to load. Serials in print via get_serial_or_batch_nos(bundle).
+  - 6e DONE: Outgoing Quality Inspection on the finished pump (Type=Outgoing, Reference=
+    Delivery Note MAT-DN-2026-00002-1, Item MERCURY-001, template "Mercury Pump Final QC",
+    Manual Inspection, Accepted, submitted). Needed Item "Inspection Required before
+    Delivery" flag (Quality tab).
+  - Stage 6 fully documented in mercury_phase1_stepbystep_guide.txt (6a-6e + gotchas).
+  - TODO (rules.md): export the "Mercury Shipping Label" Print Format (and the Mercury
+    Pump Final QC template) to mercury fixtures.
+
+[10] STAGE 7 — MILESTONE INVOICING (Accounts / Payment Terms Template)  — 2026-07-29  DONE
+  - Payment Terms Template "Mercury 30/40/30 Milestones" (30% On RTM Approval / 40% On
+    Shipment / 60d / 30% On Delivery). Master doc (Save only, no Submit).
+  - Sales Invoice ACC-SINV-2026-00065 (from Delivery Note MAT-DN-2026-00002-1), template
+    applied -> Payment Schedule 30/40/30 of grand total $12,720 (incl 6% tax) =
+    3,816 / 5,088 / 3,816. Submitted (Unpaid).
+  - Applied on the INVOICE (SO submitted + amend blocked by linked DN).
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 7).
+  - TODO (rules.md): export Payment Terms Template to mercury fixtures.
+
+[11] STAGE 8 — PROGRESS % + MONTHLY REPORT (Projects + Print Format)  — 2026-07-29  DONE
+  - Print Format "Mercury Monthly Progress Report" on Project (Custom Format). Fetches the
+    project's Tasks live via frappe.get_all (verified works in v16 print Jinja), shows
+    overall % bar + per-stage status/progress bars.
+  - Verified on PROJ-0001: renders 21% overall + 7 stages (Raw Material 100, Fabrication
+    50, rest 0). No bench restart needed (standard frappe.get_all, no custom hook).
+  - Minor: Customer prints "—" if Project.customer empty (cosmetic; set it to Joel).
+  - Documented in mercury_phase1_stepbystep_guide.txt (Stage 8).
+  - TODO (rules.md): export this Print Format to mercury fixtures.
+
+================================================================================
+*** PHASE 1 COMPLETE (2026-07-29) — all 8 manual stages done, config-only. ***
+   Foundation + Stages 1-8. Only custom code in Phase 1 = the ~3-line QR jinja helper.
+================================================================================
+
+[DEMO PREP] — 2026-07-30
+  - Prepared management-facing DEMO TOUR / narration scripts (practice aids, delivered
+    in chat; NOT added to the step-by-step guide doc):
+      * Stage 6 tour — "From Finished Build to Shipped": kit on one Delivery Note ->
+        per-component serial/qty tracking (pump MP-00001, fuse FU-00001) -> Packing Slip
+        -> QR Shipping Label (headline) -> Outgoing QI. Framed on Mercury pain points
+        (lost components / no barcode / no proof of receipt) + likely-Q&A answers.
+      * Stage 7 tour — "Milestone Billing Without the Complexity": Payment Terms Template
+        (30/40/30) -> Sales Invoice ACC-SINV-2026-00065 Payment Schedule
+        (3,816/5,088/3,816 of $12,720). Framed on Alex's "too complex to automate" concern.
+  - Each tour = hook + click-by-click beats + closing + anticipated management questions.
+  - PENDING (optional): Stage 8 (Monthly Report) tour; a combined one-page DEMO-SCRIPT
+    ARTIFACT (Stages 6-8) for a second screen during the presentation.
+
+[12] MGMT FEEDBACK #1 — PER-COMPONENT QR LABELS + MERCURY LOGO  — 2026-08-04  DONE
+  ASK: "we don't want one QR for the whole bundle — every component must have its own
+  shipping label so the customer scans and acknowledges each one" (so no loose part is
+  missed). Later refined: 7 physical units => 7 labels, even when 2-3 are the same item.
+  - KIT CHANGED (user's instruction): dropped BOLT-M16 / NUT-M16 from the shipment (the
+    Item records still exist, just not in the kit) and added 3 real accessories, all
+    SERIAL-TRACKED so each unit has a unique identity:
+      BFV-8  8" Butterfly Valve   (BV-.#####)  qty 2
+      LG-01  Level Gauge          (LG-.#####)  qty 1
+      EJ-8   8" Expansion Joint   (EJ-.#####)  qty 3
+    + MERCURY-001 pump qty 1 => 7 units total. All have "Inspection Required before
+    Delivery" ticked (consistent with the pump).
+  - Stock Entry MAT-STE-2026-00004 (Material Receipt, ONE entry, 7 rows - user explicitly
+    wanted a single receipt) into Mercury Finished Goods - JR: MP-00002, BV-00001,
+    BV-00002, LG-00001, EJ-00001, EJ-00002, EJ-00003. One row per serial is forced by
+    serial tracking - that is normal, not a qty bug.
+  - NEW Delivery Note MAT-DN-2026-00003 (DRAFT, $18,800): 4 lines / 7 units.
+    WHY A NEW DN: the old MAT-DN-2026-00002-1 is submitted AND Sales Invoice
+    ACC-SINV-2026-00065 is built on it, so swapping its items would have meant cancelling
+    the Stage 7 invoice. Old DN + SI left intact as Stage 6/7 evidence. Kept DRAFT on
+    purpose so Packing Slips can still be attached (Packing Slip needs a draft DN).
+  - v16 GOTCHA: serial auto-generation failed with "naming series conflict" because
+    tabSeries had NO counter rows for MP-/BV-/LG-/EJ- while MP-00001 already existed.
+    Fixed by supplying serials explicitly (use_serial_batch_fields=1 + serial_no) and
+    syncing tabSeries (MP-=2, BV-=2, LG-=1, EJ-=3) so UI creation increments correctly.
+  - PRINT FORMAT "Mercury Shipping Label" REWRITTEN (was: 1 label + 1 bundle QR):
+      * page 1 = SHIPMENT MANIFEST listing all 7 units (Label 1/7..7/7, serial,
+        "Unit 2 of 3") - this is the receiver's tick-sheet.
+      * then ONE FULL LABEL PAGE PER UNIT (7 pages): component name/code, its serial in
+        large mono, LABEL n OF 7, Unit n of N, DN/date/customer/customer PO, own QR.
+      * Loop builds a flat unit list from each row's serials (falls back to one label per
+        line for any non-serialised item), so it adapts to any DN.
+      * QR PAYLOAD IS NOW PER-UNIT and Phase-2 ready (was doc.name => identical on every
+        label): {site}/shipment-ack?dn=<DN>&item=<code>&sr=<serial>. Verified all 7
+        payloads distinct. Phase 2 form can pre-fill for that exact unit.
+      * Old bundle version backed up at /tmp/mercury_label_BACKUP_bundle_qr.html.
+  - MERCURY LOGO added to all 8 headers. Stored as a FILE, not a DB record:
+    apps/mercury/mercury/public/images/mercury_logo.png (+ .svg kept for future large
+    format). Served via the existing sites/assets/mercury symlink at
+    /assets/mercury/images/mercury_logo.png. Had to create the missing public/ dir.
+    Logo sizing is ONE jinja var: {% set logo_w = 106 %} used by all 8 headers.
+    THREE REAL BUGS FOUND AND FIXED (all worth remembering):
+      (a) user's 1199x674 PNG was mostly empty padding - the wordmark only occupied
+          y=264..428. Sizing by height sized the PADDING. Cropped to the ink bbox with
+          PIL => 1173x164 (true aspect 7.152:1), transparent bg preserved.
+      (b) hardcoding BOTH width and height (200x31 = 6.45:1) stretched the logo ~11%
+          vertically. Now width only + height:auto => distortion is impossible.
+      (c) PREVIEW vs PDF MISMATCH (logo huge in Chrome preview, correct in PDF):
+          frappe/www/printview.py injects a legacy "mozilla hack for images in table":
+            body:last-child .print-format td img { width: 100% !important; }
+          Our logo sits in a <td>, and !important beats ANY inline width, so the preview
+          stretched it to the full table cell while the PDF honoured 106px. FIX: wrap the
+          img in <div style="width:{{logo_w}}px"> and give the img width:100% - the forced
+          100% then resolves to logo_w, so preview and PDF match. Comment left in the
+          format so nobody "fixes" it back. REMEMBER THIS for any print format image.
+  - FIXTURES EXPORTED (rules.md) - enabled the 3 commented placeholders in mercury
+    hooks.py and ran bench --site mysite.local export-fixtures --app mercury:
+      print_format.json              -> Mercury Shipping Label, Mercury Monthly Progress Report
+      payment_terms_template.json    -> Mercury 30/40/30 Milestones
+      quality_inspection_template.json -> Mercury Pump Final QC, "Mercury Steel Casting QC."
+    NOTE the trailing period in "Mercury Steel Casting QC." (typo in the record name;
+    harmless but rename later if it bothers anyone).
+  - WHERE THINGS LIVE (asked by user): the logo is a FILE ON DISK in the mercury app
+    (git-tracked, served via /assets), NOT in the DB and NOT embedded in the print format.
+    The Print Format is a DB record whose HTML only holds the URL string; exporting it to
+    fixtures puts that HTML into git as JSON. So a fresh machine needs: git pull +
+    bench migrate (imports fixtures) + the app installed (creates the assets symlink).
+  - STILL OPEN on this stage: DN MAT-DN-2026-00003 cannot be SUBMITTED until each of the
+    4 items has an Outgoing Quality Inspection (all have "Inspection Required before
+    Delivery"). Decide: raise 3 more QIs, or untick the flag on the accessories.
+    Also not yet done: Packing Slips (the per-freight-box "Option B" grouping).
+
+[13] PROJECT MODULE + DESK UI FIXES  — 2026-08-04/05  DONE (pushed 38932a7b4)
+  Triggered by: the Mercury demo should not show a "Defects" panel on the Project
+  Summary tab (DMS/SBIQC vocabulary, always 0 on a manufacturing project). Grew into
+  fixing several real desk defects found along the way.
+  - COLLAPSIBLE Tasks/Defects accordions on the Project Summary tab, in
+    apps/erpnext/erpnext/projects/doctype/project/project.js
+    (function show_task_defect_summary_tab). Header = chevron + icon + title + count
+    badge + "View All"; grid-template-rows 0fr->1fr animation; keyboard accessible;
+    theme variables so dark mode is correct.
+    STATE RULE (took 3 attempts): Defects CLOSED on every login, stays open once the
+    user opens it, resets on logout->login. Implemented with sessionStorage keyed by
+    frappe.csrf_token.
+    *** DO NOT "SIMPLIFY" THAT KEY. localStorage outlives the session; plain
+    sessionStorage survives logout->login in the same tab; and keying on the sid
+    cookie CANNOT work because frappe/auth.py:394 sets sid httponly=True so JS can
+    never read it (the key silently degrades to a constant - it LOOKS right). Only
+    frappe.csrf_token (exposed in frappe/www/desk.html:56) is reissued per login. ***
+  - DESK SHELL FIXES, all as ADDITIVE CSS in our own app:
+    apps/mercury/mercury/public/css/mercury_desk.css, loaded via
+    hooks.app_include_css (bump the ?v= when editing; currently v=14).
+    NO frappe/erpnext/hrms file is patched - commenting out that one hook line
+    reverts everything. mercury_desk.css MUST stay LAST in app_include_css or its
+    !important overrides lose to hrms/quality_dms.
+    Fixed: 3 scrollbars -> 1; page head genuinely pinned; tab bar pinned flush with
+    no gap; right form sidebar no longer clipped.
+  - ROOT CAUSES (most of these are OUR OWN apps, not frappe):
+      * hrms/public/css/layout_global.css:137 forces overflow-y:auto !important on
+        .form-sidebar -> a 2nd scrollbar on every form. (Overriding the PARENT
+        .layout-side-section does nothing; it targets the child.)
+      * quality_dms/public/css/quality_dms.css:862 sets
+        body.dms-theme .page-head { position: relative } which outranks core's
+        position:sticky (0,2,1 vs 0,1,0) -> the page head scrolled away desk-wide.
+        LESSON: re-assert POSITION, not just TOP, when something will not stick.
+      * frappe form_sidebar.scss:281 sizes .form-sidebar to
+        var(--form-sidebar-width) = 277px while hrms forces the COLUMN to 250px ->
+        27px overflow clipped by .main-section overflow-x:hidden. Padding the column
+        cannot fix a fixed-width child; the CARD had to be told to fit.
+      * nothing sets overflow on html/body, so the document scrolled too (outer bar).
+      * position:sticky resolves against the nearest ancestor with a SCROLLING BOX,
+        and overflow:hidden counts as one (page.scss:105) -> sticky silently
+        re-parented and drifted.
+      * the "empty band" above the tabs was TWO things: the card's own top inset
+        (quality_dms padding/margin) AND a positive top offset, because the tab bar's
+        sticky container already starts below the head. Correct value is top: 0.
+  - MERGE PROTECTION added (colleagues resolve conflicts with Claude):
+      * CLAUDE.md has a "PROTECTED UI FIXES" section - Claude Code reads it
+        automatically in this repo, including during conflict resolution.
+      * a PROTECTED banner sits directly above show_task_defect_summary_tab, so the
+        warning appears inside the conflict hunk itself.
+      * a PROTECTED header in mercury_desk.css covering load order + ?v=.
+      * documents/PROJECT_UI_CHANGES.md = the re-apply guide: exposure per file, the
+        root-cause table with file:line, deliberate trade-offs, a 10-point
+        verification checklist, and cherry-pick commands.
+  - TRADE-OFFS accepted: the form sidebar is no longer sticky (price of one
+    scrollbar); scrollbars inside .page-container are hidden (scrolling still works).
+
+[14] MERGES + GIT CONSOLIDATION  — 2026-08-04/05
+  - Branch consolidation: paul-update2 -> paul-update (local + remote are now one
+    branch). Verified first that the old local paul-update was fully contained in
+    paul-update2, so no commits were lost.
+  - Merged hephzibah/DMS (2 commits: DMS sidebar relabel + Summary stat tiles).
+    Clean; verified our mercury files were byte-identical afterwards.
+  - Merged hephzibah/staging-deployment 2026-08-05 (4 commits: DMS versioning
+    workflow + Repository/Workbench split + Key Metrics restyle, SBIQC login page
+    redesign, gated production deploy job). CLEAN, no conflicts.
+    project.js was NOT touched by it, so the accordion work could not conflict.
+    Verified after the merge: git diff pre-staging-merge HEAD over project.js,
+    apps/mercury, CLAUDE.md and documents/ = EMPTY, plus a 22-point marker script
+    all OK, plus mercury_desk.css still LAST in app_include_css.
+    MIGRATED 2026-08-05 (clean: zero errors, zero failed patches). Also flushed the
+    desktop_icons / bootinfo / wkhtmltopdf_version redis keys by hand, because
+    `bench clear-cache` does not touch those hashes and the merge changed the DMS
+    sidebar. Verified mercury_desk.css is still LAST in app_include_css (slot 7).
+  - Rollback tags: pre-dms-merge (3c8dd4878), pre-staging-merge (38932a7b4).
+  - PRE-MERGE HABIT THAT PAID OFF: always scope first (rev-list --left-right --count,
+    merge-base, diff --name-only filtered to our protected files) and tag a rollback
+    point BEFORE merging. Both merges turned out far smaller than feared.
+
+[15] TASK "DELIVERED" STATUS, GATED PER COMPANY  — 2026-08-05  DONE (pushed 015e556ae)
+  ASK: add a "Delivered" option to the Task status dropdown, but only for the Mercury
+  work — not for the DMS/SBIQC projects that share the same Task doctype.
+  - FIRST FINDING (worth knowing): the statuses on this bench are NOT all stock v16.
+    Upstream v16 ships  Open / Working / Pending Review / Overdue / TEMPLATE /
+    Completed / Cancelled.  This bench shows "Hold" instead of "Template", and the
+    Issue field relabelled to "Defect" — both from commit 90f263546 (James,
+    2026-07-27), which edited the erpnext core task.json directly. That IS committed
+    and pushed in the bench repo; it only looks unstaged if you run git status inside
+    apps/erpnext (a separate nested repo). Nothing to fix.
+  - THE CONSTRAINT: Frappe Select options are DOCTYPE METADATA. There is no
+    per-record / per-project variant in v16. So the option must be added doctype-wide
+    and then scoped by other means. Four pieces:
+        Property Setter "Task-status-options"
+            appends Delivered between Completed and Cancelled.
+        Custom Field    "Company.allow_delivered_task_status"  (Check)
+            the opt-in gate. Renders on the Company form, Details tab, top section,
+            between "Company" and "Abbr". Ticked on Mercury ONLY.
+        Client Script   "Mercury - Delivered Task Status"  (Task, Form)
+            strips Delivered from the dropdown unless the task's company opted in.
+            Never strips it when the SAVED record already is Delivered, or the
+            control renders blank and an ordinary save silently clears the status.
+        mercury/task_status.py via hooks doc_events["Task"]["validate"]
+            throws if the company has not opted in.
+  - *** THE CLIENT SCRIPT IS COSMETIC. THE validate HOOK IS THE CONTROL. *** A REST
+    call, a Data Import or frappe.db.set_value never runs client JS. Both are needed;
+    the script alone is not a permission boundary. That warning is written into the
+    script header so nobody deletes the hook as redundant.
+  - WHY A CHECKBOX AND NOT A COMPANY NAME: the user first suggested matching
+    "Mercury"/"MERCURY"/"mercury" case-insensitively. Rejected — Company is a LINK
+    field, so its value is always the exact record name and case variants cannot
+    exist; fuzzy matching buys nothing and WOULD also catch a future "Mercury Freight
+    Ltd". The checkbox also means enabling a second company is a click, not a code
+    edit, and both the client and server read the same flag.
+  - VERIFIED: Delivered saves on a Mercury task (TASK-2026-00007); blocked with a
+    validation error on a Hephzibah Technologies India task. Both tests wrapped in a
+    transaction and rolled back — PROJ-0001 untouched at 78.57%, no stray test records.
+  - FIXTURES: custom_field.json, property_setter.json, client_script.json, all
+    filtered by module = Mercury. hooks.py fixtures list updated.
+  - KNOWN GAP (open): the checkbox VALUE lives on the Company record, which is master
+    data and NOT a fixture. On a fresh machine the field imports UNTICKED, so
+    Delivered stays hidden until someone ticks it. Decide: document the step, or add
+    an after_migrate hook in mercury.
+  - COSMETIC (open): task_list.js:24 has a hardcoded status->colour map with no
+    Delivered key, so the list-view indicator has no colour.
+  - LATENT, CANNOT FIRE TODAY: set_tasks_as_overdue (erpnext hooks.py:467,
+    daily_maintenance) flips any task NOT in ("Cancelled","Completed") with a PAST
+    exp_end_date to Overdue — it would un-deliver a Delivered task overnight. Every
+    PROJ-0001 task has exp_end_date = None, so it cannot trigger. If end dates are
+    ever added, override update_status FROM THE MERCURY APP; do not patch core.
+    (I initially reported this as a live risk before checking the actual records —
+    check the instance, not just the code path.)
+  - Project % rollup is unaffected: project.py:235 counts only Cancelled/Completed,
+    but PROJ-0001 uses the "Task Progress" method, not "Task Completion".
+
+[16] SECOND staging-deployment MERGE  — 2026-08-05 evening  DONE (fa134009b, UNPUSHED)
+  - 5 commits, merge base cb1875648, CLEAN (no conflicts):
+      4645e2236 fix(login): button colors win over frappe core CSS
+      fb6aaa66d fix(login): cache-bust the login page CSS link
+      e42dfdadf merge origin/staging-deployment
+      7b03508b7 feat(dms): training score history, self-service dashboards, analytics
+      8f1a13727 fix(infra): pin CRLF for shell scripts, guard duplicate icon labels
+  - SCOPED FIRST (the habit that has now paid off three times): diff --name-only over
+    the incoming range showed it touches ONLY quality_dms, sbiqc_provisioning and
+    infra (Dockerfile, .gitattributes, docker-start.sh). NO protected file is in it.
+    Tagged pre-staging-merge-2 (=96eda0dd3) before merging.
+  - TWO THINGS THAT LOOKED RISKY AND WERE CHECKED, NOT ASSUMED:
+      * quality_dms/hooks.py IS in the diff and it owns app_include_css - but the
+        change is only ?v= 26 -> 31 plus two permission-hook entries for the new
+        doctype. mercury_desk.css still loads LAST (slot 7 of 8), so the !important
+        overrides still win. VERIFIED after migrate, not assumed.
+      * quality_dms.css is NOT in the diff, so the body.dms-theme .page-head
+        { position: relative } rule at :862 that we override is untouched.
+  - POST-MERGE VERIFICATION (all green):
+      * git diff pre-staging-merge-2 over project.js, apps/mercury, CLAUDE.md,
+        documents/ and workprogress_mercury.txt = EMPTY.
+      * 20/20 protected UI marker checks pass (/tmp/verify_markers.py).
+      * bench migrate clean - zero errors, zero failed patches. New DocType
+        "DMS Training Score History" + Pages my-training-dashboard and
+        training-analytics all created.
+      * Delivered gate intact after the fixture re-import: Property Setter, Custom
+        Field, Client Script, doc_events hook all present; Mercury still ticked.
+      * Mercury demo data untouched: PROJ-0001 78.57%, MAT-DN-2026-00003 still
+        draft (docstatus 0), both Mercury print formats and the workspace present.
+  - MARKER-SCRIPT GOTCHA: a naive "is the string localStorage present in project.js"
+    check FAILS as a false positive. project.js legitimately contains localStorage
+    in (a) the two warning comments and (b) a deliberate localStorage.removeItem()
+    that clears the stale flag from the first implementation. Only a
+    localStorage.getItem/setItem is an actual regression. The corrected script also
+    positively asserts sessionStorage.getItem/setItem(collapse_key(...)).
+
+--------------------------------------------------------------------------------
+NEXT UP  (post-Phase-1)
+--------------------------------------------------------------------------------
+[ ] EXPORT all pending config to mercury fixtures (rules.md): Shipping Label +
+    Monthly Report print formats, Payment Terms Template, QI templates
+    ("Mercury Steel Casting QC", "Mercury Pump Final QC"). (Workflow/Workspace/Desktop
+    Icon already exported.) Then bench migrate on a fresh DB should reproduce everything.
+[ ] NESTED COCKPIT SIDEBAR — needs 2 user decisions (see TODO section below).
+[ ] PHASE 2 (custom) — Shipment Acknowledgement DocType + customer QR-scan portal
+    (see Mercury_ERP_Phase1_Phase2_Build_Plan.md).
+[ ] PATH 2 (deferred) — sbiqc_provisioning desk-access gate for real multi-user login.
+
+--------------------------------------------------------------------------------
+TODO — AFTER STAGE 8 (needs user decision)
+--------------------------------------------------------------------------------
+[ ] NESTED "COCKPIT" SIDEBAR under the Mercury workspace.
+    Idea (user's): make each stage in the left Mercury sidebar a COLLAPSIBLE PARENT that
+    expands to the doctypes that stage uses — so the demo runs stage-by-stage with every
+    tool in place, no searching. Verified DOABLE in v16 (Workspace Sidebar Item supports
+    type="Sidebar Item Group" + child/indent/collapsible/show_arrow).
+    Proposed structure:
+      Stage 1 · PO Intake & RTM      -> Sales Order, Customer, Item, Company, Workflow
+      Stage 3 · Procurement          -> Supplier, Material Request, Purchase Order, Purchase Receipt
+      Stage 4 · Build Progress       -> Project, Task
+      Stage 5 · Inspection           -> Quality Inspection, QI Template
+      Stage 6 · Packaging & Dispatch -> Stock Entry, Serial No, Delivery Note, Packing Slip, Print Format
+      Stage 7 · Invoicing            -> Sales Invoice, Payment Terms Template
+    DECISIONS NEEDED FROM USER before building:
+      (a) Build via backend + re-export fixture? (recommended; flat UI can't nest easily)
+      (b) Group labels: stage-labeled ("Stage 1 · PO Intake") OR plain doctype names
+          ("Sales Order", "Purchase Order", ...) as parents?
+    Status: DEFERRED until after Stage 8 (finish manual stages first).
+
+[ ] PATH 2 (deferred) — sbiqc_provisioning desk-access gate for real multi-user login.
+
+--------------------------------------------------------------------------------
+STANDING RULES (see CLAUDE.md + .claude/rules.md)
+--------------------------------------------------------------------------------
+- Answer v16-only; verify against docs/source before stating where fields/buttons are.
+- Any DocType/config change -> export to JSON/fixtures + commit (JSON = source of truth).
+- Git: commit locally after each step; only push when user says "promote it".
+- DEMOS RUN ON THE QA SERVER, NOT LOCAL. Every change must survive a fresh
+  `bench migrate` on another machine: fixtures/source files, never DB-only edits.
+
+================================================================================
+[17] PROJECT / TASK MODULE UI ROUND — 2026-08-06 (pre-demo)
+================================================================================
+Boss reviewed the Project + Task modules and asked for changes one at a time.
+Everything below is config or files under apps/ - no frappe/erpnext core patch.
+Pushed to hephzibah/paul-update on 2026-08-06.
+
+17.1 TASK DATE FIELDS — the answer, and a live trap
+--------------------------------------------------------------------------------
+Task has BOTH pairs (verified in erpnext/projects/doctype/task/task.json):
+  exp_start_date / exp_end_date   "Expected Start/End Date"  Datetime, EDITABLE
+  act_start_date / act_end_date   "Actual Start/End Date"    Date, READ-ONLY
+Actuals are derived: task.py:239-240 sets them from Min(from_time)/Max(to_time)
+over SUBMITTED Timesheet Details. No Timesheet => permanently blank.
+
+*** TWO BLOCKERS, BOTH STILL OPEN, BOTH WILL FIRE IN A DEMO ***
+  1. PROJ-0001.expected_end_date = 2026-08-03 (IN THE PAST).
+     task.py:120-136 validate_parent_project_dates throws if ANY task date -
+     expected OR actual - is after the project's expected end date. So no task
+     date can be entered at all, and a Timesheet SUBMIT also fails, because
+     timesheet.py:182 saves the Task and re-runs that validation.
+     FIX: push PROJ-0001's Expected End Date out first.
+  2. Delivered -> Overdue overnight. task.py:319-325 update_status (nightly
+     set_tasks_as_overdue) flips anything not Cancelled/Completed with a past
+     exp_end_date to Overdue. "Delivered" is NOT on that safe list, and
+     TASK-2026-00001 is Delivered. Cannot fire while exp_end_date is null;
+     the moment end dates are set it will.
+     FIX: override update_status FROM THE MERCURY APP. Do not patch erpnext.
+  ALSO: timesheet.py:178-181 force-sets the task to Completed/Working on submit,
+  which DESTROYS a Delivered status. Do not log a Timesheet against TASK-...-00001.
+
+17.2 "(via Timesheet)" removed from the actual-date labels   [7c748dc33]
+--------------------------------------------------------------------------------
+Asked for "list headers only" - NOT achievable. list_view.js:782 renders the
+header from col.df.label, so the header IS the docfield label, and v16 has no
+per-listview label override. Changed doctype-wide via Property Setter instead,
+with a field DESCRIPTION carrying the meaning on the form:
+  "Set automatically from submitted Timesheets logged against this Task."
+Also tagged the 10 untagged in_list_view Property Setters (module was None, so
+they never exported) - all 17 Task Property Setters now reach QA together.
+
+17.3 "% PROGRESS" list header clipped                        [7c748dc33]
+--------------------------------------------------------------------------------
+NOT a layout bug - a CSS class-name COLLISION. list_view.js:774 stamps the
+FIELDNAME on each header cell as a class; Task's percent field is literally named
+"progress", so the cell matched Bootstrap's progress-bar component
+(bootstrap.css:5492 line-height:0 / overflow:hidden, height clamped to 10px by
+list.scss:312) and the label rendered above its box.
+Fixed in mercury_desk.css scoped to .list-row-head ONLY - the BODY cell needs
+that class, it is the bar's track. Do not widen the selector.
+
+17.4 Breadcrumbs                                             [af1e2d9a2]
+--------------------------------------------------------------------------------
+New file apps/mercury/mercury/public/js/mercury_desk.js, loaded via a now-LIVE
+app_include_js. It WRAPS frappe.breadcrumbs.update - core still builds the
+crumbs, we rewrite two hrefs after.
+  home icon  -> the module workspace  (was "/desk", which workspace.js:137-155
+                resolves to localStorage.current_page = the LAST WORKSPACE THAT
+                BROWSER VISITED. Unstable across machines; on a fresh QA browser
+                it lands on workspaces[0], not Projects.)
+  "Projects" -> the Project list      (mercury.breadcrumbs.CRUMB_TARGETS)
+  "Task"     -> Task list             (already correct in core, untouched)
+TRAPS: the core class is misspelled "worksapce-breadcrumb" (breadcrumbs.js:140) -
+"correcting" it makes the selector miss. CRUMB_TARGETS is keyed on the workspace
+ROUTE, not the label, because the label passes through __().
+NOTE: hiding the workspace crumb on list routes was built [f260af6b1] and then
+REVERTED at the user's request [bb7a58eca]. Both "Projects" crumbs are intended.
+
+17.5 Projects workspace — number cards + "Light Aurora" design
+--------------------------------------------------------------------------------
+[94d6516fd] Cards filled only HALF the row. Cause was OUR app: quality_dms.css
+  had `.ce-block:has(.number-widget-box) { flex: 0 0 12.5% !important }` - right
+  for the DMS workspace's 8 Key Metrics cards, wrong for Projects' 4, because
+  quality_dms.js:120 deliberately puts .dms-theme on the Projects route too.
+  Fixed AT SOURCE with `flex: 1 1 0`: 8 cards -> 12.5%, 4 -> 25%, N -> 100/N.
+  Do NOT add a min-width - 8 DMS cards are ~105px each and would wrap.
+[b09330592 + 6b423ec90 + 6c8ca9c78 + 56207b6f4] Light Aurora glass cards per the
+  approved mock (Downloads/projects_dashboard_light_aurora.html), in
+  mercury_desk.css scoped to body[data-route="Workspaces/Projects"]
+  (container.js:22 sets data-route from get_route_str()).
+  *** THE SPECIFICITY TRAP, cost a round-trip: quality_dms.css:399-405 has
+  body.dms-theme[data-route^="Workspaces"] .layout-main-section{background:
+  transparent} at (0,3,1). Ours at (0,2,1) LOST regardless of load order - being
+  last in app_include_css does not help against a more specific selector. And it
+  is the `background` SHORTHAND, so it resets background-image too. Our selector
+  must include .dms-theme AND !important. ***
+  Gradient numbers are wrapped in @supports(background-clip:text) - without it
+  color:transparent renders the figure INVISIBLE. Dark mode falls back to plain
+  cards. No web fonts (mock's Inter/Space Grotesk would need self-hosting).
+  Board inset is `padding: 1% 3% 3%`; % padding resolves against container WIDTH
+  on all four sides. Chart cards get NO padding override - 24px stole plot width
+  and frappe-charts truncated its x-labels.
+
+17.6 Task "Assign" tab, assignee mandatory                   [d315b0199]
+--------------------------------------------------------------------------------
+The "Add to ToDo" popup could NOT be moved onto a tab: assign_to.js does not edit
+Task fields, it inserts a ToDo and ToDo.on_update writes the hidden `_assign`.
+It also could not be made mandatory - the dialog needs a SAVED doc, so "cannot
+save without an assignee" + "must save before assigning" deadlocks every new Task.
+So the tab is REAL Custom Fields (mercury fixtures custom_field.json):
+  Assign To (Link User, REQD) · Assign To User Group · Complete By · Priority ·
+  Comment,  under Tab Break custom_assign_tab.
+Placed with insert_after = total_billing_amount (last field of the Dependencies
+tab) => Dependencies idx 28 -> Assign idx 42 -> More Info idx 51.
+mercury/task_assign.py (hooks doc_events Task.on_update) turns the stored value
+into a REAL assignment, so sidebar Assign / ToDo list / notifications / sharing
+all behave natively. on_update not validate: a ToDo needs doc.name.
+Re-assigning CLOSES the old ToDo (verified: old -> Cancelled, new -> Open).
+ONE-WAY by design: the native sidebar dialog does not write back to the field.
+All 9 Tasks were backfilled (Administrator, except 00007/00008 = paul, 00009 =
+engineer1) - without that, reqd=1 makes every existing Task unsaveable on edit.
+"Assign to me" checkbox is NOT on the tab (UI shortcut, not data).
+
+17.7 DMS training pages missing after the staging merge      [36619b420]
+--------------------------------------------------------------------------------
+"My Training Dashboard" / "Training Analytics" were not missing - both Pages
+existed on disk AND in the DB. What was missing were the SIDEBAR LINKS.
+*** ROOT CAUSE, REMEMBER THIS ONE: frappe.modules.import_file SKIPS a standard
+record when the JSON `modified` stamp is not NEWER than the DB row's. James's
+7b03508b7 added the two Page links (plus Curricula and Quizzes) to
+workspace_sidebar/dms.json but left modified at 2026-07-06 20:45:00 - byte
+identical to what every database already held. So every `bench migrate` since
+skipped the file UNREAD, and still reported success. ***
+Fixed by bumping the stamp IN THE FILE, not by forcing a local re-import - a
+forced import fixes one bench and leaves QA broken the same way.
+
+17.8 The wider DMS drift sweep — FOUND, FIXED, THEN REVERTED ON REQUEST
+--------------------------------------------------------------------------------
+A sweep of every quality_dms standard record found NINE more in the same trap
+(file differs, stamp not newer => never imports on any bench):
+  Workspace DMS         4th KPI card: Pending Approval -> Approved Documents
+  Number Card x7        short labels ("Documents in Review" -> "Review", ...) and
+                        show_percentage_stats off
+  Dashboard Chart       "Documents by Status": color #1e3a5f + navy custom_options
+                        (DB had null - it has never rendered in DMS colours)
+Applied as [1d97ef045], then the user said the request was a mistake and it was
+REVERTED as [6bfd4f123] - BOTH the files and the DB rows (the migrate had already
+written to the database; a git revert alone would not have undone it). Original
+`modified` stamps were restored too, so these records skip again exactly as before.
+NOT reverted, because they were already pending and ANY migrate applies them:
+Approved / Pending Approval / Rejected Documents cards, Training Compliance by
+Department chart, DMS Module Onboarding.
+Verified separately that there is NO REAL DOCTYPE DRIFT in DMS - the generic scan
+flags every doctype, but that is an artefact (field_order is not a DB column).
+=> The nine findings are REAL and still unapplied. Raise with James rather than
+   re-applying unasked.
+
+17.9 Verification
+--------------------------------------------------------------------------------
+documents/verify_ui_markers.py grew 20 -> 28 checks: the new mercury_desk.js
+markers, the misspelled "worksapce-breadcrumb" selector, the % Progress CSS
+selector, and a regex assert that app_include_js is actually UNCOMMENTED (the
+failure mode where the file exists but never loads). ALL CHECKS PASSED.
+Asset versions now: mercury_desk.css ?v=19, mercury_desk.js ?v=1,
+quality_dms.css ?v=32. mercury_desk.css must stay LAST in app_include_css
+(verified 8 of 8) or the aurora block and the DMS overrides silently lose.
+
+17.10 TEMPLATE TASKS EXEMPT FROM THE MANDATORY ASSIGNEE     [51887868a]
+--------------------------------------------------------------------------------
+A template Task is a blueprint, never worked on, so there is nobody to assign it
+to - an unconditional reqd blocked template creation outright.
+  Custom Field : reqd = 0, mandatory_depends_on = "eval:!doc.is_template"
+  Server hook  : mercury.task_assign.validate_assignee on Task.validate
+*** BOTH HALVES ARE REQUIRED. mandatory_depends_on IS EVALUATED ONLY IN JS
+(frappe/public/js/frappe/form/save.js and form/layout.js). There is NO python
+implementation anywhere in frappe. Set it alone and a probe proves the hole: a
+NON-template Task with no assignee inserts happily, and so does a template
+flipped back to normal. REST / Data Import / db.set_value all bypass it. ***
+Same split as the Delivered gate in task_status.py: field flag = UI, hook =
+control. Task.validate is now a LIST of two hooks; frappe runs every entry.
+Verified server-side: template+no assignee saves · normal+no assignee rejected ·
+normal+assignee saves and still creates the ToDo · template flipped to normal
+with no assignee rejected. 9 real Tasks unaffected.
+
+================================================================================
+[17.11] *** NOTICE — TWO KNOWN BLOCKERS, LEFT UNFIXED ON PURPOSE ***
+================================================================================
+Found 2026-08-06 while answering how to populate the Task date columns. Paul
+tested the demo path, it works for him, and he decided NOT to change these the
+night before the demo. That is a deliberate call, not an oversight.
+
+DO NOT fix them unprompted. Offer, then wait. They are LATENT, not cosmetic -
+each has a precise trigger, and each is a small fix when the time is right.
+
+BLOCKER 1 — PROJ-0001.expected_end_date = 2026-08-03, i.e. IN THE PAST.
+  Mechanism : task.py:120-136 validate_parent_project_dates throws if ANY task
+              date - expected OR actual - falls after the project's expected end
+              date.
+  Triggers  : typing an Expected Start/End Date on any Mercury task; AND
+              submitting a Timesheet, because timesheet.py:182 saves the Task and
+              re-runs the same validation. The Timesheet SUBMIT itself fails.
+  Blast     : both Actual date columns can never be populated while this stands,
+              because Timesheets are the only way to fill them.
+  Fix       : move PROJ-0001's Expected End Date into the future. One field.
+
+BLOCKER 2 — Delivered flips to Overdue overnight.
+  Mechanism : task.py:319-325 update_status, run nightly by set_tasks_as_overdue
+              (erpnext/hooks.py daily_maintenance), flips anything whose status is
+              not Cancelled/Completed and whose exp_end_date is past. "Delivered"
+              is NOT on that safe list. TASK-2026-00001 is Delivered.
+  Triggers  : the first night after ANY exp_end_date is set on a Mercury task.
+              Cannot fire while they are all NULL - which is exactly why blocker 1
+              has been masking blocker 2.
+  Fix       : override update_status FROM THE MERCURY APP. Do NOT patch erpnext
+              core. Add "Delivered" to the terminal set.
+
+RELATED, same area: timesheet.py:178-181 force-sets a Task to Completed/Working
+on Timesheet submit, which DESTROYS a Delivered status. Do not log a Timesheet
+against TASK-2026-00001.
+
+================================================================================
+END — MERCURY WORK PROGRESS
+================================================================================
