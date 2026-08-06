@@ -18,12 +18,27 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest push:** `51887868a` — "Task: exempt template tasks from the mandatory
-assignee" (2026-08-06). Everything below is pushed; nothing is local-only.
+**Latest push:** `1d1854a3f` — "sidebar user avatar: make the initial visible again"
+(2026-08-06). Everything below is pushed.
+
+**Deployed to QA:** yes — PR **#16** (`paul-update` → `staging-deployment`, merged as
+`f1e3606`), then a **manual** Deploy to Staging run. Verified live on `qa.sbiqc.com`:
+Assign tab, real ToDo assignment, Assign To list column.
+
+> ### ⚠️ THE CI NO LONGER DEPLOYS ON PUSH
+>
+> `6a309a4a3` (ponnambalaraju) split the workflows:
+> - **`build.yml`** — runs on push to `staging-deployment` / `production`. **Build only**, pushes images to GHCR.
+> - **`deploy-staging.yml`** / **`deploy-production.yml`** — **`workflow_dispatch` only.** *"this never runs on push."*
+>
+> Merging to `staging-deployment` therefore does **not** reach the QA server. Someone
+> must run **Actions → Deploy to Staging** (tag `latest-staging`) once the build is green.
+> The deploy script runs `bench --site all migrate`, force-reimports the DMS fixtures, and
+> clears the server cache. Assets are baked into the image — no separate `bench build`.
 
 > ### ⚠️ NOTICE — two known blockers, deliberately NOT fixed
 >
-> Both were found on 2026-08-06 while answering how to fill the Task date columns.
+> Both were found on 2026-08-06 while answering how to fill the Task date columns.ok 
 > Paul tested the demo path and it works for him, so these were left alone rather
 > than changed the night before. They are **latent, not cosmetic** — each has a
 > definite trigger:
@@ -68,6 +83,12 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 | # | Commit | Date | Pushed | Summary |
 |---|--------|------|--------|---------|
+| 29 | `1d1854a3f` | 2026-08-06 | yes | sidebar user avatar: initial was white-on-white, made visible |
+| 28 | `4a3ec8800` | 2026-08-06 | yes | remove the square outline around avatars |
+| 27 | `323e1b85a` | 2026-08-06 | yes | list view: **actually** bold the headers and freeze them (27a was a no-op) |
+| 27a | `daf844cb0` | 2026-08-06 | yes | list view: bold + freeze — *no-op, superseded by 27* |
+| 26 | `5088c7186` | 2026-08-06 | yes | merge `staging-deployment` into `paul-update` (CI build/deploy split) — tag `pre-staging-merge-3` |
+| 25 | `9883806eb` | 2026-08-06 | yes | docs: the two known blockers as a standing notice |
 | 24 | `51887868a` | 2026-08-06 | yes | Task: exempt template tasks from the mandatory assignee |
 | 23 | `b8d5110cc` | 2026-08-06 | yes | docs: log the Project/Task UI round in `workprogress_mercury.txt` §17 |
 | 22 | `6bfd4f123` | 2026-08-06 | yes | revert the DMS drift fix (files **and** DB) at the user's request |
@@ -115,6 +136,41 @@ app as additive overrides and no frappe/erpnext/hrms file is patched.
 Rollback-before-this: `3db8740fd`
 
 ## Features by commit
+
+### `daf844cb0` … `1d1854a3f` — list-view polish (2026-08-06) · PUSHED
+
+Bold + frozen column headers, and two avatar defects. All in `mercury_desk.css`
+(`?v=23`). Detail in `workprogress_mercury.txt` §17.12.
+
+| Symptom | Root cause |
+|---|---|
+| Headers not bold after the first attempt | they were **already** 600 — `quality_dms.css:575` sets it at **(0,3,1)** and a bare `.list-row-head .list-row-col` is (0,2,0). They read light because they're 11px uppercase grey, not because of weight. Now 700 + `var(--text-color)` |
+| Header didn't freeze after the first attempt | `list.scss:592-598` makes `.result-container` a scroll container (`overflow-x: auto`), so sticky resolved against it — and it only scrolls *horizontally*. **Third occurrence of the overflow/sticky trap.** Fixed by giving that container its own vertical scroll and pinning at `top: 0` inside it |
+| Square outline around avatars | `quality_dms.css:924-927` rings them with `box-shadow`; a spread follows the element's own `border-radius`, and frappe rounds only the inner pieces — so it drew a square around a circle |
+| Sidebar avatar initial invisible | `quality_dms.css:125-129` paints `.body-sidebar-bottom *` for a navy background, but the avatar sits on its own light circle → white on white. **An external `!important` outranks a non-important inline style**, which is why frappe's inline avatar colour lost |
+
+Rollback-before-this: `5088c7186`
+
+### First QA deploy of this work
+
+PR **#16** merged as `f1e3606`, then a manual Deploy to Staging. Two QA-only symptoms,
+**neither caused by our changes**:
+
+1. **Assign To column blank on QA** — browser cache. The form showed the value and the
+   ToDo existed; only the list was stale. The deploy clears the *server* cache, not the
+   browser's doctype meta. `Ctrl+Shift+R` fixed it.
+2. **No quick-entry popup on QA** — QA-side setting. `quick_entry.js:79-86` builds the
+   dialog from `reqd || allow_in_quick_entry`; our field is `reqd=0 / allow=0`, so it is
+   invisible to that logic (verified locally: `Task.quick_entry = 1`, dialog fields are
+   exactly subject/project/is_template). `is_quick_entry()` only bails on
+   `quick_entry != 1`, a mandatory child table, or no eligible fields — so QA's Task has
+   **`quick_entry = 0`**. Fix there: Customize Form → Task → tick *Allow Quick Entry*.
+
+**⚠️ OPEN — QA / production backfill.** `custom_assign_to` is mandatory on real Tasks, but
+only this bench's 9 Tasks were backfilled. Every other environment still holds Tasks with
+no assignee, which will **refuse to save on first edit**. Offered but not built: an
+`after_migrate` hook in mercury so any environment self-heals on deploy. Decide before
+anyone edits an old Task on QA or production.
 
 ### `7c748dc33` … `51887868a` — Project/Task module UI round (2026-08-06) · PUSHED
 
