@@ -899,6 +899,89 @@ Verified server-side: template+no assignee saves · normal+no assignee rejected 
 normal+assignee saves and still creates the ToDo · template flipped to normal
 with no assignee rejected. 9 real Tasks unaffected.
 
+17.12 LIST-VIEW POLISH — headers, avatars                    [daf844cb0 ->
+                                                              1d1854a3f]
+--------------------------------------------------------------------------------
+(a) BOLD HEADERS + FROZEN HEADER ROW. First attempt [daf844cb0] was a DOUBLE
+    NO-OP; both halves are worth remembering:
+      - `font-weight: 600` changed nothing. quality_dms.css:575 ALREADY sets 600
+        on `body.dms-theme .list-row-head .list-row-col` at (0,3,1); a bare
+        `.list-row-head .list-row-col` is (0,2,0) and loses. The headers read
+        light because they are 11px uppercase letter-spaced grey, NOT because of
+        weight. Fixed with 700 + var(--text-color) at a winning specificity.
+      - `top: var(--page-head-height)` changed nothing. list.scss:592-598 sets
+        `.list-view .frappe-list .result-container { overflow-x: auto }`, which
+        makes that element a SCROLL CONTAINER. position:sticky resolves against
+        it, and it only scrolls HORIZONTALLY - so `top` had nothing to act on.
+        *** THIS IS THE SAME TRAP AS THE FORM TAB BAR, THIRD OCCURRENCE. Any
+        ancestor with overflow on EITHER axis silently re-parents a sticky
+        element. Check the overflow chain FIRST next time. ***
+    Real fix [323e1b85a]: give .result-container its own vertical scroll
+    (max-height: calc(100vh - 250px)) and pin the header at top:0 INSIDE it.
+    Horizontal scroll still works and the header now travels sideways with the
+    columns. Its scrollbar is deliberately re-exposed - the block further up
+    hides every scrollbar inside .page-container, and an invisible inner scroller
+    reads as a broken page. core's `.result { overflow-y: hidden }` is cleared so
+    rows are not clipped. THE 250px IS A MAGIC NUMBER (navbar + page head +
+    filter row + paging) - it is the knob if the list is too short/tall.
+
+(b) SQUARE OUTLINE AROUND AVATARS [4a3ec8800]. quality_dms.css:924-927 adds a
+    decorative ring via box-shadow. A box-shadow spread follows the element's OWN
+    border-radius, and frappe rounds only the inner pieces (.standard-image,
+    avatar.scss:155) - not every .avatar wrapper - so it painted a hard SQUARE
+    around a round avatar. Removed. To restore it as a ring instead of deleting
+    it: `border-radius: 50%` on the same elements.
+
+(c) SIDEBAR AVATAR INITIAL INVISIBLE [1d1854a3f]. quality_dms.css:125-129 paints
+    the footer for a NAVY background with
+      body.dms-theme .body-sidebar-bottom * { color: var(--dms-on-navy) !important }
+    The `*` caught the avatar letter, but the avatar is NOT on navy - it sits on
+    its own light --avatar-frame-bg circle, so the "A" was white on white.
+    *** WHY FRAPPE LOST: an external !important OUTRANKS a non-important INLINE
+    style, and frappe sets the avatar colour inline. *** Restored to frappe's own
+    --avatar-frame-color token (correct in dark mode too), scoped to
+    .body-sidebar-bottom. Diagnosed from a DevTools reading Paul supplied - which
+    is exactly the workflow CLAUDE.md asks for on CSS problems.
+
+Asset version after this round: mercury_desk.css ?v=23.
+
+17.13 FIRST QA DEPLOY OF THIS WORK — what differed, and why
+--------------------------------------------------------------------------------
+Merged staging-deployment INTO paul-update first [5088c7186], then PR #16 ->
+staging-deployment (merged as f1e3606 by HTIPL-Paul), then a MANUAL deploy.
+
+*** THE CI NO LONGER DEPLOYS ON PUSH. *** ponnambalaraju's 6a309a4a3 split it:
+  build.yml            runs on push to staging-deployment/production. BUILD ONLY.
+  deploy-staging.yml   workflow_dispatch ONLY - "this never runs on push".
+So merging to staging-deployment does NOT reach the QA server. Someone must run
+Actions -> Deploy to Staging (default tag latest-staging) after the build goes
+green. The deploy script itself runs `bench --site all migrate`, force-reimports
+the DMS fixtures (see 17.8 - the team already works around that stale-stamp bug
+there), and clears cache. Assets are baked into the image; no separate build.
+
+TWO QA-ONLY SYMPTOMS, BOTH DIAGNOSED, NEITHER OURS:
+  1. "Assign To column is empty on QA" - BROWSER CACHE. The form showed the value
+     and the ToDo existed; only the list was blank. The deploy clears the SERVER
+     cache, not the browser's doctype meta/bundle. Ctrl+Shift+R fixed it. Same
+     symptom seen locally earlier the same day, same fix. The other 33 QA tasks
+     are legitimately blank - QA was never backfilled (see below).
+  2. "No quick-entry popup when adding a Task on QA" - QA-SIDE SETTING, not our
+     field. quick_entry.js:79-86 builds the dialog from `reqd ||
+     allow_in_quick_entry`; our custom_assign_to is reqd=0/allow=0, so it is
+     invisible to that logic. Verified locally: Task.quick_entry=1 and the dialog
+     fields are exactly subject/project/is_template. is_quick_entry() (:95-107)
+     only bails on quick_entry!=1, a mandatory child table, or no eligible
+     fields - so QA's Task has quick_entry = 0. Fix on QA: Customize Form -> Task
+     -> tick "Allow Quick Entry". Check it with
+       bench --site mysite.local execute frappe.db.get_value \
+         --kwargs "{'doctype':'DocType','filters':'Task','fieldname':'quick_entry'}"
+
+[ ] OPEN - QA/PROD BACKFILL. custom_assign_to is mandatory on real Tasks, but only
+    THIS bench's 9 Tasks were backfilled. Every other environment still has Tasks
+    with no assignee, which refuse to save on first edit. Offered but not built:
+    an after_migrate hook in mercury so any environment self-heals on deploy.
+    Decide this before anyone edits old Tasks on QA or production.
+
 ================================================================================
 [17.11] *** NOTICE — TWO KNOWN BLOCKERS, LEFT UNFIXED ON PURPOSE ***
 ================================================================================
