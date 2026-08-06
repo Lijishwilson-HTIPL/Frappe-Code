@@ -350,6 +350,31 @@ body.dms-theme .list-row-head .list-subject .level-item,
 	color: var(--text-color);
 }
 
+/* ------------------------------------------------------------------------
+ * Square outline around avatars (list assignment chips, sidebar user).
+ *
+ * quality_dms.css:924-927 adds a decorative ring:
+ *     body.dms-theme .avatar, body.dms-theme .avatar-frame {
+ *         box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px rgba(47,111,178,.35); }
+ *
+ * A box-shadow spread follows the element's OWN border-radius. frappe rounds the
+ * inner pieces (.standard-image, avatar.scss:155) but not every .avatar wrapper,
+ * so on those the ring paints as a hard square around a round avatar.
+ *
+ * Removed rather than rounded, per the request. If the ring is wanted back, the
+ * one-line alternative is `border-radius: 50%` on the same elements - that makes
+ * it circular instead of deleting it.
+ *
+ * Same selector as theirs plus a plain copy; mercury_desk.css loads later, so
+ * equal specificity is enough and no !important is needed.
+ * ------------------------------------------------------------------------ */
+body.dms-theme .avatar,
+body.dms-theme .avatar-frame,
+.avatar,
+.avatar-frame {
+	box-shadow: none;
+}
+
 /* ========================================================================
  * "Light Aurora" board — Projects workspace only.
  *
