@@ -269,6 +269,43 @@ body {
 	border-radius: 0;
 }
 
+/* ------------------------------------------------------------------------
+ * List view: bolder column headers, and pin them while the rows scroll.
+ *
+ * Core renders the header as <header class="level list-row-head text-muted">
+ * (list_view.js:818) with no font-weight of its own, so it inherits the body
+ * weight and reads the same as the data under it.
+ *
+ * PINNING: .page-head is already sticky at top: 0 / z-index 20 (see the block
+ * above), and both live in the SAME scroller (.main-section), so the header has
+ * to stop at the head's height or it slides underneath it. Hence
+ * top: var(--page-head-height) - 48px, css_variables.scss:23 - and z-index 18,
+ * deliberately below the page head (20) and the form tab bar (19) so it can
+ * never paint over either.
+ *
+ * This only works because the overflow chain above already clears
+ * .layout-main-section and friends to `overflow: visible`. position: sticky
+ * resolves against the nearest ancestor with a scrolling box, and `overflow:
+ * hidden` counts - without that block the header would re-parent to a box that
+ * never scrolls and drift with the rows. Do not "tidy" the two apart.
+ *
+ * A background is required: sticky elements are transparent by default and the
+ * rows would show through as they pass underneath.
+ * ------------------------------------------------------------------------ */
+.list-row-head {
+	position: sticky;
+	top: var(--page-head-height, 48px);
+	z-index: 18;
+	background-color: var(--subtle-fg);
+}
+
+.list-row-head,
+.list-row-head .list-row-col,
+.list-row-head .list-row-col > span,
+.list-row-head .list-subject .level-item {
+	font-weight: 600;
+}
+
 /* ========================================================================
  * "Light Aurora" board — Projects workspace only.
  *
