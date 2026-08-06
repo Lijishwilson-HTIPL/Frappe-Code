@@ -26,12 +26,23 @@ WHERE WE ARE
     errors, zero failed patches). This is DONE - do not run it again "just in case".
   - TASK "DELIVERED" STATUS = DONE 2026-08-05 evening, gated per company. See [15].
   - SECOND staging-deployment MERGE = DONE 2026-08-05 evening (fa134009b). Clean,
-    migrated, 20/20 protected UI markers verified. See [16]. NOT PUSHED YET.
-  - Remote tip = 96eda0dd3. Local HEAD = fa134009b => LOCAL IS 1 AHEAD (the merge).
+    migrated, 20/20 protected UI markers verified. See [16].
+  - PROJECT/TASK MODULE UI ROUND = DONE 2026-08-06, PUSHED. See [17]. Covers:
+    actual-date labels, % Progress header, breadcrumbs, Projects workspace
+    "Light Aurora" cards, the Task "Assign" tab, and the DMS sidebar fix.
+  - *** DEMOS RUN ON THE QA SERVER, NOT LOCAL. *** Paul practises locally, pushes,
+    pulls on QA, migrates, then demos there. Anything DB-only does not exist on QA.
+  - TWO OPEN BLOCKERS THAT WILL FIRE IN A DEMO - see [17.1]:
+      PROJ-0001.expected_end_date = 2026-08-03 (past) blocks EVERY task-date entry
+      and every Timesheet submit; and Delivered flips to Overdue overnight once
+      any exp_end_date is set. Neither is fixed yet.
 
 --------------------------------------------------------------------------------
 THE VERY NEXT THINGS TO DO (in this order)
 --------------------------------------------------------------------------------
+  0. CLEAR THE TWO DEMO BLOCKERS IN [17.1] FIRST — the past project end date and
+     the Delivered->Overdue nightly flip. Both are one script + one mercury
+     override; both surface in front of management if left.
   1. MANAGEMENT'S "PROJECT REPORT" SUGGESTION — still not briefed. The user has
      been about to explain this for two sessions running. ASK THEM FOR IT; do not
      guess what it is. It probably reshapes Stage 8 (Monthly Progress Report).
@@ -709,6 +720,166 @@ STANDING RULES (see CLAUDE.md + .claude/rules.md)
 - Answer v16-only; verify against docs/source before stating where fields/buttons are.
 - Any DocType/config change -> export to JSON/fixtures + commit (JSON = source of truth).
 - Git: commit locally after each step; only push when user says "promote it".
+- DEMOS RUN ON THE QA SERVER, NOT LOCAL. Every change must survive a fresh
+  `bench migrate` on another machine: fixtures/source files, never DB-only edits.
+
+================================================================================
+[17] PROJECT / TASK MODULE UI ROUND — 2026-08-06 (pre-demo)
+================================================================================
+Boss reviewed the Project + Task modules and asked for changes one at a time.
+Everything below is config or files under apps/ - no frappe/erpnext core patch.
+Pushed to hephzibah/paul-update on 2026-08-06.
+
+17.1 TASK DATE FIELDS — the answer, and a live trap
+--------------------------------------------------------------------------------
+Task has BOTH pairs (verified in erpnext/projects/doctype/task/task.json):
+  exp_start_date / exp_end_date   "Expected Start/End Date"  Datetime, EDITABLE
+  act_start_date / act_end_date   "Actual Start/End Date"    Date, READ-ONLY
+Actuals are derived: task.py:239-240 sets them from Min(from_time)/Max(to_time)
+over SUBMITTED Timesheet Details. No Timesheet => permanently blank.
+
+*** TWO BLOCKERS, BOTH STILL OPEN, BOTH WILL FIRE IN A DEMO ***
+  1. PROJ-0001.expected_end_date = 2026-08-03 (IN THE PAST).
+     task.py:120-136 validate_parent_project_dates throws if ANY task date -
+     expected OR actual - is after the project's expected end date. So no task
+     date can be entered at all, and a Timesheet SUBMIT also fails, because
+     timesheet.py:182 saves the Task and re-runs that validation.
+     FIX: push PROJ-0001's Expected End Date out first.
+  2. Delivered -> Overdue overnight. task.py:319-325 update_status (nightly
+     set_tasks_as_overdue) flips anything not Cancelled/Completed with a past
+     exp_end_date to Overdue. "Delivered" is NOT on that safe list, and
+     TASK-2026-00001 is Delivered. Cannot fire while exp_end_date is null;
+     the moment end dates are set it will.
+     FIX: override update_status FROM THE MERCURY APP. Do not patch erpnext.
+  ALSO: timesheet.py:178-181 force-sets the task to Completed/Working on submit,
+  which DESTROYS a Delivered status. Do not log a Timesheet against TASK-...-00001.
+
+17.2 "(via Timesheet)" removed from the actual-date labels   [7c748dc33]
+--------------------------------------------------------------------------------
+Asked for "list headers only" - NOT achievable. list_view.js:782 renders the
+header from col.df.label, so the header IS the docfield label, and v16 has no
+per-listview label override. Changed doctype-wide via Property Setter instead,
+with a field DESCRIPTION carrying the meaning on the form:
+  "Set automatically from submitted Timesheets logged against this Task."
+Also tagged the 10 untagged in_list_view Property Setters (module was None, so
+they never exported) - all 17 Task Property Setters now reach QA together.
+
+17.3 "% PROGRESS" list header clipped                        [7c748dc33]
+--------------------------------------------------------------------------------
+NOT a layout bug - a CSS class-name COLLISION. list_view.js:774 stamps the
+FIELDNAME on each header cell as a class; Task's percent field is literally named
+"progress", so the cell matched Bootstrap's progress-bar component
+(bootstrap.css:5492 line-height:0 / overflow:hidden, height clamped to 10px by
+list.scss:312) and the label rendered above its box.
+Fixed in mercury_desk.css scoped to .list-row-head ONLY - the BODY cell needs
+that class, it is the bar's track. Do not widen the selector.
+
+17.4 Breadcrumbs                                             [af1e2d9a2]
+--------------------------------------------------------------------------------
+New file apps/mercury/mercury/public/js/mercury_desk.js, loaded via a now-LIVE
+app_include_js. It WRAPS frappe.breadcrumbs.update - core still builds the
+crumbs, we rewrite two hrefs after.
+  home icon  -> the module workspace  (was "/desk", which workspace.js:137-155
+                resolves to localStorage.current_page = the LAST WORKSPACE THAT
+                BROWSER VISITED. Unstable across machines; on a fresh QA browser
+                it lands on workspaces[0], not Projects.)
+  "Projects" -> the Project list      (mercury.breadcrumbs.CRUMB_TARGETS)
+  "Task"     -> Task list             (already correct in core, untouched)
+TRAPS: the core class is misspelled "worksapce-breadcrumb" (breadcrumbs.js:140) -
+"correcting" it makes the selector miss. CRUMB_TARGETS is keyed on the workspace
+ROUTE, not the label, because the label passes through __().
+NOTE: hiding the workspace crumb on list routes was built [f260af6b1] and then
+REVERTED at the user's request [bb7a58eca]. Both "Projects" crumbs are intended.
+
+17.5 Projects workspace — number cards + "Light Aurora" design
+--------------------------------------------------------------------------------
+[94d6516fd] Cards filled only HALF the row. Cause was OUR app: quality_dms.css
+  had `.ce-block:has(.number-widget-box) { flex: 0 0 12.5% !important }` - right
+  for the DMS workspace's 8 Key Metrics cards, wrong for Projects' 4, because
+  quality_dms.js:120 deliberately puts .dms-theme on the Projects route too.
+  Fixed AT SOURCE with `flex: 1 1 0`: 8 cards -> 12.5%, 4 -> 25%, N -> 100/N.
+  Do NOT add a min-width - 8 DMS cards are ~105px each and would wrap.
+[b09330592 + 6b423ec90 + 6c8ca9c78 + 56207b6f4] Light Aurora glass cards per the
+  approved mock (Downloads/projects_dashboard_light_aurora.html), in
+  mercury_desk.css scoped to body[data-route="Workspaces/Projects"]
+  (container.js:22 sets data-route from get_route_str()).
+  *** THE SPECIFICITY TRAP, cost a round-trip: quality_dms.css:399-405 has
+  body.dms-theme[data-route^="Workspaces"] .layout-main-section{background:
+  transparent} at (0,3,1). Ours at (0,2,1) LOST regardless of load order - being
+  last in app_include_css does not help against a more specific selector. And it
+  is the `background` SHORTHAND, so it resets background-image too. Our selector
+  must include .dms-theme AND !important. ***
+  Gradient numbers are wrapped in @supports(background-clip:text) - without it
+  color:transparent renders the figure INVISIBLE. Dark mode falls back to plain
+  cards. No web fonts (mock's Inter/Space Grotesk would need self-hosting).
+  Board inset is `padding: 1% 3% 3%`; % padding resolves against container WIDTH
+  on all four sides. Chart cards get NO padding override - 24px stole plot width
+  and frappe-charts truncated its x-labels.
+
+17.6 Task "Assign" tab, assignee mandatory                   [d315b0199]
+--------------------------------------------------------------------------------
+The "Add to ToDo" popup could NOT be moved onto a tab: assign_to.js does not edit
+Task fields, it inserts a ToDo and ToDo.on_update writes the hidden `_assign`.
+It also could not be made mandatory - the dialog needs a SAVED doc, so "cannot
+save without an assignee" + "must save before assigning" deadlocks every new Task.
+So the tab is REAL Custom Fields (mercury fixtures custom_field.json):
+  Assign To (Link User, REQD) · Assign To User Group · Complete By · Priority ·
+  Comment,  under Tab Break custom_assign_tab.
+Placed with insert_after = total_billing_amount (last field of the Dependencies
+tab) => Dependencies idx 28 -> Assign idx 42 -> More Info idx 51.
+mercury/task_assign.py (hooks doc_events Task.on_update) turns the stored value
+into a REAL assignment, so sidebar Assign / ToDo list / notifications / sharing
+all behave natively. on_update not validate: a ToDo needs doc.name.
+Re-assigning CLOSES the old ToDo (verified: old -> Cancelled, new -> Open).
+ONE-WAY by design: the native sidebar dialog does not write back to the field.
+All 9 Tasks were backfilled (Administrator, except 00007/00008 = paul, 00009 =
+engineer1) - without that, reqd=1 makes every existing Task unsaveable on edit.
+"Assign to me" checkbox is NOT on the tab (UI shortcut, not data).
+
+17.7 DMS training pages missing after the staging merge      [36619b420]
+--------------------------------------------------------------------------------
+"My Training Dashboard" / "Training Analytics" were not missing - both Pages
+existed on disk AND in the DB. What was missing were the SIDEBAR LINKS.
+*** ROOT CAUSE, REMEMBER THIS ONE: frappe.modules.import_file SKIPS a standard
+record when the JSON `modified` stamp is not NEWER than the DB row's. James's
+7b03508b7 added the two Page links (plus Curricula and Quizzes) to
+workspace_sidebar/dms.json but left modified at 2026-07-06 20:45:00 - byte
+identical to what every database already held. So every `bench migrate` since
+skipped the file UNREAD, and still reported success. ***
+Fixed by bumping the stamp IN THE FILE, not by forcing a local re-import - a
+forced import fixes one bench and leaves QA broken the same way.
+
+17.8 The wider DMS drift sweep — FOUND, FIXED, THEN REVERTED ON REQUEST
+--------------------------------------------------------------------------------
+A sweep of every quality_dms standard record found NINE more in the same trap
+(file differs, stamp not newer => never imports on any bench):
+  Workspace DMS         4th KPI card: Pending Approval -> Approved Documents
+  Number Card x7        short labels ("Documents in Review" -> "Review", ...) and
+                        show_percentage_stats off
+  Dashboard Chart       "Documents by Status": color #1e3a5f + navy custom_options
+                        (DB had null - it has never rendered in DMS colours)
+Applied as [1d97ef045], then the user said the request was a mistake and it was
+REVERTED as [6bfd4f123] - BOTH the files and the DB rows (the migrate had already
+written to the database; a git revert alone would not have undone it). Original
+`modified` stamps were restored too, so these records skip again exactly as before.
+NOT reverted, because they were already pending and ANY migrate applies them:
+Approved / Pending Approval / Rejected Documents cards, Training Compliance by
+Department chart, DMS Module Onboarding.
+Verified separately that there is NO REAL DOCTYPE DRIFT in DMS - the generic scan
+flags every doctype, but that is an artefact (field_order is not a DB column).
+=> The nine findings are REAL and still unapplied. Raise with James rather than
+   re-applying unasked.
+
+17.9 Verification
+--------------------------------------------------------------------------------
+documents/verify_ui_markers.py grew 20 -> 28 checks: the new mercury_desk.js
+markers, the misspelled "worksapce-breadcrumb" selector, the % Progress CSS
+selector, and a regex assert that app_include_js is actually UNCOMMENTED (the
+failure mode where the file exists but never loads). ALL CHECKS PASSED.
+Asset versions now: mercury_desk.css ?v=19, mercury_desk.js ?v=1,
+quality_dms.css ?v=32. mercury_desk.css must stay LAST in app_include_css
+(verified 8 of 8) or the aurora block and the DMS overrides silently lose.
+
 ================================================================================
 END — MERCURY WORK PROGRESS
 ================================================================================
