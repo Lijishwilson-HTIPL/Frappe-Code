@@ -292,18 +292,62 @@ body {
  * A background is required: sticky elements are transparent by default and the
  * rows would show through as they pass underneath.
  * ------------------------------------------------------------------------ */
-.list-row-head {
+ * FIRST ATTEMPT FAILED, both halves - recorded so nobody repeats it:
+ *   - `font-weight: 600` did nothing. quality_dms.css:575 ALREADY sets 600 on
+ *     `body.dms-theme .list-row-head .list-row-col` at (0,3,1); a bare
+ *     `.list-row-head .list-row-col` is (0,2,0) and loses. The headers read light
+ *     because they are 11px uppercase letter-spaced grey, not because of weight.
+ *     So this needs 700 AND a darker colour, at a specificity that wins.
+ *   - `top: var(--page-head-height)` did nothing. list.scss:592-598 sets
+ *     `.list-view .frappe-list .result-container { overflow-x: auto }`, which makes
+ *     that element a SCROLL CONTAINER. Sticky resolves against it, and it only ever
+ *     scrolls horizontally, so there was no vertical scroll for `top` to act on.
+ *
+ * The fix therefore gives .result-container a vertical scroll of its own and pins
+ * the header at top: 0 INSIDE it. Horizontal scrolling is preserved (wide lists
+ * still slide sideways), and the header now travels with that horizontal scroll,
+ * which is what you want - the labels stay above their columns.
+ *
+ * The scrollbar is re-exposed here on purpose: the block further up hides every
+ * scrollbar inside .page-container, and an inner scroll area with no visible
+ * indicator reads as a broken page.
+ *
+ * MAGIC NUMBER: 250px is the chrome above and below the rows (navbar + page head +
+ * filter row + paging area). If the list ends up too short or too tall on another
+ * screen, this is the knob - measure and adjust rather than guessing. */
+.list-view .frappe-list .result-container {
+	max-height: calc(100vh - 250px);
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.list-view .frappe-list .result-container::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+/* core sets overflow-y: hidden on .result (list.scss:596), which would clip the
+ * rows now that the parent is the scroller. */
+.list-view .frappe-list .result-container .result {
+	overflow-y: visible;
+}
+
+.list-view .frappe-list .result-container .list-row-head {
 	position: sticky;
-	top: var(--page-head-height, 48px);
+	top: 0;
 	z-index: 18;
 	background-color: var(--subtle-fg);
 }
 
-.list-row-head,
+/* Beats quality_dms.css:575 (0,3,1) - hence body + .dms-theme in the selector,
+ * with a plain copy for when that theme is not applied. */
+body.dms-theme .list-row-head .list-row-col,
+body.dms-theme .list-row-head .list-subject .level-item,
 .list-row-head .list-row-col,
-.list-row-head .list-row-col > span,
+.list-row-head .list-subject,
 .list-row-head .list-subject .level-item {
-	font-weight: 600;
+	font-weight: 700;
+	color: var(--text-color);
 }
 
 /* ========================================================================
