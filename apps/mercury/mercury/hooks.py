@@ -153,6 +153,9 @@ jinja = {
 doc_events = {
 	"Task": {
 		"validate": "mercury.task_status.validate",
+		# Assign tab -> real ToDo assignment. on_update, not validate: a ToDo needs
+		# doc.name, which does not exist until after the insert. See task_assign.py.
+		"on_update": "mercury.task_assign.sync_assignment",
 	},
 }
 
