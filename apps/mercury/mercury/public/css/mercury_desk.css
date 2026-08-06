@@ -375,6 +375,29 @@ body.dms-theme .avatar-frame,
 	box-shadow: none;
 }
 
+/* Sidebar user avatar: the initial was invisible (white on white).
+ *
+ * quality_dms.css:125-129 paints the whole sidebar footer for a NAVY background:
+ *     body.dms-theme .body-sidebar-bottom,
+ *     body.dms-theme .body-sidebar-bottom * { color: var(--dms-on-navy) !important; }
+ *
+ * The `*` catches the avatar's letter too - but the avatar is NOT on the navy
+ * background, it sits on its own light --avatar-frame-bg circle. So the "A" was
+ * painted near-white on near-white. Confirmed in DevTools: that rule wins over
+ * frappe's own inline `color: var(--dark-green-avatar-color)` on .avatar-frame,
+ * because an external !important outranks a non-important inline style.
+ *
+ * Restored to frappe's own token rather than a hardcoded colour, so it stays
+ * correct in dark mode too (avatar.scss:2 --avatar-frame-color = gray-500,
+ * :35 = gray-600 under [data-theme="dark"]). !important is unavoidable here -
+ * it is the only way to outrank theirs. */
+body.dms-theme .body-sidebar-bottom .avatar,
+body.dms-theme .body-sidebar-bottom .avatar *,
+body.dms-theme .body-sidebar-bottom .avatar-frame,
+body.dms-theme .body-sidebar-bottom .standard-image {
+	color: var(--avatar-frame-color) !important;
+}
+
 /* ========================================================================
  * "Light Aurora" board — Projects workspace only.
  *
