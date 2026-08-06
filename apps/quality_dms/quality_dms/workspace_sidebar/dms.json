@@ -191,6 +191,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "My Training Dashboard",
+   "link_to": "my-training-dashboard",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Training Records",
    "link_to": "DMS Training Record",
    "link_type": "DocType",
@@ -202,9 +213,9 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
-   "label": "Curricula",
-   "link_to": "DMS Curriculum",
-   "link_type": "DocType",
+   "label": "Training Analytics",
+   "link_to": "training-analytics",
+   "link_type": "Page",
    "show_arrow": 0,
    "type": "Link"
   },
@@ -215,6 +226,17 @@
    "keep_closed": 0,
    "label": "Quizzes",
    "link_to": "DMS Quiz",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Curricula",
+   "link_to": "DMS Curriculum",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -238,28 +260,6 @@
    "label": "Assignment Rules",
    "link_to": "DMS Training Assignment Rule",
    "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "My Training Dashboard",
-   "link_to": "my-training-dashboard",
-   "link_type": "Page",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Training Analytics",
-   "link_to": "training-analytics",
-   "link_type": "Page",
    "show_arrow": 0,
    "type": "Link"
   },
@@ -375,7 +375,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-06 20:45:00.000000",
+ "modified": "2026-08-06 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "DMS",
  "module_onboarding": "DMS",
