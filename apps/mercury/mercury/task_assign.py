@@ -26,10 +26,39 @@ mandatory anyway, so it always holds a value.
 """
 
 import frappe
+from frappe import _
 from frappe.desk.form.assign_to import _add as assign_to_add
 from frappe.desk.form.assign_to import remove as assign_to_remove
 
 ASSIGN_FIELD = "custom_assign_to"
+
+
+def validate_assignee(doc, method=None):
+	"""An assignee is required on a real Task, but NOT on a template.
+
+	A template Task is a blueprint - it is copied to create real tasks and is never
+	worked on - so there is nobody to assign it to.
+
+	The Custom Field carries mandatory_depends_on = "eval:!doc.is_template", which
+	is what makes the form show the field as required only when it applies. That
+	flag is NOT ENOUGH ON ITS OWN: frappe evaluates mandatory_depends_on only in
+	JS (frappe/public/js/frappe/form/save.js and form/layout.js) - grep the python
+	side and you will find it nowhere. So REST, Data Import, db.set_value and any
+	server-side insert bypass it completely. This hook is the real control; the
+	field flag is the UI half. Same split as the Delivered status gate in
+	task_status.py - do not delete either as redundant.
+	"""
+	if doc.get("is_template"):
+		return
+
+	if not doc.get(ASSIGN_FIELD):
+		frappe.throw(
+			_("{0} is required. Tick {1} if this Task is a blueprint rather than real work.").format(
+				frappe.bold(_("Assign To")), frappe.bold(_("Is Template"))
+			),
+			frappe.MandatoryError,
+			title=_("Assignee Required"),
+		)
 
 
 def sync_assignment(doc, method=None):

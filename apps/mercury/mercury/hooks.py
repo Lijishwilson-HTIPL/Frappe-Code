@@ -152,7 +152,13 @@ jinja = {
 # REST / Data Import / db.set_value writes. See mercury/task_status.py.
 doc_events = {
 	"Task": {
-		"validate": "mercury.task_status.validate",
+		"validate": [
+			"mercury.task_status.validate",
+			# Assignee required on real Tasks, exempt on templates. The field's
+			# mandatory_depends_on is JS-only (frappe has no python side for it),
+			# so this hook is what actually enforces it. See task_assign.py.
+			"mercury.task_assign.validate_assignee",
+		],
 		# Assign tab -> real ToDo assignment. on_update, not validate: a ToDo needs
 		# doc.name, which does not exist until after the insert. See task_assign.py.
 		"on_update": "mercury.task_assign.sync_assignment",
