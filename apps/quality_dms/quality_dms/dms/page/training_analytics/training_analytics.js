@@ -284,19 +284,19 @@ class TrainingAnalytics {
 			return `<div class="ta-empty-small">${__("No overdue trainings on record — nothing to show.")}</div>`;
 		}
 		const max = Math.max(...overdueTrend.map((d) => d.overdue_count), 1);
-		const rows = overdueTrend
+		const cols = overdueTrend
 			.map(
 				(d) => `
-				<div class="ta-dist-row">
-					<div class="ta-dist-label">${frappe.utils.escape_html(d.month)}</div>
-					<div class="ta-dist-track">
-						<div class="ta-dist-fill crit" style="width:${(d.overdue_count / max * 100).toFixed(1)}%"></div>
+				<div class="ta-vdist-col">
+					<div class="ta-vdist-count">${d.overdue_count}</div>
+					<div class="ta-vdist-track">
+						<div class="ta-vdist-fill crit" style="height:${(d.overdue_count / max * 100).toFixed(1)}%"></div>
 					</div>
-					<div class="ta-dist-count">${d.overdue_count}</div>
+					<div class="ta-vdist-label">${frappe.utils.escape_html(d.month)}</div>
 				</div>`
 			)
 			.join("");
-		return `<div class="ta-dist-chart">${rows}</div>`;
+		return `<div class="ta-vdist-chart">${cols}</div>`;
 	}
 
 	distribution_chart(distribution) {
@@ -304,20 +304,20 @@ class TrainingAnalytics {
 			return `<div class="ta-empty-small">${__("No graded attempts on record yet.")}</div>`;
 		}
 		const max = Math.max(...distribution.map((d) => d.count), 1);
-		const rows = distribution
+		const cols = distribution
 			.map((d) => {
 				const cls = d.label === "0-59" ? "crit" : d.label === "60-69" || d.label === "70-79" ? "warn" : "good";
 				return `
-				<div class="ta-dist-row">
-					<div class="ta-dist-label">${d.label}</div>
-					<div class="ta-dist-track">
-						<div class="ta-dist-fill ${cls}" style="width:${(d.count / max * 100).toFixed(1)}%"></div>
+				<div class="ta-vdist-col">
+					<div class="ta-vdist-count">${d.count}</div>
+					<div class="ta-vdist-track">
+						<div class="ta-vdist-fill ${cls}" style="height:${(d.count / max * 100).toFixed(1)}%"></div>
 					</div>
-					<div class="ta-dist-count">${d.count}</div>
+					<div class="ta-vdist-label">${d.label}</div>
 				</div>`;
 			})
 			.join("");
-		return `<div class="ta-dist-chart">${rows}</div>`;
+		return `<div class="ta-vdist-chart">${cols}</div>`;
 	}
 
 	department_table(rows) {
@@ -592,6 +592,44 @@ class TrainingAnalytics {
 			.ta-dist-fill.warn { background: #fab219; }
 			.ta-dist-fill.good { background: #0ca30c; }
 			.ta-dist-count { font-size: 12px; font-weight: 600; text-align: right; }
+			.ta-vdist-chart {
+				display: flex;
+				align-items: flex-end;
+				justify-content: space-around;
+				gap: 14px;
+				height: 220px;
+				padding-top: 8px;
+			}
+			.ta-vdist-col {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: flex-end;
+				flex: 1 1 0;
+				height: 100%;
+				min-width: 0;
+			}
+			.ta-vdist-count { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+			.ta-vdist-track {
+				width: 32px;
+				flex: 1 1 auto;
+				border-radius: 4px;
+				background: var(--border-color, #e1e1e1);
+				overflow: hidden;
+				display: flex;
+				align-items: flex-end;
+			}
+			.ta-vdist-fill { width: 100%; border-radius: 4px 4px 0 0; }
+			.ta-vdist-fill.crit { background: #d03b3b; }
+			.ta-vdist-fill.warn { background: #fab219; }
+			.ta-vdist-fill.good { background: #0ca30c; }
+			.ta-vdist-label {
+				margin-top: 8px;
+				font-size: 12px;
+				color: var(--text-secondary, #52514e);
+				text-align: center;
+				white-space: nowrap;
+			}
 			.ta-table { font-size: 13px; margin: 0; }
 			.ta-table thead th {
 				background: linear-gradient(90deg, #1f4e79 0%, #2c6499 100%);

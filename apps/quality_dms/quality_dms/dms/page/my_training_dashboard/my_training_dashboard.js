@@ -19,7 +19,7 @@ class MyTrainingDashboard {
 	}
 
 	add_transcript_button() {
-		this.page.add_inner_button(__("Download My Training Transcript"), () => {
+		this.page.add_inner_button(__("Download My Training Report"), () => {
 			frappe.show_alert({ message: __("Generating your transcript..."), indicator: "blue" });
 			frappe.call({
 				method: "quality_dms.dms.api.generate_training_transcript",
