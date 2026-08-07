@@ -544,7 +544,7 @@ def _resolve_dashboard_employee(employee=None):
 def get_my_training_dashboard(employee=None):
     target_employee = _resolve_dashboard_employee(employee)
 
-    todo = []
+    all_trainings = []
     completed_scores = []
     total_assigned = 0
     total_completed = 0
@@ -557,6 +557,7 @@ def get_my_training_dashboard(employee=None):
                 da.status AS status,
                 da.assessment_score AS assessment_score,
                 da.due_date AS due_date,
+                da.completion_date AS completion_date,
                 trn.document AS document,
                 trn.name AS training_record
             FROM `tabDocument Acknowledgement` da
@@ -575,13 +576,14 @@ def get_my_training_dashboard(employee=None):
                 total_completed += 1
                 if row.assessment_score is not None:
                     completed_scores.append(row.assessment_score)
-            else:
-                todo.append({
-                    "document": row.document,
-                    "status": row.status,
-                    "due_date": row.due_date,
-                    "training_record": row.training_record,
-                })
+            all_trainings.append({
+                "document": row.document,
+                "status": row.status,
+                "due_date": frappe.utils.format_date(row.due_date) if row.due_date else None,
+                "completion_date": frappe.utils.format_date(row.completion_date) if row.completion_date else None,
+                "assessment_score": row.assessment_score,
+                "training_record": row.training_record,
+            })
 
     overall_score = round(sum(completed_scores) / len(completed_scores), 1) if completed_scores else None
     completion_pct = round(total_completed / total_assigned * 100, 1) if total_assigned else 0.0
@@ -624,7 +626,7 @@ def get_my_training_dashboard(employee=None):
         "completion_pct": completion_pct,
         "total_assigned": total_assigned,
         "total_completed": total_completed,
-        "todo": todo,
+        "all_trainings": all_trainings,
         "leaderboard": leaderboard[:20],
     }
 
@@ -827,30 +829,63 @@ _SCORE_BUCKETS = [
 
 
 @frappe.whitelist()
-def get_training_analytics():
+def get_training_analytics(from_date=None, to_date=None, department=None):
     if not _is_admin_user():
         frappe.throw("Only managers can view training analytics.", frappe.PermissionError)
 
-    # Monthly average score trend, across every graded attempt org-wide.
+    # ---- shared filter fragments ----
+    score_conditions = ["1=1"]
+    score_values = {}
+    if from_date:
+        score_conditions.append("sh.recorded_on >= %(from_date)s")
+        score_values["from_date"] = from_date
+    if to_date:
+        score_conditions.append("sh.recorded_on <= %(to_date)s")
+        score_values["to_date"] = to_date
+    if department:
+        score_conditions.append("emp.department = %(department)s")
+        score_values["department"] = department
+    score_where = " AND ".join(score_conditions)
+    # Score History join to Employee is only needed when filtering by department.
+    score_join = "INNER JOIN `tabEmployee` emp ON emp.name = sh.employee" if department else ""
+
+    # Monthly average score trend, across every graded attempt (respects filters).
     monthly_rows = frappe.db.sql(
-        """
-        SELECT DATE_FORMAT(recorded_on, '%%Y-%%m') AS month, AVG(score) AS avg_score, COUNT(*) AS attempts
-        FROM `tabDMS Training Score History`
+        f"""
+        SELECT DATE_FORMAT(sh.recorded_on, '%%Y-%%m') AS month,
+            AVG(sh.score) AS avg_score,
+            COUNT(*) AS attempts,
+            SUM(CASE WHEN sh.quiz_passed THEN 1 ELSE 0 END) AS passed
+        FROM `tabDMS Training Score History` sh
+        {score_join}
+        WHERE {score_where}
         GROUP BY month
         ORDER BY month ASC
         """,
-        {},
+        score_values,
         as_dict=True,
     )
     score_trend = [
         {"month": r.month, "avg_score": round(r.avg_score, 1), "attempts": r.attempts}
         for r in monthly_rows
     ]
+    # Pass rate as its own trend -- a flat/rising average score can mask a
+    # falling pass rate (many scores barely scraping by), so track separately.
+    pass_rate_trend = [
+        {
+            "month": r.month,
+            "pass_rate": round(r.passed / r.attempts * 100, 1) if r.attempts else 0.0,
+            "attempts": r.attempts,
+        }
+        for r in monthly_rows
+    ]
 
-    # Score distribution across every graded attempt on record.
+    # Score distribution across every graded attempt matching the filters.
     all_scores = [
         r.score for r in frappe.db.sql(
-            "SELECT score FROM `tabDMS Training Score History`", as_dict=True
+            f"SELECT sh.score FROM `tabDMS Training Score History` sh {score_join} WHERE {score_where}",
+            score_values,
+            as_dict=True,
         )
     ]
     distribution = []
@@ -858,17 +893,30 @@ def get_training_analytics():
         count = sum(1 for s in all_scores if lo <= s < hi)
         distribution.append({"label": label, "count": count})
 
-    # Completion rate by department, from Document Acknowledgement (same
-    # source as Training Matrix Report), excluding non-real assignment rows.
+    # ---- Document Acknowledgement based metrics (completion + overdue) ----
+    ack_conditions = ["da.status NOT IN ('Suggested', 'Excused')"]
+    ack_values = {}
+    if department:
+        ack_conditions.append("emp.department = %(department)s")
+        ack_values["department"] = department
+    if from_date:
+        ack_conditions.append("(da.due_date IS NULL OR da.due_date >= %(from_date)s)")
+        ack_values["from_date"] = from_date
+    if to_date:
+        ack_conditions.append("(da.due_date IS NULL OR da.due_date <= %(to_date)s)")
+        ack_values["to_date"] = to_date
+    ack_where = " AND ".join(ack_conditions)
+
     dept_rows = frappe.db.sql(
-        """
+        f"""
         SELECT
             emp.department AS department,
             da.status AS status
         FROM `tabDocument Acknowledgement` da
         LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
-        WHERE da.status NOT IN ('Suggested', 'Excused')
+        WHERE {ack_where}
         """,
+        ack_values,
         as_dict=True,
     )
     by_dept = {}
@@ -890,9 +938,143 @@ def get_training_analytics():
     ]
     completion_by_department.sort(key=lambda r: r["completion_pct"], reverse=True)
 
+    # Overdue trainings grouped by the month they were due -- shows whether
+    # overdue risk is concentrated in old, long-stale due dates or is a
+    # recent spike, rather than just a single current overdue count.
+    overdue_conditions = ["da.status = 'Overdue'"]
+    overdue_values = {}
+    if department:
+        overdue_conditions.append("emp.department = %(department)s")
+        overdue_values["department"] = department
+    if from_date:
+        overdue_conditions.append("da.due_date >= %(from_date)s")
+        overdue_values["from_date"] = from_date
+    if to_date:
+        overdue_conditions.append("da.due_date <= %(to_date)s")
+        overdue_values["to_date"] = to_date
+    overdue_where = " AND ".join(overdue_conditions)
+
+    overdue_rows = frappe.db.sql(
+        f"""
+        SELECT DATE_FORMAT(da.due_date, '%%Y-%%m') AS month, COUNT(*) AS overdue_count
+        FROM `tabDocument Acknowledgement` da
+        LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
+        WHERE {overdue_where}
+        GROUP BY month
+        ORDER BY month ASC
+        """,
+        overdue_values,
+        as_dict=True,
+    )
+    overdue_trend = [{"month": r.month, "overdue_count": r.overdue_count} for r in overdue_rows]
+
+    # ---- Per-employee scores (every employee, not just a top-N leaderboard) ----
+    # Reuses ack_where (department + due_date window) so it stays consistent
+    # with the department table above; date filter applies to due_date since
+    # that's the window already established for this endpoint's other tables.
+    emp_rows = frappe.db.sql(
+        f"""
+        SELECT
+            da.employee AS employee,
+            emp.employee_name AS employee_name,
+            emp.department AS department,
+            da.status AS status,
+            da.assessment_score AS assessment_score
+        FROM `tabDocument Acknowledgement` da
+        LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
+        WHERE {ack_where}
+        """,
+        ack_values,
+        as_dict=True,
+    )
+    by_employee = {}
+    for row in emp_rows:
+        if not row.employee:
+            continue
+        bucket = by_employee.setdefault(row.employee, {
+            "employee": row.employee,
+            "employee_name": row.employee_name,
+            "department": row.department or "Unassigned",
+            "total": 0,
+            "completed": 0,
+            "scores": [],
+        })
+        bucket["total"] += 1
+        if row.status == "Completed":
+            bucket["completed"] += 1
+            if row.assessment_score is not None:
+                bucket["scores"].append(row.assessment_score)
+
+    employee_scores = []
+    for data in by_employee.values():
+        scores = data.pop("scores")
+        employee_scores.append({
+            **data,
+            "overall_score": round(sum(scores) / len(scores), 1) if scores else None,
+            "completion_pct": round(data["completed"] / data["total"] * 100, 1) if data["total"] else 0.0,
+        })
+    employee_scores.sort(key=lambda r: (r["overall_score"] is None, -(r["overall_score"] or 0)))
+
+    # ---- Every employee's pending/overdue trainings, org-wide (managers need
+    # to see everyone's outstanding items, not just the aggregate rate) ----
+    pending_conditions = ["da.status IN ('Pending', 'Overdue', 'In Progress', 'Failed')"]
+    pending_values = {}
+    if department:
+        pending_conditions.append("emp.department = %(department)s")
+        pending_values["department"] = department
+    if from_date:
+        pending_conditions.append("(da.due_date IS NULL OR da.due_date >= %(from_date)s)")
+        pending_values["from_date"] = from_date
+    if to_date:
+        pending_conditions.append("(da.due_date IS NULL OR da.due_date <= %(to_date)s)")
+        pending_values["to_date"] = to_date
+    pending_where = " AND ".join(pending_conditions)
+
+    pending_rows = frappe.db.sql(
+        f"""
+        SELECT
+            emp.employee_name AS employee_name,
+            emp.department AS department,
+            trn.document AS document,
+            da.status AS status,
+            da.due_date AS due_date,
+            trn.name AS training_record
+        FROM `tabDocument Acknowledgement` da
+        INNER JOIN `tabDMS Training Record` trn ON trn.name = da.parent AND da.parenttype = 'DMS Training Record'
+        LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
+        WHERE {pending_where}
+        ORDER BY da.due_date ASC
+        """,
+        pending_values,
+        as_dict=True,
+    )
+    pending_trainings = [
+        {
+            "employee_name": r.employee_name,
+            "department": r.department or "Unassigned",
+            "document": r.document,
+            "status": r.status,
+            "due_date": frappe.utils.format_date(r.due_date) if r.due_date else None,
+            "due_date_raw": str(r.due_date) if r.due_date else None,
+            "training_record": r.training_record,
+        }
+        for r in pending_rows
+    ]
+
     return {
         "score_trend": score_trend,
+        "pass_rate_trend": pass_rate_trend,
         "distribution": distribution,
         "completion_by_department": completion_by_department,
+        "overdue_trend": overdue_trend,
+        "employee_scores": employee_scores,
+        "pending_trainings": pending_trainings,
         "total_attempts": len(all_scores),
     }
+
+
+@frappe.whitelist()
+def get_departments_for_filter():
+    if not _is_admin_user():
+        frappe.throw("Only managers can view training analytics.", frappe.PermissionError)
+    return frappe.get_all("Department", filters={"disabled": 0}, pluck="name", order_by="name asc")

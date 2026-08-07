@@ -239,7 +239,8 @@ body:has(.sbiqc-login-shell) {
    after it -- specificity beats source order. */
 .sbiqc-form-panel .btn-login,
 .sbiqc-form-panel .btn-forgot,
-.sbiqc-form-panel .btn-login-with-email-link {
+.sbiqc-form-panel .btn-login-with-email-link,
+.sbiqc-form-panel .btn-update {
 	background: linear-gradient(90deg, #1f4e79 0%, #4a86b8 100%) !important;
 	border: none !important;
 	border-radius: 8px !important;
@@ -248,6 +249,14 @@ body:has(.sbiqc-login-shell) {
 	letter-spacing: 0.03em !important;
 	box-shadow: 0 8px 20px -8px rgba(31, 78, 121, 0.6) !important;
 	color: #ffffff !important;
+	width: 100%;
+}
+.sbiqc-form-panel .btn-update:disabled {
+	opacity: 0.55;
+	box-shadow: none !important;
+}
+.sbiqc-form-panel .password-strength-indicator {
+	right: 40px;
 }
 
 .sbiqc-form-panel .login-divider {
