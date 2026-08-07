@@ -97,3 +97,6 @@ start-bench.sh
 # Windows Zone.Identifier ADS metadata files (created when files downloaded on Windows)
 *Zone.Identifier
 *:Zone.Identifier
+
+# machine-local: honcho PATH injection for wkhtmltopdf (hardcodes /home/paul/...)
+.env

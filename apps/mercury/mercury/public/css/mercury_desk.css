@@ -1,0 +1,617 @@
+/* Mercury desk UI overrides.
+ *
+ * Loaded on every desk page via hooks.app_include_css. Additive only - we do not
+ * patch frappe/erpnext core CSS, so removing the hook line reverts everything.
+ *
+ * =========================================================================
+ * PROTECTED - DO NOT DELETE OR "CLEAN UP" WHEN MERGING.
+ *
+ * These rules fix real desk defects: three vertical scrollbars instead of one,
+ * a page head that scrolled out of view, a tab bar that never pinned, and the
+ * right form sidebar clipped at the viewport edge. Each block documents the
+ * exact core/hrms/quality_dms rule it works around, with file:line.
+ *
+ * Two things must hold or the overrides silently stop working:
+ *   1. this file must stay LAST in frappe.get_hooks("app_include_css") - it
+ *      overrides !important rules in hrms/layout_global.css and quality_dms.css;
+ *   2. bump the ?v= on the app_include_css path in mercury/hooks.py whenever you
+ *      edit this file, or browsers serve a stale copy.
+ *
+ * Full rationale + verification checklist: documents/PROJECT_UI_CHANGES.md
+ * =========================================================================
+ */
+
+/* ------------------------------------------------------------------------
+ * ONE vertical scrollbar on form views (was two).
+ *
+ * v16 core creates two independent scroll containers on a Form route:
+ *   main.scss:37          .main-section { height: 100vh; overflow: scroll; }
+ *   form_sidebar.scss:274 body[data-route^="Form"] .layout-side-section {
+ *                             height: calc(100vh - var(--page-head-height));
+ *                             overflow-y: auto; position: sticky; }
+ *
+ * So whenever the right form sidebar is taller than the viewport (a few
+ * attachments is enough) the browser paints a second scrollbar right next to the
+ * page one, and the sidebar scrolls independently - which also lets it drift out
+ * of vertical alignment with .layout-main-section.
+ *
+ * Putting the sidebar back into normal page flow gives a single page scrollbar
+ * and keeps the sidebar and the main section starting at the same level.
+ *
+ * TRADE-OFF: the sidebar is no longer sticky/pinned - it scrolls with the page.
+ * That is the price of one scrollbar. To restore core behaviour, delete this
+ * block (or the app_include_css line in mercury/hooks.py).
+ * ------------------------------------------------------------------------ */
+body[data-route^="Form"] .layout-side-section {
+	height: auto;
+	overflow-x: visible;
+	overflow-y: visible;
+	position: static;
+	top: auto;
+}
+
+/* The right form sidebar had no right inset, so its card ran straight into the
+ * viewport edge and .main-section's overflow-x: hidden clipped it.
+ * Every other column gets an inset from somewhere - hrms gives .page-body 15px,
+ * quality_dms gives .layout-main-section-wrapper margin: 4px 16px 24px - but
+ * nothing ever insets .layout-side-section on the right. Also cap its width so it
+ * can never be sized wider than the space available: frappe asks for
+ * min-width: var(--form-sidebar-width) (277px, form_sidebar.scss:292) while hrms
+ * forces 250px, and min-width outranks width. */
+body[data-route^="Form"] .layout-side-section.right,
+body[data-route^="Form"] .layout-side-section {
+	padding-right: 16px !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+/* THE actual clipping cause: the sidebar CARD carries its own fixed width.
+ *   frappe form_sidebar.scss:281  .form-sidebar { width: var(--form-sidebar-width) }
+ * which is 277px, while hrms layout_global.css:126 forces the COLUMN to 250px.
+ * A 277px card in a 250px column overflows by 27px and .main-section's
+ * overflow-x: hidden cuts it off. Padding on the column cannot fix that, because
+ * the child's width is fixed - the card has to be told to fit its column. */
+body[data-route^="Form"] .layout-side-section .form-sidebar,
+body[data-route^="Form"] .form-sidebar {
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+/* Both columns are flex children of .row.layout-main - align their tops so the
+ * form sidebar and the main section always begin on the same horizontal level. */
+body[data-route^="Form"] .layout-main {
+	align-items: flex-start;
+}
+
+/* ------------------------------------------------------------------------
+ * Kill the form sidebar's own scrollbar.
+ *
+ * This one does NOT come from frappe core - it is forced by HRMS:
+ *   hrms/public/css/layout_global.css:137
+ *     .layout-side-section .form-sidebar, .form-sidebar {
+ *         scrollbar-gutter: stable !important;
+ *         overflow-y: auto !important;   <- the bar on
+ *     }                                     .form-sidebar.overlay-sidebar
+ *
+ * It targets .form-sidebar itself with !important, so overriding the parent
+ * .layout-side-section (above) does not affect it. mercury_desk.css is included
+ * AFTER hrms in app_include_css, so matching !important here wins.
+ * ------------------------------------------------------------------------ */
+.layout-side-section .form-sidebar,
+.layout-side-section .sidebar-image-section,
+.form-sidebar,
+.form-sidebar.overlay-sidebar {
+	overflow-y: visible !important;
+	overflow-x: visible !important;
+	scrollbar-gutter: auto !important;
+}
+
+/* ------------------------------------------------------------------------
+ * Keep the page head and the form tab bar permanently pinned.
+ *
+ * Core state (v16):
+ *   page.scss:113   .page-head { position: sticky; top: 0 }  ...but
+ *                   ui/page.js:69 + form/layout.js:560 push it to top:-15px on
+ *                   scroll-down for read-only / impersonated sessions.
+ *   form.scss:484   .form-tabs-list { position: sticky } with NO top value, so
+ *                   sticky does nothing until form/layout.js:538 adds
+ *                   .form-tabs-sticky-up / -down on the first scroll. That is why
+ *                   the tab bar only starts sticking after you scroll once.
+ *
+ * Pin both unconditionally, with the tab bar sitting directly under the head.
+ * ------------------------------------------------------------------------ */
+/* position:sticky resolves against the nearest ancestor that has a SCROLLING BOX -
+ * and `overflow: hidden` counts as one. Several ancestors of .form-tabs-list can
+ * carry overflow (e.g. page.scss:105 `.layout-main-section.frappe-card {
+ * overflow: hidden }`), which silently re-parents the sticky element to a box that
+ * never scrolls - so the tab bar drifts with the content instead of pinning, and
+ * its `top` offset lands in the wrong place. Clearing overflow along the chain
+ * forces sticky to resolve against .main-section, the real scroller. */
+.layout-main-section,
+.layout-main-section.frappe-card,
+.layout-main-section-wrapper,
+.std-form-layout,
+.form-layout,
+.form-page,
+.form-tab-content {
+	overflow: visible !important;
+}
+
+/* `position` must be re-asserted, not just `top`: quality_dms.css:862 sets
+ *     body.dms-theme .page-head { position: relative; }
+ * which outranks core's `.page-head { position: sticky }` on specificity
+ * (0,2,1 vs 0,1,0). That is why the head scrolled out of view while the tab bar
+ * stayed pinned - only the head's position was being overridden. DMS only needs
+ * a containing block for its ::after accent rule, and `sticky` provides one just
+ * as `relative` does, so their accent bar is unaffected. */
+.page-head {
+	position: sticky !important;
+	top: 0 !important;
+	z-index: 20 !important;
+}
+
+/* Tab bar: sticky with NO offset.
+ *
+ * top must be 0, not var(--page-head-height). The bar's sticky container starts
+ * BELOW the page head already, so a 48px offset stacks a second head's worth of
+ * space on top of it - that is the gap that kept reappearing. Measured in
+ * DevTools the bar's own margin-top/padding-top are 0, so the space was the
+ * offset itself.
+ *
+ * With top: 0 it pins at the top of that container, i.e. flush under the head.
+ * z-index stays below the head so it can never paint over it. */
+.form-tabs-list,
+.form-tabs-sticky-up,
+.form-tabs-sticky-down,
+.form-tabs-sticky-down.show-navbar {
+	position: sticky !important;
+	top: 0 !important;
+	margin-top: 0 !important;
+	z-index: 19 !important;
+	background-color: var(--card-bg) !important;
+}
+
+/* Remove the space ABOVE the tab bar. That band is not caused by sticky - it is
+ * the card's own top inset (quality_dms.css adds padding to .layout-main-section
+ * and margin to .layout-main-section-wrapper, on top of the form layout's own
+ * padding), so it shows whether the bar is pinned or not. Zeroing the top inset on
+ * form routes makes the tab bar the first thing in the card, flush under the head.
+ * Left/right/bottom insets are untouched. */
+body[data-route^="Form"] .layout-main-section,
+body[data-route^="Form"] .std-form-layout,
+body[data-route^="Form"] .form-layout,
+body[data-route^="Form"] .form-page {
+	padding-top: 0 !important;
+	margin-top: 0 !important;
+}
+
+/* ------------------------------------------------------------------------
+ * ONE vertical scrollbar on the desk.
+ *
+ * Two scroll containers exist by default:
+ *   1. the document itself - nothing in frappe sets overflow on html/body, so
+ *      the window scrolls and paints the OUTER bar at the window edge;
+ *   2. .main-section (main.scss:37 - height 100vh + overflow scroll), which is
+ *      what actually scrolls the page content and paints the INNER bar.
+ *
+ * Trying to merely *hide* the outer bar was unreliable (the viewport scrollbar
+ * is not consistently styleable via html/body). Instead, stop the document
+ * scrolling at all: .main-section is already a full-viewport scroller, so the
+ * document has nothing useful to scroll. That leaves exactly ONE scrollbar -
+ * .main-section's - which stays visible as the scroll-position indicator.
+ *
+ * Safe because this stylesheet is desk-only (hooks.app_include_css) and every
+ * desk view scrolls inside .main-section. Dialogs/modals are position:fixed and
+ * unaffected. The only side effect is that document.documentElement.scrollTop
+ * stays 0, which merely no-ops frappe's scroll-away header handlers - and those
+ * are already overridden above to keep the head pinned.
+ * ------------------------------------------------------------------------ */
+html,
+body {
+	overflow: hidden;
+}
+
+/* Belt and braces: .main-section is OUTSIDE .page-container, so this suppresses
+ * every other scrollbar inside the page shell while leaving .main-section's own
+ * bar as the single visible one. Without this, any app that later sets overflow
+ * on a shell element (hrms already does on .form-sidebar) reintroduces a second
+ * bar. Scrolling still works everywhere - only the indicator is suppressed. */
+.page-container,
+.page-container * {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* legacy Edge */
+}
+
+.page-container::-webkit-scrollbar,
+.page-container *::-webkit-scrollbar {
+	width: 0 !important;
+	height: 0 !important;
+}
+
+/* Keep the one we want, and make it slim. */
+.main-section {
+	scrollbar-width: thin;
+}
+
+.main-section::-webkit-scrollbar {
+	width: 8px;
+}
+
+/* ------------------------------------------------------------------------
+ * List-view header: "% PROGRESS" label rendered above its cell and clipped.
+ *
+ * NOT a layout bug - a CSS class-name collision. frappe builds each list
+ * header cell with the FIELDNAME as a class:
+ *   list_view.js:774   col.df?.fieldname   (header)
+ *   list_view.js:1030  fieldname           (body cell, same collision)
+ * Task's percent field is literally named "progress", so the header cell
+ * matches Bootstrap's progress-bar component:
+ *   bootstrap.css:5492  .progress { display:flex; overflow:hidden;
+ *                                   line-height:0; background:#e9ecef; }
+ *   list.scss:312       .progress { height: 10px; }
+ * line-height:0 in a 10px overflow:hidden box pushes the text out of the
+ * top of the cell. Any doctype with a Percent field named "progress" hits
+ * this (Task, Project); no other fieldname collides with a Bootstrap class.
+ *
+ * Scoped to the HEADER only. The body cell needs .progress-the-component
+ * (it is the bar's track), so do NOT widen these selectors to .list-row-col.
+ * ------------------------------------------------------------------------ */
+.list-row-head .list-row-col.progress,
+.list-row-head .list-row-col.progress > span {
+	display: block;
+	height: auto;
+	overflow: visible;
+	line-height: inherit;
+	font-size: inherit;
+	background-color: transparent;
+	border-radius: 0;
+}
+
+/* ------------------------------------------------------------------------
+ * List view: bolder column headers, and pin them while the rows scroll.
+ *
+ * Core renders the header as <header class="level list-row-head text-muted">
+ * (list_view.js:818) with no font-weight of its own, so it inherits the body
+ * weight and reads the same as the data under it.
+ *
+ * PINNING: .page-head is already sticky at top: 0 / z-index 20 (see the block
+ * above), and both live in the SAME scroller (.main-section), so the header has
+ * to stop at the head's height or it slides underneath it. Hence
+ * top: var(--page-head-height) - 48px, css_variables.scss:23 - and z-index 18,
+ * deliberately below the page head (20) and the form tab bar (19) so it can
+ * never paint over either.
+ *
+ * This only works because the overflow chain above already clears
+ * .layout-main-section and friends to `overflow: visible`. position: sticky
+ * resolves against the nearest ancestor with a scrolling box, and `overflow:
+ * hidden` counts - without that block the header would re-parent to a box that
+ * never scrolls and drift with the rows. Do not "tidy" the two apart.
+ *
+ * A background is required: sticky elements are transparent by default and the
+ * rows would show through as they pass underneath.
+ * ------------------------------------------------------------------------ */
+ * FIRST ATTEMPT FAILED, both halves - recorded so nobody repeats it:
+ *   - `font-weight: 600` did nothing. quality_dms.css:575 ALREADY sets 600 on
+ *     `body.dms-theme .list-row-head .list-row-col` at (0,3,1); a bare
+ *     `.list-row-head .list-row-col` is (0,2,0) and loses. The headers read light
+ *     because they are 11px uppercase letter-spaced grey, not because of weight.
+ *     So this needs 700 AND a darker colour, at a specificity that wins.
+ *   - `top: var(--page-head-height)` did nothing. list.scss:592-598 sets
+ *     `.list-view .frappe-list .result-container { overflow-x: auto }`, which makes
+ *     that element a SCROLL CONTAINER. Sticky resolves against it, and it only ever
+ *     scrolls horizontally, so there was no vertical scroll for `top` to act on.
+ *
+ * The fix therefore gives .result-container a vertical scroll of its own and pins
+ * the header at top: 0 INSIDE it. Horizontal scrolling is preserved (wide lists
+ * still slide sideways), and the header now travels with that horizontal scroll,
+ * which is what you want - the labels stay above their columns.
+ *
+ * The scrollbar is re-exposed here on purpose: the block further up hides every
+ * scrollbar inside .page-container, and an inner scroll area with no visible
+ * indicator reads as a broken page.
+ *
+ * MAGIC NUMBER: 250px is the chrome above and below the rows (navbar + page head +
+ * filter row + paging area). If the list ends up too short or too tall on another
+ * screen, this is the knob - measure and adjust rather than guessing. */
+.list-view .frappe-list .result-container {
+	max-height: calc(100vh - 250px);
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.list-view .frappe-list .result-container::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+/* core sets overflow-y: hidden on .result (list.scss:596), which would clip the
+ * rows now that the parent is the scroller. */
+.list-view .frappe-list .result-container .result {
+	overflow-y: visible;
+}
+
+.list-view .frappe-list .result-container .list-row-head {
+	position: sticky;
+	top: 0;
+	z-index: 18;
+	background-color: var(--subtle-fg);
+}
+
+/* Beats quality_dms.css:575 (0,3,1) - hence body + .dms-theme in the selector,
+ * with a plain copy for when that theme is not applied. */
+body.dms-theme .list-row-head .list-row-col,
+body.dms-theme .list-row-head .list-subject .level-item,
+.list-row-head .list-row-col,
+.list-row-head .list-subject,
+.list-row-head .list-subject .level-item {
+	font-weight: 700;
+	color: var(--text-color);
+}
+
+/* ------------------------------------------------------------------------
+ * Square outline around avatars (list assignment chips, sidebar user).
+ *
+ * quality_dms.css:924-927 adds a decorative ring:
+ *     body.dms-theme .avatar, body.dms-theme .avatar-frame {
+ *         box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px rgba(47,111,178,.35); }
+ *
+ * A box-shadow spread follows the element's OWN border-radius. frappe rounds the
+ * inner pieces (.standard-image, avatar.scss:155) but not every .avatar wrapper,
+ * so on those the ring paints as a hard square around a round avatar.
+ *
+ * Removed rather than rounded, per the request. If the ring is wanted back, the
+ * one-line alternative is `border-radius: 50%` on the same elements - that makes
+ * it circular instead of deleting it.
+ *
+ * Same selector as theirs plus a plain copy; mercury_desk.css loads later, so
+ * equal specificity is enough and no !important is needed.
+ * ------------------------------------------------------------------------ */
+body.dms-theme .avatar,
+body.dms-theme .avatar-frame,
+.avatar,
+.avatar-frame {
+	box-shadow: none;
+}
+
+/* Sidebar user avatar: the initial was invisible (white on white).
+ *
+ * quality_dms.css:125-129 paints the whole sidebar footer for a NAVY background:
+ *     body.dms-theme .body-sidebar-bottom,
+ *     body.dms-theme .body-sidebar-bottom * { color: var(--dms-on-navy) !important; }
+ *
+ * The `*` catches the avatar's letter too - but the avatar is NOT on the navy
+ * background, it sits on its own light --avatar-frame-bg circle. So the "A" was
+ * painted near-white on near-white. Confirmed in DevTools: that rule wins over
+ * frappe's own inline `color: var(--dark-green-avatar-color)` on .avatar-frame,
+ * because an external !important outranks a non-important inline style.
+ *
+ * Restored to frappe's own token rather than a hardcoded colour, so it stays
+ * correct in dark mode too (avatar.scss:2 --avatar-frame-color = gray-500,
+ * :35 = gray-600 under [data-theme="dark"]). !important is unavoidable here -
+ * it is the only way to outrank theirs. */
+body.dms-theme .body-sidebar-bottom .avatar,
+body.dms-theme .body-sidebar-bottom .avatar *,
+body.dms-theme .body-sidebar-bottom .avatar-frame,
+body.dms-theme .body-sidebar-bottom .standard-image {
+	color: var(--avatar-frame-color) !important;
+}
+
+/* ========================================================================
+ * "Light Aurora" board — Projects workspace only.
+ *
+ * Pastel aurora wash behind white glass cards, per the approved mock
+ * (Downloads/projects_dashboard_light_aurora.html).
+ *
+ * SCOPE: body[data-route="Workspaces/Projects"]. container.js:22 sets
+ * data-route from frappe.get_route_str(), so this matches the Projects
+ * workspace and NOTHING else - not the DMS workspace, not Project/Task lists
+ * or forms. Widen this selector and you re-skin other people's workspaces.
+ *
+ * WHY HERE AND NOT IN quality_dms.css: quality_dms.js:120 puts .dms-theme on
+ * the Projects route so it inherits the DMS navy theme. Aurora contradicts that
+ * theme, so it must override it rather than live beside it - and mercury_desk.css
+ * is LAST in app_include_css (slot 8 of 8), which is what makes these rules win
+ * over quality_dms' own !important card styles. If the load order ever changes,
+ * this whole block silently loses. See the header of this file.
+ *
+ * No web fonts: the mock uses Inter/Space Grotesk from Google Fonts, which a
+ * desk page must not fetch (offline/CSP on the QA server). The desk font is
+ * kept and only size/weight/colour are matched.
+ * ======================================================================== */
+
+/* The aurora wash. The mock puts it on a .board wrapper; the workspace has no
+ * such element, so it goes on the section that already backs the whole canvas.
+ *
+ * .dms-theme is REQUIRED in this selector, and !important with it. quality_dms.css
+ * :399-405 has
+ *     body.dms-theme[data-route^="Workspaces"] .layout-main-section {
+ *         background: transparent; }
+ * at specificity (0,3,1). Without .dms-theme ours is (0,2,1) and LOSES no matter
+ * how late the file loads - which is exactly how the first attempt at this block
+ * silently did nothing. Note theirs is the `background` SHORTHAND, so it also
+ * resets background-image: setting background-image alone is not enough, the
+ * declarations have to out-rank it outright.
+ *
+ * The no-.dms-theme copy below keeps the wash working if quality_dms ever stops
+ * theming this route (quality_dms.js:107-117). */
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
+body[data-route="Workspaces/Projects"] .layout-main-section {
+	background-color: #fbfcff !important;
+	background-image: radial-gradient(70% 90% at 12% 0%, rgba(244, 114, 160, 0.28), transparent 55%),
+		radial-gradient(70% 90% at 88% 8%, rgba(129, 140, 248, 0.28), transparent 55%),
+		radial-gradient(90% 90% at 55% 120%, rgba(45, 212, 191, 0.18), transparent 50%) !important;
+	background-repeat: no-repeat !important;
+	border-radius: 24px;
+	border: none;
+}
+
+/* Mock gap is 16px; core gives each block 7px of padding (desktop.scss ~1100). */
+body[data-route="Workspaces/Projects"] .ce-block__content {
+	padding: 8px;
+}
+
+/* Trim the dead space between the page head and "Project Overview".
+ *
+ * Pre-existing, not caused by the aurora block: the heading sits at the same
+ * y-offset in screenshots taken before any of this work. It is the sum of
+ * quality_dms.css:415 (.layout-main-section-wrapper margin-top) + :412
+ * (.layout-main-section padding) + the first editor block's own padding.
+ * Reclaimed on this route only. */
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section-wrapper,
+body[data-route="Workspaces/Projects"] .layout-main-section-wrapper {
+	margin-top: 0;
+}
+
+/* Board inset, the mock's 28px expressed as a ratio so it scales with the
+ * viewport instead of pinning to one screen width. Percentage padding resolves
+ * against the CONTAINER'S WIDTH on all four sides - vertical included - so a
+ * single value keeps the inset visually square. ~3% of the ~900px content
+ * column is ~27px.
+ *
+ * Overrides quality_dms.css:412 (padding: 8px 12px). The wrapper's margin-top
+ * stays 0 above, so this adds room INSIDE the board without pushing the board
+ * back down away from the page head. */
+body.dms-theme[data-route="Workspaces/Projects"] .layout-main-section,
+body[data-route="Workspaces/Projects"] .layout-main-section {
+	padding: 1% 3% 3%;
+}
+
+/* The heading's own leading stacks on top of the board inset. Zeroed so the gap
+ * above "Project Overview" is the board padding alone. */
+body.dms-theme[data-route="Workspaces/Projects"] .codex-editor h4,
+body[data-route="Workspaces/Projects"] .codex-editor h4 {
+	margin-top: 0;
+	line-height: 1.2;
+}
+
+body[data-route="Workspaces/Projects"] .codex-editor__redactor > .ce-block:first-child,
+body[data-route="Workspaces/Projects"]
+	.codex-editor__redactor
+	> .ce-block:first-child
+	.ce-block__content {
+	padding-top: 0;
+	margin-top: 0;
+}
+
+/* Glass card shell, shared by the KPI cards and the two chart cards so the
+ * whole board reads as one surface. */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+	background: rgba(255, 255, 255, 0.62);
+	backdrop-filter: blur(16px) saturate(140%);
+	-webkit-backdrop-filter: blur(16px) saturate(140%);
+	border: 1px solid rgba(255, 255, 255, 0.85) !important;
+	border-radius: 18px;
+	box-shadow: 0 10px 30px rgba(79, 70, 229, 0.07), 0 2px 6px rgba(236, 72, 153, 0.05),
+		inset 0 1px 0 rgba(255, 255, 255, 0.9);
+	transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+body[data-route="Workspaces/Projects"] .widget.number-widget-box {
+	padding: 20px;
+	min-height: 118px;
+}
+
+/* NOTE: no padding override on .dashboard-widget-box. desktop.scss:189 gives it
+ * none of its own, so the mock's 24px came straight off the plot area - enough
+ * that frappe-charts truncated its x-labels ("Compl ...", "Deliv ...") and
+ * collided the two trend dates. The glass shell above is the whole treatment
+ * these cards get. */
+
+body[data-route="Workspaces/Projects"] .widget.number-widget-box:hover,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 16px 40px rgba(79, 70, 229, 0.12), 0 3px 10px rgba(236, 72, 153, 0.08);
+}
+
+/* Card label: 13px slate, and allowed to wrap. quality_dms.css:272 sets 11px
+ * for the 8 narrow DMS cards; at 25% width these have room for the real label,
+ * which is what stops "Completed Tasks" rendering as "Comple...". */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .widget-title {
+	font-size: 13px !important;
+	font-weight: 500 !important;
+	color: #64748b !important;
+	white-space: normal !important;
+}
+
+/* The big figure. 34px, and the mock's ink->indigo gradient.
+ *
+ * Two overrides are unavoidable here:
+ *   - number_card_widget.js render_number() writes an inline colour per card;
+ *   - quality_dms.css:279-287 forces all of them to navy with !important.
+ * Both are beaten by colour:transparent, which is also what reveals the
+ * gradient painted behind the glyphs.
+ *
+ * Guarded by @supports: without background-clip:text, transparent text would
+ * render the number INVISIBLE - a blank KPI is far worse than a flat one. */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+	font-size: 34px !important;
+	font-weight: 700 !important;
+	line-height: 1.1 !important;
+	margin: 14px 0 10px;
+	font-variant-numeric: tabular-nums;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+		background: linear-gradient(120deg, #0f172a, #4338ca);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent !important;
+	}
+}
+
+/* "100 % since yesterday" / "0 % since yesterday" */
+body[data-route="Workspaces/Projects"] .widget.number-widget-box .percentage-stat-area {
+	font-size: 12px !important;
+	font-weight: 600;
+	margin-top: 0;
+}
+
+/* Section headings ("Project Overview", "Reports & Masters") */
+body[data-route="Workspaces/Projects"] .ce-block h4,
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box .widget-title {
+	color: #475569 !important;
+}
+
+/* Chart card sub-label ("Last synced just now") */
+body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box .widget-subtitle {
+	color: #94a3b8 !important;
+	font-size: 12px !important;
+}
+
+/* Dark mode: the wash and the white glass are a light-theme design. Fall back to
+ * the plain themed card instead of white-on-dark, which would be unreadable. */
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .layout-main-section {
+	background-image: none;
+	background-color: var(--fg-color);
+}
+
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+	background: var(--card-bg);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: 1px solid var(--border-color) !important;
+	box-shadow: none;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+	[data-theme="dark"] body[data-route="Workspaces/Projects"] .widget.number-widget-box .number {
+		background: none;
+		color: var(--text-color) !important;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box,
+	body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box {
+		transition: none;
+	}
+	body[data-route="Workspaces/Projects"] .widget.number-widget-box:hover,
+	body[data-route="Workspaces/Projects"] .widget.dashboard-widget-box:hover {
+		transform: none;
+	}
+}

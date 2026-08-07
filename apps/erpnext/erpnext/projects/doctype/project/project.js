@@ -140,6 +140,26 @@ frappe.ui.form.on("Project", {
 		});
 	},
 
+	// ===========================================================================
+	// ⚠️  PROTECTED — DO NOT DROP THIS WHEN RESOLVING A MERGE CONFLICT.
+	//
+	// This function carries deliberate UI fixes (collapsible Tasks/Defects
+	// accordions, Defects closed on every login). project.js is an erpnext core
+	// file, so it conflicts often. On conflict: KEEP OUR SIDE OF THIS FUNCTION and
+	// take the incoming side elsewhere in the file — merge both, don't pick one
+	// whole file.
+	//
+	// Must survive the merge: DEFAULT_COLLAPSED, the frappe.csrf_token-namespaced
+	// collapse_key(), the .summary-accordion* markup, and the click + keydown
+	// handlers on .summary-accordion-header.
+	//
+	// Do NOT "simplify" the collapsed-state storage to localStorage, to plain
+	// sessionStorage, or to the sid cookie — all three have been tried and are
+	// broken (sid is httponly, so JS cannot read it and the key degrades to a
+	// constant). Only frappe.csrf_token resets per login.
+	//
+	// Full rationale + verification checklist: documents/PROJECT_UI_CHANGES.md
+	// ===========================================================================
 	show_task_defect_summary_tab: function (frm) {
 		// Full Task + Defect (Issue) summary report on the form's own "Summary"
 		// tab — same numbers as the sidebar panel, plus a per-status breakdown.
@@ -215,25 +235,86 @@ frappe.ui.form.on("Project", {
 					.join("")}
 			</div>`;
 
-		const section = (title, icon, doctype, project, s, view_route) => `
-			<div>
-				<div class="flex justify-between align-items-center" style="margin-bottom: 8px;">
+		// Each block is a collapsible accordion, so a section that isn't relevant to
+		// a given project can be folded away instead of taking up the tab. Tasks are
+		// the primary content so they open by default; Defects start folded (they are
+		// empty on most projects, and manufacturing projects never log any) — the
+		// count badge in the header still shows the total while it's closed.
+		// Whatever the user chooses is remembered per section per browser, so the
+		// chosen layout survives reloads and route changes.
+		const DEFAULT_COLLAPSED = { Tasks: false, Defects: true };
+
+		// The stored state is scoped to the CURRENT LOGIN, so logging out always
+		// resets Defects to closed.
+		//
+		// Two earlier attempts failed:
+		//   - localStorage     -> outlived the session entirely.
+		//   - sessionStorage   -> survives logout -> login in the same tab.
+		//   - keying on the sid cookie -> frappe sets `sid` with httponly=True
+		//     (auth.py:394), so JS can never read it; the key silently degraded to a
+		//     constant and behaved exactly like plain sessionStorage.
+		//
+		// frappe.csrf_token (set per session in www/desk.html) IS readable from JS
+		// and is reissued on every login, so a fresh login cannot match the previous
+		// session's keys and the defaults apply again: Tasks open, Defects closed.
+		const session_id = frappe.csrf_token || frappe.session?.user || "nosession";
+		const collapse_key = (title) => `project_summary_collapsed::${session_id}::${title}`;
+
+		const is_collapsed = (title) => {
+			const saved = sessionStorage.getItem(collapse_key(title));
+			if (saved !== null) return saved === "1";
+			return !!DEFAULT_COLLAPSED[title];
+		};
+		const panel_id = (title) => `summary-panel-${frappe.scrub(title)}`;
+
+		// Drop keys from earlier builds / previous logins so nothing stale survives:
+		// an old localStorage flag could otherwise pin Tasks shut, and old per-session
+		// keys would just accumulate.
+		Object.keys(DEFAULT_COLLAPSED).forEach((t) => {
+			localStorage.removeItem(`project_summary_collapsed::${t}`);
+			sessionStorage.removeItem(`project_summary_collapsed::${t}`);
+		});
+		Object.keys(sessionStorage)
+			.filter((k) => k.startsWith("project_summary_collapsed::") && !k.includes(session_id))
+			.forEach((k) => sessionStorage.removeItem(k));
+
+		const section = (title, icon, doctype, project, s, view_route) => {
+			const collapsed = is_collapsed(title);
+			const total = s.total || 0;
+			return `
+			<div class="summary-accordion ${collapsed ? "" : "open"}" data-section="${frappe.utils.escape_html(title)}">
+				<div class="summary-accordion-header" role="button" tabindex="0"
+					aria-expanded="${!collapsed}" aria-controls="${panel_id(title)}"
+					title="${__("Click to show or hide this section")}">
 					<div class="flex align-items-center" style="gap: 8px; font-weight: 700; font-size: 18px; color: var(--dms-blue, #1e3a5f);">
+						<svg class="summary-chevron" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+							<path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8"
+								stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
 						${frappe.utils.icon(icon, "md")} ${__(title)}
+						<span class="summary-count-badge">${total}</span>
 					</div>
-					<a href="${view_route}" class="btn btn-default btn-xs"
-						style="font-size: 12px; border-radius: 6px; padding: 4px 12px;">${__("View All {0}", [__(title)])}</a>
+					<a href="${view_route}" class="btn btn-default btn-xs summary-view-all">${__("View All {0}", [
+						__(title),
+					])}</a>
 				</div>
-				<div style="margin-bottom: 16px;">${legend(doctype)}</div>
-				<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
-					${stat_card(doctype, project, "Total", s.total, null, null)}
-					${ALL_STATUSES[doctype]
-						.map((status) =>
-							stat_card(doctype, project, status, s.by_status[status] || 0, [status], STATUS_ACCENT[doctype][status])
-						)
-						.join("")}
+				<div class="summary-accordion-panel" id="${panel_id(title)}">
+					<div class="summary-accordion-panel-inner">
+						<div style="padding-top: 4px;">
+							<div style="margin-bottom: 16px;">${legend(doctype)}</div>
+							<div style="display: flex; gap: 8px; flex-wrap: nowrap;">
+								${stat_card(doctype, project, "Total", s.total, null, null)}
+								${ALL_STATUSES[doctype]
+									.map((status) =>
+										stat_card(doctype, project, status, s.by_status[status] || 0, [status], STATUS_ACCENT[doctype][status])
+									)
+									.join("")}
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>`;
+		};
 
 		Promise.all([
 			frappe.call({
@@ -255,12 +336,112 @@ frappe.ui.form.on("Project", {
 						transform: translateY(-1px);
 						background: color-mix(in srgb, var(--accent, transparent) 10%, var(--card-bg, #fff)) !important;
 					}
+					/* Collapsible section. Colours come from frappe's theme variables
+					   (not fixed hex) so this stays correct in dark mode. */
+					.summary-accordion-header {
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 8px;
+						padding: 8px 10px;
+						margin: 0 -10px 8px;
+						border-radius: 6px;
+						cursor: pointer;
+						user-select: none;
+						transition: background 0.15s ease;
+					}
+					.summary-accordion-header:hover {
+						background: var(--fg-hover-color, var(--control-bg, #f4f5f6));
+					}
+					.summary-accordion-header:focus-visible {
+						outline: 2px solid var(--primary, #2490ef);
+						outline-offset: 1px;
+					}
+					.summary-chevron {
+						width: 16px;
+						height: 16px;
+						flex-shrink: 0;
+						color: var(--text-muted, #8d99a6);
+						transform: rotate(-90deg);
+						transition: transform 0.25s ease;
+					}
+					.summary-accordion.open .summary-chevron { transform: rotate(0deg); }
+					/* "View All Tasks" and "View All Defects" are different lengths, so
+					   without a shared width their left edges sit ragged against each
+					   other. A common min-width makes both buttons identical, so the
+					   two header rows line up on both edges. */
+					.summary-view-all {
+						flex: 0 0 auto;
+						min-width: 132px;
+						text-align: center;
+						font-size: 12px;
+						border-radius: 6px;
+						padding: 4px 12px;
+						white-space: nowrap;
+					}
+					.summary-count-badge {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						min-width: 22px;
+						height: 20px;
+						padding: 0 7px;
+						border-radius: 999px;
+						background: var(--control-bg, #f4f5f6);
+						color: var(--text-muted, #8d99a6);
+						font-size: 12px;
+						font-weight: 700;
+						font-variant-numeric: tabular-nums;
+					}
+					/* 0fr -> 1fr grid trick: animates to the panel's natural height
+					   without hardcoding a max-height. */
+					.summary-accordion-panel {
+						display: grid;
+						grid-template-rows: 0fr;
+						transition: grid-template-rows 0.28s ease;
+					}
+					.summary-accordion.open .summary-accordion-panel { grid-template-rows: 1fr; }
+					.summary-accordion-panel-inner { overflow: hidden; }
+					@media (prefers-reduced-motion: reduce) {
+						.summary-accordion-panel, .summary-chevron { transition: none; }
+					}
 				</style>
 				<div style="display: flex; flex-direction: column; gap: 22px; margin-top: 8px;">
 					${section("Tasks", "bullet-list", "Task", frm.doc.name, task_r.message, task_route)}
 					${section("Defects", "alert-triangle", "Issue", frm.doc.name, defect_r.message, defect_route)}
 				</div>
 			`);
+
+			// Collapse / expand a section and remember the choice. The "View All"
+			// button lives inside the header, so its click must not also toggle.
+			const toggle_section = ($header) => {
+				const $acc = $header.closest(".summary-accordion");
+				const open = $acc.toggleClass("open").hasClass("open");
+				$header.attr("aria-expanded", open);
+				const title = $acc.attr("data-section");
+				sessionStorage.setItem(collapse_key(title), open ? "0" : "1");
+			};
+
+			// "View All" sits inside the clickable header, so its click must not also
+			// toggle the section open/closed.
+			$wrapper.off("click", ".summary-view-all").on("click", ".summary-view-all", function (e) {
+				e.stopPropagation();
+			});
+
+			$wrapper
+				.off("click", ".summary-accordion-header")
+				.on("click", ".summary-accordion-header", function () {
+					toggle_section($(this));
+				});
+
+			$wrapper
+				.off("keydown", ".summary-accordion-header")
+				.on("keydown", ".summary-accordion-header", function (e) {
+					if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+						e.preventDefault();
+						toggle_section($(this));
+					}
+				});
 
 			$wrapper.off("click", ".summary-stat-card").on("click", ".summary-stat-card", function () {
 				const $el = $(this);

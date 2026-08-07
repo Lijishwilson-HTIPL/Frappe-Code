@@ -1,0 +1,30 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-07-22 15:49:09.150554",
+  "name": "Request Revision",
+  "workflow_action_name": "Request Revision"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-07-22 15:49:09.154298",
+  "name": "Approve RTM",
+  "workflow_action_name": "Approve RTM"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-07-24 11:47:05.031560",
+  "name": "Send for Customer Review",
+  "workflow_action_name": "Send for Customer Review"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-07-24 11:53:42.891507",
+  "name": "Resubmit for Review",
+  "workflow_action_name": "Resubmit for Review"
+ }
+]

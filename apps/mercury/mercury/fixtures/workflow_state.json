@@ -1,0 +1,38 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-07-24 11:48:22.160242",
+  "name": "Submittal Under Customer Review",
+  "style": "",
+  "workflow_state_name": "Submittal Under Customer Review"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-07-22 15:49:09.084974",
+  "name": "Draft",
+  "style": "",
+  "workflow_state_name": "Draft"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-07-22 15:49:09.125442",
+  "name": "Revision Requested",
+  "style": "",
+  "workflow_state_name": "Revision Requested"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-07-24 11:50:40.791077",
+  "name": "RTM Approved",
+  "style": "",
+  "workflow_state_name": "RTM Approved"
+ }
+]
