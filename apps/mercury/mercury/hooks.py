@@ -199,6 +199,16 @@ doc_events = {
 # 	"Task": "mercury.custom.task.CustomTaskMixin"
 # }
 
+# The nightly overdue sweep (erpnext daily_maintenance -> set_tasks_as_overdue) flips
+# any task that is not Cancelled/Completed and whose exp_end_date has passed. Our
+# custom "Delivered" status is not on that hardcoded list, so it reverts to Overdue on
+# the first night after a Mercury task gets an Expected End Date. The mixin makes
+# Delivered terminal. A mixin rather than a doc_event because update_status() writes
+# with db_set() and never runs validate. See mercury/task_status.py.
+extend_doctype_class = {
+	"Task": "mercury.task_status.TaskStatusMixin",
+}
+
 # Overriding Methods
 # ------------------------------
 #

@@ -105,7 +105,11 @@ re-read this whole file.
 ▎      bench's tasks were backfilled. Old tasks elsewhere refuse to save on first edit.
 ▎      An after_migrate hook in mercury would self-heal every environment — offered,
 ▎      not built.
-▎  [ ] Two Mercury blockers, deliberately unfixed — see [17.11]. Do not "fix" them.
+▎  [x] Two Mercury blockers — BOTH FIXED 2026-08-10, see [17.11]. Blocker 1 was
+▎      master data (PROJ-0001 Expected End Date): re-apply BY HAND on QA/any other
+▎      environment, it does not travel. Blocker 2 was code and does travel.
+▎  [ ] Same area, NOT fixed: timesheet.py:178-181 still overwrites a Delivered
+▎      status on Timesheet submit. Different code path — [17.11].
 ▎  [ ] Nine quality_dms records whose JSON never reaches any DB — [17.8]. James's call.
 ################################################################################
 
@@ -1159,14 +1163,34 @@ cost of guessing wrong is a rebuild. Get these answered before designing anythin
   styling should follow him.
 
 ================================================================================
-[17.11] *** NOTICE — TWO KNOWN BLOCKERS, LEFT UNFIXED ON PURPOSE ***
+[17.11] *** TWO KNOWN BLOCKERS — BOTH FIXED 2026-08-10 ***
 ================================================================================
-Found 2026-08-06 while answering how to populate the Task date columns. Paul
-tested the demo path, it works for him, and he decided NOT to change these the
-night before the demo. That is a deliberate call, not an oversight.
+Found 2026-08-06 while answering how to populate the Task date columns. Left
+unfixed on purpose the night before the demo; Paul cleared them for fixing on
+2026-08-10 and BOTH ARE NOW DONE. The mechanism write-ups below are kept because
+they explain WHY each fix looks the way it does - do not re-fix them.
 
-DO NOT fix them unprompted. Offer, then wait. They are LATENT, not cosmetic -
-each has a precise trigger, and each is a small fix when the time is right.
+  BLOCKER 1 = FIXED. PROJ-0001.expected_end_date 2026-08-03 -> 2027-12-31.
+    This is MASTER DATA, not a fixture. It does NOT travel via bench migrate -
+    any other environment running this demo needs the same edit by hand.
+    Verified: Expected Start/End Date now saves on a PROJ-0001 task
+    (TASK-2026-00006 set to 2026-08-10 / 2026-08-20 as the probe).
+  BLOCKER 2 = FIXED in code, so it DOES travel. mercury/task_status.py gains
+    TaskStatusMixin.update_status, wired via hooks.py -> extend_doctype_class.
+    It early-returns on "Delivered" and delegates everything else to erpnext via
+    super(), so the core overdue rule is untouched. NOT a doc_event: core
+    update_status writes with db_set() and never runs validate.
+    Verified by giving TASK-2026-00001 a past exp_end_date and running
+    set_tasks_as_overdue() directly: it stayed Delivered, while the control
+    task TASK-2026-00007 still flipped to Overdue. MRO confirmed as
+    ExtendedTask -> TaskStatusMixin -> Task.
+
+STILL OPEN in this area: the RELATED note at the bottom of this section.
+timesheet.py:178-181 force-sets Completed/Working on Timesheet submit and will
+still destroy a Delivered status. Blocker 2's fix does not cover it - it is a
+different code path. Not fixed, not authorised.
+
+--- original write-ups, kept for the mechanism detail ---
 
 BLOCKER 1 — PROJ-0001.expected_end_date = 2026-08-03, i.e. IN THE PAST.
   Mechanism : task.py:120-136 validate_parent_project_dates throws if ANY task
