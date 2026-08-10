@@ -1,12 +1,118 @@
 ================================================================================
-  MERCURY ERP DEMO — WORK PROGRESS LOG
-  Client: Mercury (Engineer-to-Order manufacturer)
+  SBIQC / ERP — WORK PROGRESS LOG
+  ACTIVE:  Adam — "Namibia Constructions" (Project + CRM)      -> section [18]
+  PAUSED:  Mercury (Engineer-to-Order manufacturer)            -> sections [1]-[17]
   Platform: ERPNext v16 / Frappe v16 (erpnext 16.23.1, frappe 16.23.0)
   Site: mysite.local | Login: Administrator | Started: 2026-07-23
 ================================================================================
 
 ################################################################################
+## >>> START HERE — COPY THIS WHOLE BLOCK INTO A NEW CHAT (updated 2026-08-10) <<<
+################################################################################
+Everything between the ▎ marks is the prompt. Paste it as your first message in a
+fresh session; it is written to be self-contained so the new chat does not have to
+re-read this whole file.
+
+▎ SBIQC / Frappe bench — ERPNext v16 · Frappe v16 · site mysite.local · login Administrator
+▎ Bench: \\wsl.localhost\Ubuntu-22.04\home\paul\frappe-bench
+▎
+▎ ══ CURRENT FOCUS ══
+▎ Client ADAM — "Namibia Constructions". The Project/Task demo was delivered and he
+▎ liked it. He now wants to explore TWO modules only:
+▎     1. SBIQC Project module  (= ERPNext Projects)
+▎     2. SBIQC CRM             (= ERPNext/Frappe CRM)
+▎ We white-label Frappe/ERPNext as SBIQC, so all client-facing naming is SBIQC.
+▎ *** MERCURY IS PAUSED. Do not touch Mercury work until Paul says "ok, back to
+▎ Mercury". Mercury's own state is in [17.11] and sections [12]-[17] of
+▎ workprogress_mercury.txt - read only if he reopens it. ***
+▎
+▎ ══ READ FIRST (in this order) ══
+▎  1. CLAUDE.md at the repo root — the PROTECTED UI FIXES section is binding.
+▎  2. workprogress_mercury.txt [18] — the Adam engagement, and what is still unknown.
+▎  3. documents/CHANGELOG.md — commit IDs, push history, rollback targets.
+▎  4. documents/PROJECT_UI_CHANGES.md — ONLY if anything UI/CSS comes up.
+▎     §4 is the verification checklist, §5 the re-apply guide.
+▎
+▎ ══ GIT ══
+▎ Remote "hephzibah" = github.com/hephzibahtechnologies/Frappe-Code · branch paul-update.
+▎ ("origin" = Lijishwilson-HTIPL is DEPRECATED — never push there.)
+▎ As of 2026-08-10: local == remote == 1fef86302, NOTHING unpushed, and all of it is
+▎ already merged into staging-deployment.
+▎ - Paul Sahaya Doss is the SOLE author. NEVER add a Claude/Anthropic co-author trailer.
+▎ - Commit locally after each step. PUSH only when he says so. Credentials are stored,
+▎   so a push succeeds silently — which is exactly why you must not push unasked.
+▎ - Multi-line commit messages: write a temp file and `git commit -F file`. Heredocs
+▎   break through the WSL bridge.
+▎ - To reach QA: PR from paul-update -> staging-deployment. ALWAYS merge
+▎   staging-deployment INTO paul-update first, verify, push, then raise the PR - that
+▎   keeps it a fast-forward. Tag the pre-merge state (pre-staging-merge-N).
+▎ - `gh` is NOT installed and sudo is unavailable, so Claude cannot open the PR.
+▎   Give Paul the compare link and write the PR body to a file for him to paste.
+▎
+▎ ══ DEPLOYMENT — THE CI DOES NOT DEPLOY ON PUSH ══
+▎ build.yml runs on push to staging-deployment/production and ONLY builds images.
+▎ deploy-staging.yml / deploy-production.yml are workflow_dispatch ONLY.
+▎ So merging to staging-deployment does NOT reach QA (qa.sbiqc.com). Someone must run
+▎ Actions -> Deploy to Staging (tag latest-staging) after the build goes green. That
+▎ script runs `bench --site all migrate`, force-reimports the DMS fixtures, and clears
+▎ the SERVER cache — the BROWSER still needs Ctrl+Shift+R.
+▎
+▎ ══ ENVIRONMENT — THIS BITES EVERY SESSION ══
+▎ - The bench is in WSL; the Bash tool is Windows Git Bash. Prefix everything:
+▎       wsl -d Ubuntu-22.04 -- bash -c "cd ~/frappe-bench && <command>"
+▎ - $(...), $((...)) and heredocs break through that bridge — they fail silently or
+▎   mangle. Write script files with the Write tool to
+▎   \\wsl.localhost\Ubuntu-22.04\tmp\x.py and run them. Prefer double quotes outside.
+▎ - Python against the site (never `bench console`, it is interactive):
+▎       cd ~/frappe-bench/sites && ../env/bin/python /tmp/script.py
+▎   with frappe.init(site="mysite.local"); frappe.connect()
+▎ - PDF generation must run under honcho:
+▎       cd ~/frappe-bench && honcho run bash -c "cd sites && ../env/bin/python ..."
+▎ - `bench restart` does NOT reload .env — only a full Ctrl+C + `bench start` does.
+▎ - After editing mercury CSS/JS: bump the ?v= in mercury/hooks.py, then
+▎   `bench build --app mercury` and `bench --site mysite.local clear-cache`.
+▎ - python-pptx is installed in env/ (used for the client deck).
+▎
+▎ ══ STANDING RULES ══
+▎ - v16 ONLY. Verify against apps/ source or docs.frappe.io BEFORE stating where a
+▎   field/button/setting lives. No trial-and-error, no v15 guessing.
+▎ - DEMOS RUN ON QA, NOT LOCAL. Every change must survive a fresh `bench migrate` on
+▎   another machine: fixtures or source files, never DB-only edits. Master-data VALUES
+▎   (holiday lists, company checkboxes) are NOT fixtures — flag them as manual steps.
+▎ - Any DocType/config change -> export to mercury fixtures and commit. JSON is the
+▎   source of truth, not the database.
+▎ - Never patch frappe/erpnext/hrms core. Our overrides live in apps/mercury/
+▎   (mercury_desk.css / mercury_desk.js, loaded LAST via app_include_css/js).
+▎ - For UI/CSS: MEASURE the rendered page — ask Paul for a DevTools Computed/Styles
+▎   reading. Three apps override the same properties with !important; reading .scss
+▎   alone has produced wrong diagnoses three times, and cost real time each time.
+▎ - VERIFY BEFORE WARNING, and verify before claiming a fix works. Several "fixes"
+▎   this project were silent no-ops (see [17.12]). Prove it, then say it.
+▎ - Prefer backend scripts over UI walk-throughs — he knows the UI and wants records
+▎   created, not a tutorial.
+▎
+▎ ══ WHAT IS ALREADY BUILT (do NOT rebuild) ══
+▎ Task module: "Assign" tab (mandatory assignee, exempt for templates and for
+▎ Project-Template-generated tasks), actual-date labels cleaned, Delivered status
+▎ gated per company, list-view bold + frozen headers, breadcrumb retargeting,
+▎ Projects workspace "Light Aurora" cards, avatar fixes. Details: [17].
+▎ Verify nothing regressed with:  env/bin/python documents/verify_ui_markers.py
+▎ (28 checks — it must print ALL CHECKS PASSED before you push anything.)
+▎
+▎ ══ OPEN ITEMS ══
+▎  [ ] Adam's scope is NOT yet defined — see [18]. ASK, do not guess.
+▎  [ ] QA/production Task backfill: custom_assign_to is mandatory, but only the local
+▎      bench's tasks were backfilled. Old tasks elsewhere refuse to save on first edit.
+▎      An after_migrate hook in mercury would self-heal every environment — offered,
+▎      not built.
+▎  [ ] Two Mercury blockers, deliberately unfixed — see [17.11]. Do not "fix" them.
+▎  [ ] Nine quality_dms records whose JSON never reaches any DB — [17.8]. James's call.
+################################################################################
+
+################################################################################
 ## >>> HANDOFF FOR NEXT CHAT (read this WHOLE block first) — updated 2026-08-05 (evening) <<<
+##     SUPERSEDED for day-to-day work by the START HERE block above. Kept because
+##     it carries the Mercury demo detail, which is still accurate for [12]-[17].
 ################################################################################
 You are picking up the Mercury ERP demo mid-project. Read this block, then
 "web docs/mercury_phase1_stepbystep_guide.txt" (Stage 6 was REWRITTEN 2026-08-04)
@@ -981,6 +1087,76 @@ TWO QA-ONLY SYMPTOMS, BOTH DIAGNOSED, NEITHER OURS:
     with no assignee, which refuse to save on first edit. Offered but not built:
     an after_migrate hook in mercury so any environment self-heals on deploy.
     Decide this before anyone edits old Tasks on QA or production.
+
+================================================================================
+[18] CLIENT: ADAM — "NAMIBIA CONSTRUCTIONS"  (opened 2026-08-10)
+================================================================================
+*** THIS IS THE ACTIVE WORK STREAM. Mercury is paused until Paul says otherwise. ***
+
+18.1 WHERE IT STANDS
+--------------------------------------------------------------------------------
+- Demo DELIVERED. Paul walked Adam through the Project module and the Task module
+  using the SBIQC build (ERPNext v16 white-labelled as SBIQC).
+- Outcome: Adam liked it and wants to explore further.
+- Adam's stated interest is TWO modules only:
+      1. SBIQC Project module   (ERPNext Projects)
+      2. SBIQC CRM              (ERPNext / Frappe CRM)
+  Everything else in the bench (DMS, HR, Stock, Manufacturing, Helpdesk, Accounts…)
+  is OUT of his scope as it stands.
+
+18.2 DEMO COLLATERAL BUILT FOR THIS CLIENT
+--------------------------------------------------------------------------------
+A 17-slide client walkthrough of Project + Task, written in construction language
+(phases, crews, snags, sign-off) rather than system language. Covers: what a
+Project vs a Task is, the working-calendar and project-template setup, creating a
+job, assigning owners, plan-vs-actual dates, dependencies, statuses, timesheets,
+defects, the dashboard, reports, a who-does-what rhythm, and five known gotchas.
+  - "web docs/SBIQC_Projects_Tasks_Client_Walkthrough.pptx"   (17 slides, 16:9)
+  - "web docs/SBIQC_Projects_Tasks_Client_Walkthrough.html"   (same deck, offline)
+  - Published artifact (interactive, arrow-key navigable, P prints one slide/page)
+NOTE: "web docs/" is GITIGNORED (.gitignore:26) - these files live only on this
+machine. If they matter, decide whether to track them.
+Deliberately left OUT of the client deck: the "Delivered" status (Mercury-only,
+gated per company - it would confuse a construction client).
+
+18.3 *** WHAT IS NOT YET KNOWN — ASK, DO NOT GUESS ***
+--------------------------------------------------------------------------------
+"Adam needs only Project and CRM" can mean several very different builds, and the
+cost of guessing wrong is a rebuild. Get these answered before designing anything:
+
+  a) DELIVERY SHAPE. A separate SITE/tenant for Adam, or the existing site with his
+     modules scoped by role? This decides almost everything downstream.
+  b) HIDE vs REMOVE. Should the other modules be invisible in the UI (workspaces,
+     sidebar, Desktop Icons, role permissions) or genuinely not installed? v16's
+     navigation is Desktop Icon + Workspace Sidebar driven - see [13]/[16] for how
+     those behave and how they are exported.
+  c) CRM - WHICH ONE? Frappe has TWO: the ERPNext CRM module (Lead/Opportunity/
+     Customer inside the desk) and the separate Frappe CRM app (its own UI at /crm).
+     This bench has a `crm` app AND a `crm_unify` app installed. Establish which
+     product Adam saw and which he wants BEFORE any work starts.
+  d) BRANDING DEPTH. Logo/name swap only, or navbar, login page, emails, print
+     formats and the app switcher too? sbiqc_provisioning already exists in this
+     bench and may already cover part of this.
+  e) DATA. Does Adam get a clean site, sample construction data, or a migration of
+     something he already has?
+  f) USERS AND ROLES. How many, and what should a site engineer see versus a PM
+     versus Adam himself?
+
+18.4 THINGS ALREADY TRUE THAT AFFECT HIS BUILD
+--------------------------------------------------------------------------------
+- The Task "Assign" tab makes an assignee MANDATORY on every real task. On a fresh
+  site that is fine. On any site with existing tasks it needs the backfill (see the
+  open item in the START HERE block) or old tasks refuse to save on first edit.
+- Project Templates + a Holiday List are the backbone of the construction workflow
+  we demoed - both are MASTER DATA, not fixtures, so they must be created on
+  whatever environment Adam uses. They will not arrive via `bench migrate`.
+- A Project's Expected End Date acts as a hard ceiling on every task date and every
+  timesheet in that project ([17.1] blocker 1). On a real client build, set it
+  generously or the site team will be blocked.
+- The desk UI overrides in apps/mercury (aurora cards, frozen list headers,
+  breadcrumbs, avatars) are currently DESK-WIDE, not scoped to one client. If Adam
+  gets his own site this is moot; if he shares this one, decide whether the Mercury
+  styling should follow him.
 
 ================================================================================
 [17.11] *** NOTICE — TWO KNOWN BLOCKERS, LEFT UNFIXED ON PURPOSE ***
