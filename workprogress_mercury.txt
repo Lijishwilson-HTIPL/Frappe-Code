@@ -1123,10 +1123,24 @@ machine. If they matter, decide whether to track them.
 Deliberately left OUT of the client deck: the "Delivered" status (Mercury-only,
 gated per company - it would confuse a construction client).
 
-18.3 *** WHAT IS NOT YET KNOWN — ASK, DO NOT GUESS ***
+18.3 *** SCOPE — ANSWERED BY PAUL 2026-08-10 ***
 --------------------------------------------------------------------------------
-"Adam needs only Project and CRM" can mean several very different builds, and the
-cost of guessing wrong is a rebuild. Get these answered before designing anything:
+  a) DELIVERY SHAPE = SEPARATE SITE/TENANT, created through our own SBIQC
+     provisioning module. Management's expectation: subdomain "naf", so Adam gets
+     his own instance at naf.sbiqc.com.
+  b) SELECTION = from the provisioning UI. We (SBIQC super admins) tick what the
+     tenant gets. For Adam: ERPNext Project + CRM modules only.
+  c) CRM = the ERPNext CRM module (Lead/Opportunity/Customer inside the desk),
+     branded SBIQC CRM. NOT the standalone Frappe CRM app. => do NOT tick the
+     `crm` app in the provisioning wizard.
+  d) BRANDING = full SBIQC branding.
+  e) DATA = clean site. Adam enters his own data.
+  f) USERS/ROLES = Adam gets an administrator-level role and manages his own
+     users. So his instance needs user management + role management alongside
+     Project and CRM.
+
+The original questions are kept below for the reasoning behind each.
+--------------------------------------------------------------------------------
 
   a) DELIVERY SHAPE. A separate SITE/tenant for Adam, or the existing site with his
      modules scoped by role? This decides almost everything downstream.
@@ -1161,6 +1175,87 @@ cost of guessing wrong is a rebuild. Get these answered before designing anythin
   breadcrumbs, avatars) are currently DESK-WIDE, not scoped to one client. If Adam
   gets his own site this is moot; if he shares this one, decide whether the Mercury
   styling should follow him.
+  => SETTLED by 18.3(a): Adam gets his OWN SITE, so this is moot. Mercury styling
+     does not follow him; apps/mercury is not installed on his tenant.
+
+18.5 AUDIT OF THE EXISTING sbiqc_provisioning APP  (read 2026-08-10, code only)
+--------------------------------------------------------------------------------
+Written by Lijish. Never used: zero Tenant records, zero Provisioning Log records
+on this bench. Treat every path below as UNTESTED, not as working.
+
+WHAT EXISTS AND IS REAL
+  - Doctypes: Tenant (submittable), Tenant App (child), Provisioning Log,
+    MFT License (a 6-line stub, no logic - leftover).
+  - Desk Page `sbiqc-provisioning` = a Vue "Management Console" (988-line SFC):
+    Tenants / Queue / Health / Reports / Errors, plus a 3-step New Tenant wizard
+    (Identity -> Apps -> Confirm).
+  - engine.provision_tenant: bench new-site -> install apps (erpnext forced first)
+    -> seeder -> routing -> clear-cache -> status Active -> welcome email.
+    Idempotent-ish: reuses an existing site, skips installed apps, clears stale
+    install_app.lock. Passwords are redacted from subprocess error messages.
+  - Tenant.validate: subdomain regex + reserved-word list + uniqueness, and it
+    force-adds erpnext to every tenant.
+  - Everything runs async on the "long" queue via frappe.enqueue.
+
+THE FIVE THINGS THAT BLOCK ADAM
+  1. NO MODULE-LEVEL SELECTION. This is the big one. Tenant App only picks whole
+     APPS (erpnext, hrms, helpdesk, crm, quality_dms, mercury). "Project + CRM
+     only" is a selection of MODULES INSIDE erpnext. Installing erpnext installs
+     Accounts, Stock, Manufacturing, Selling, Buying, Assets, Support, the lot -
+     and nothing in this app hides or removes any of it. 18.3(b) therefore needs
+     NEW work, not configuration of what is there.
+     The v16 lever to build on: frappe/utils/modules.py:9-12 - the Administrator
+     user's `blocked_modules` child table acts as a GLOBAL block for every user on
+     a site, and frappe/desk/desktop.py:358 filters workspaces by it. So the
+     module gate is a per-tenant list of Module Defs written into the tenant
+     site's Administrator.blocked_modules, plus Desktop Icon / Workspace Sidebar
+     cleanup. NOTE: common_site_config.json on THIS bench has a `blocked_modules`
+     key (Crm Unify, FTelephony). It is INERT - grepped every app in apps/, and
+     nothing anywhere reads blocked_modules from conf; the only reader is
+     User.get_blocked_modules(), the child table. Do not copy that key pattern.
+  2. PRODUCTION ROUTING IS A STUB. engine._setup_production_routing is literally
+     `pass`. The only implemented path is local: append to WSL /etc/hosts (via
+     `sudo -n`, and sudo is not available to us) plus the Windows hosts file.
+     naf.sbiqc.com CANNOT work until this is built: nginx server block, wildcard
+     DNS for *.sbiqc.com, and TLS. This is the gap between what the code does and
+     what management is expecting.
+  3. `tenant_domain_suffix` IS NOT SET in common_site_config.json, and neither is
+     `is_production`. Tenant.validate therefore falls back to ".localhost", which
+     is why the wizard screenshot shows "naf.localhost". For naf.sbiqc.com both
+     keys must be set. `dns_multitenant` is already True - that part is fine.
+  4. NO LONG-QUEUE WORKER. The console's own Health tab reports DEGRADED / "No
+     long queue worker found". Provisioning is enqueued to the "long" queue, so
+     with no worker the job sits forever and the UI shows no error at all. Verify
+     this first - it is the most likely reason the module "looks broken".
+  5. BRANDING IS BACKWARDS FOR OUR CASE (vs 18.3(d) = full SBIQC branding).
+     seeder._set_site_branding sets the TENANT's app_name/system_name to the
+     CLIENT's name ("Adam"), not to SBIQC. whitelabel.apply_branding is the thing
+     that sets "SBIQC" and relabels the Frappe/ERPNext Desktop Icons - but it runs
+     on after_migrate of sbiqc_provisioning, and sbiqc_provisioning is in
+     Tenant.ALWAYS_EXCLUDED, so it is never installed on a tenant site and never
+     runs there. Net effect: Adam's site would say "Adam" and still show Frappe /
+     ERPNext / Frappe HR labels. Login page, logo, emails and print formats are
+     not covered by either path.
+
+ALSO WRONG / RISKY, FIX BEFORE A CLIENT TOUCHES IT
+  - The welcome email SENDS THE PASSWORD IN PLAINTEXT ("Admin@123"), and
+    engine.py defaults admin_password to that literal when `tenant_admin_password`
+    is unset. It IS set on this bench, but the fallback should not exist.
+  - `db_root_password` defaults to "root" when unset - and it IS unset here.
+  - delete_tenant runs `bench drop-site --no-backup`. Whitelisted, irreversible,
+    and the only guard is the UI.
+  - The seeder never completes the Setup Wizard, it only writes set-config keys.
+    Adam would land on the wizard - and the welcome email tells him to run it.
+    Decide: complete it programmatically, or accept it as his first step.
+  - Roles: seeder._create_admin_user only grants System Manager. That satisfies
+    18.3(f) for user/role management, but System Manager also SEES EVERYTHING,
+    which directly fights the "Project and CRM only" requirement. The module gate
+    in item 1 has to be what constrains him, not his role.
+  - The wizard offers the `crm` app. Per 18.3(c) it must NOT be ticked for Adam -
+    that is the wrong CRM product. The Confirm screenshot shows "SBIQC, crm",
+    i.e. exactly the wrong pick.
+  - common_site_config.json still has `frappe_user: ijish` from the original dev's
+    machine.
 
 ================================================================================
 [17.11] *** TWO KNOWN BLOCKERS — BOTH FIXED 2026-08-10 ***
