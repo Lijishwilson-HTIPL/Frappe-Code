@@ -969,9 +969,22 @@ def get_training_analytics(from_date=None, to_date=None, department=None):
     overdue_trend = [{"month": r.month, "overdue_count": r.overdue_count} for r in overdue_rows]
 
     # ---- Per-employee scores (every employee, not just a top-N leaderboard) ----
-    # Reuses ack_where (department + due_date window) so it stays consistent
-    # with the department table above; date filter applies to due_date since
-    # that's the window already established for this endpoint's other tables.
+    # Own copy of the department/due_date filter (same shape as ack_where/
+    # ack_values above, intentionally not the same variables) so an edit to
+    # one query's filter can't silently change the other's.
+    emp_conditions = ["da.status NOT IN ('Suggested', 'Excused')"]
+    emp_values = {}
+    if department:
+        emp_conditions.append("emp.department = %(department)s")
+        emp_values["department"] = department
+    if from_date:
+        emp_conditions.append("(da.due_date IS NULL OR da.due_date >= %(from_date)s)")
+        emp_values["from_date"] = from_date
+    if to_date:
+        emp_conditions.append("(da.due_date IS NULL OR da.due_date <= %(to_date)s)")
+        emp_values["to_date"] = to_date
+    emp_where = " AND ".join(emp_conditions)
+
     emp_rows = frappe.db.sql(
         f"""
         SELECT
@@ -982,9 +995,9 @@ def get_training_analytics(from_date=None, to_date=None, department=None):
             da.assessment_score AS assessment_score
         FROM `tabDocument Acknowledgement` da
         LEFT JOIN `tabEmployee` emp ON emp.name = da.employee
-        WHERE {ack_where}
+        WHERE {emp_where}
         """,
-        ack_values,
+        emp_values,
         as_dict=True,
     )
     by_employee = {}

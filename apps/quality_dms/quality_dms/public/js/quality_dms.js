@@ -28,6 +28,7 @@
 		"File",
 		"Workflow",
 		"Workflow Action",
+		"Department",
 	]);
 	const DMS_REPORTS = new Set([
 		"Audit Trail Report",
@@ -233,12 +234,16 @@
 	const title_observer = new MutationObserver(() => {
 		if (current_title_override) set_title_now(current_title_override);
 	});
-	title_observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
 	$(document).ready(function () {
 		apply();
 		apply_locked_filter_ui();
 		apply_route_title_override();
+		// Deferred to ready (not top-level) since this script loads via
+		// app_include_js in <head> -- document.body may not exist yet at
+		// parse time, and an error here would abort this whole IIFE,
+		// silently disabling everything registered below it too.
+		title_observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 		if (frappe.router && frappe.router.on) {
 			frappe.router.on("change", apply);
 			frappe.router.on("change", apply_locked_filter_ui);
