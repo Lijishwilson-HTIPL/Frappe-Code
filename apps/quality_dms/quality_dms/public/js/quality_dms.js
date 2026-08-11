@@ -120,14 +120,14 @@
 		document.body.classList.toggle("dms-theme", is_dms_route() || is_projects_route());
 	}
 
-	// Curated Document Library entry points (Repository, Workbench, the
+	// Curated Document Library entry points (Repository, ToDo, the
 	// "Published Documents" Key Metrics card) should land on a pre-scoped view
 	// that reads as the default list for that purpose, not as "a filter someone
 	// applied and could remove." Hides just the clear-all-filters (X) button --
 	// scoped to when the ONLY active filter is exactly one of these curated
 	// ones, so a user's own manual filtering elsewhere is completely unaffected.
 	const LOCKED_FILTER_SIGNATURES = [
-		{ fieldname: "is_in_progress", value: "1", title: "Workbench" },
+		{ fieldname: "is_in_progress", value: "1", title: "ToDo" },
 		{ fieldname: "workflow_state", value: "Published", title: "Repository" },
 	];
 
@@ -148,7 +148,7 @@
 					);
 				document.body.classList.toggle("dms-locked-filter", !!match);
 				// Rename the page title/breadcrumb away from "Document Library" so
-				// the curated view reads as its own page (Repository/Workbench),
+				// the curated view reads as its own page (Repository/ToDo),
 				// matching the sidebar label the user actually clicked.
 				if (match && cur_list && cur_list.page && cur_list.page.set_title) {
 					cur_list.page.set_title(__(match.title));
@@ -159,15 +159,94 @@
 		}, 400);
 	}
 
+	// The DMS sidebar uses friendly labels (e.g. "Curricula", "Classifications")
+	// that don't match the underlying DocType/Report's own name, so the page
+	// title/breadcrumb a user lands on can read completely differently from
+	// what they clicked. Unlike the locked-filter case above, these apply
+	// unconditionally to every view of that route (List/Report/Kanban/etc.),
+	// not just one specific filter combination.
+	//
+	// Department and Workflow are deliberately excluded here even though the
+	// DMS sidebar also links to them ("Departments", "Workflow Configuration")
+	// — they're shared core doctypes used by HR and other modules, and
+	// renaming their title globally would leak into those unrelated UIs.
+	const ROUTE_TITLE_OVERRIDES = {
+		"List/DMS Curriculum": "Curricula",
+		"List/DMS Quiz": "Quizzes",
+		"List/DMS Training Record": "Training Records",
+		"List/DMS Training Session": "Training Sessions",
+		"List/DMS Training Assignment Rule": "Assignment Rules",
+		"List/DMS Audit Log": "Audit Logs",
+		"List/CFR Part 11 Signature Log": "Signature Log",
+		"List/Document Category": "Classifications",
+		"List/Document Type": "Record Types",
+		"List/Document Request": "Change Requests",
+		"List/Document Revision": "Revision History",
+		"query-report/Training Matrix Report": "Training Matrix",
+		"query-report/Training Compliance Report": "Training Compliance",
+		"query-report/Overdue Training Report": "Overdue Training",
+	};
+
+	// Query reports (and some list views) re-set their own page title
+	// asynchronously after their data finishes loading, which can happen well
+	// after any fixed setTimeout — a later re-render silently reverts a
+	// one-shot override. A MutationObserver on the title element itself keeps
+	// re-applying the override for as long as the matching route is active,
+	// the same async-fights-back pattern already used for card accents below.
+	let current_title_override = null;
+
+	function apply_route_title_override() {
+		const route = (frappe.get_route && frappe.get_route()) || [];
+		const key = `${route[0]}/${route[1]}`;
+		current_title_override = ROUTE_TITLE_OVERRIDES[key] || null;
+		if (current_title_override) {
+			set_title_now(current_title_override);
+		}
+	}
+
+	function set_title_now(title) {
+		try {
+			// Query reports don't use page.set_title()/.title-text at all —
+			// frappe.breadcrumbs.update() (views/breadcrumbs.js) rebuilds the
+			// breadcrumb's last <li> directly from frappe.query_report.page_title
+			// on every call, including ones that happen well after page load as
+			// the report's own data finishes loading. Overriding page_title and
+			// re-running update() is the only override that survives that.
+			if (frappe.get_route()[0] === "query-report" && frappe.query_report) {
+				if (frappe.query_report.page_title !== __(title)) {
+					frappe.query_report.page_title = __(title);
+					frappe.breadcrumbs.update();
+				}
+				return;
+			}
+			const page =
+				(cur_list && cur_list.page) ||
+				(cur_page && cur_page.page);
+			if (page && page.set_title && page.title !== __(title)) {
+				page.set_title(__(title));
+			}
+		} catch (e) {
+			// title override is cosmetic only — never break navigation over it
+		}
+	}
+
+	const title_observer = new MutationObserver(() => {
+		if (current_title_override) set_title_now(current_title_override);
+	});
+	title_observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
 	$(document).ready(function () {
 		apply();
 		apply_locked_filter_ui();
+		apply_route_title_override();
 		if (frappe.router && frappe.router.on) {
 			frappe.router.on("change", apply);
 			frappe.router.on("change", apply_locked_filter_ui);
+			frappe.router.on("change", apply_route_title_override);
 		} else {
 			$(window).on("hashchange", apply);
 			$(window).on("hashchange", apply_locked_filter_ui);
+			$(window).on("hashchange", apply_route_title_override);
 		}
 	});
 
@@ -251,11 +330,38 @@
 		});
 	}
 
+	// "Documents by Department" bar chart: frappe-charts only honors
+	// custom_options.colors[0] for a single-series Bar chart (unlike a
+	// Donut, which is inherently multi-segment) -- every bar renders in one
+	// color no matter how many entries the colors array has. There's no
+	// reliable department-name text in the DOM to match against (the x-axis
+	// labels are truncated to "...", and the tooltip text isn't rendered
+	// until hover), so bars are recolored by their stable data-point-index
+	// instead, which matches the dataset's render order.
+	const DEPARTMENT_COLORS = [
+		"#4C7CF3", "#36AE7C", "#E8A317", "#26A69A", "#ECAD4B", "#CB4B4B", "#6C63FF", "#8E5CE6",
+	];
+
+	function apply_department_chart_colors(root) {
+		root.querySelectorAll(".widget-head").forEach((head) => {
+			if (!head.textContent.includes("Documents by Department")) return;
+			const widget = head.closest(".widget");
+			if (!widget) return;
+			widget.querySelectorAll("svg rect.bar").forEach((rect) => {
+				const idx = parseInt(rect.getAttribute("data-point-index"), 10);
+				if (Number.isNaN(idx)) return;
+				const color = DEPARTMENT_COLORS[idx % DEPARTMENT_COLORS.length];
+				if (rect.style.fill !== color) rect.style.fill = color;
+			});
+		});
+	}
+
 	const card_observer = new MutationObserver((mutations) => {
 		for (const m of mutations) {
 			if (m.addedNodes.length) {
 				apply_card_accents(document.body);
 				apply_status_chart_colors(document.body);
+				apply_department_chart_colors(document.body);
 			}
 		}
 	});
