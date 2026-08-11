@@ -1107,6 +1107,110 @@ def check_training_expiry():
 			)
 
 
+_SCOPE_TYPES = frozenset({"Employee", "Department", "Employee Group", "Company"})
+
+
+def _resolve_employee_ids_for_scope(scope_type, scope_value, include_subdepartments=False):
+	"""Resolve a targeting scope down to a flat list of active Employee IDs.
+	Shared by the count-preview and the actual bulk-assign endpoint so the
+	two can never disagree about who's included."""
+	if scope_type not in _SCOPE_TYPES:
+		frappe.throw(f"Invalid scope_type '{scope_type}'. Must be one of: {', '.join(sorted(_SCOPE_TYPES))}.")
+	if not scope_value:
+		frappe.throw("scope_value is required.")
+
+	if scope_type == "Employee":
+		# Accept either a single employee id or a JSON-encoded list, so this
+		# scope can also serve the plain "pick individuals" case.
+		if isinstance(scope_value, str) and scope_value.strip().startswith("["):
+			import json
+			return json.loads(scope_value)
+		return [scope_value] if isinstance(scope_value, str) else list(scope_value)
+
+	if scope_type == "Department":
+		departments = [scope_value]
+		if include_subdepartments:
+			from frappe.utils.nestedset import get_descendants_of
+			departments += get_descendants_of("Department", scope_value, ignore_permissions=True)
+		return frappe.get_all(
+			"Employee",
+			filters={"status": "Active", "department": ("in", departments)},
+			pluck="name",
+		)
+
+	if scope_type == "Company":
+		return frappe.get_all(
+			"Employee",
+			filters={"status": "Active", "company": scope_value},
+			pluck="name",
+		)
+
+	# Employee Group: the group's own child table is a static, curated list —
+	# still filtered to currently-Active employees so someone who left after
+	# being added to the group doesn't get re-assigned training.
+	group_employee_ids = frappe.get_all(
+		"Employee Group Table",
+		filters={"parenttype": "Employee Group", "parent": scope_value},
+		pluck="employee",
+	)
+	if not group_employee_ids:
+		return []
+	return frappe.get_all(
+		"Employee",
+		filters={"status": "Active", "name": ("in", group_employee_ids)},
+		pluck="name",
+	)
+
+
+@frappe.whitelist()
+def count_employees_for_scope(scope_type, scope_value, include_subdepartments=False):
+	"""Preview how many employees a scope would resolve to, before committing
+	to the actual bulk assignment — assigning to a whole department/company is
+	hard to casually undo, so the caller should see the number first."""
+	if not (set(frappe.get_roles(frappe.session.user)) & _MANAGER_ROLES):
+		frappe.throw("Only System Managers can preview training assignment scopes.")
+
+	employee_ids = _resolve_employee_ids_for_scope(
+		scope_type, scope_value, frappe.utils.cint(include_subdepartments)
+	)
+	return {"count": len(employee_ids)}
+
+
+@frappe.whitelist()
+def assign_by_scope(training_record, scope_type, scope_value, due_date=None, include_subdepartments=False):
+	"""Assign training to every (active) employee matching a scope — a whole
+	Department (optionally including sub-departments), an Employee Group, an
+	entire Company, or a plain list of individual employees — instead of
+	requiring the caller to already have every employee id in hand. Resolves
+	the scope, then delegates to the exact same core assignment method the
+	single-employee and bulk-employee-list flows already use, so status
+	guards, dedup-against-existing-rows, and notifications all behave
+	identically regardless of how the employee list was produced."""
+	if not (set(frappe.get_roles(frappe.session.user)) & _MANAGER_ROLES):
+		frappe.throw("Only System Managers can assign training by scope.")
+
+	employee_ids = _resolve_employee_ids_for_scope(
+		scope_type, scope_value, frappe.utils.cint(include_subdepartments)
+	)
+	if not employee_ids:
+		frappe.throw(f"No active employees matched this {scope_type} scope.")
+
+	doc = frappe.get_doc("DMS Training Record", training_record)
+	result = doc._assign_employees(employee_ids, due_date)
+	result["scope_type"] = scope_type
+	result["scope_value"] = scope_value
+	result["matched"] = len(employee_ids)
+
+	if doc.document:
+		from quality_dms.dms.file_manager import log_file_event
+		log_file_event(
+			doc.document,
+			f"Training assigned by scope ({scope_type}: {scope_value}, {result['added']} employee(s) newly added)",
+		)
+
+	return result
+
+
 @frappe.whitelist()
 def bulk_assign_employees(training_record_names, employee_ids, due_date=None):
 	"""Assign the same set of employees to many Training Records at once
