@@ -21,7 +21,12 @@ class TrainingAnalytics {
 		this.pendDeptFilter = "";
 		this.pendSort = { key: "due_date_raw", dir: "asc" };
 		this.render_shell();
-		this.load_departments().then(() => this.load());
+		// get_departments_for_filter() throws frappe.PermissionError for
+		// non-admins -- without this .catch(), load() (which already knows
+		// how to show a proper permission message) would never run, leaving
+		// those users stuck on the "Loading..." spinner from render_shell()
+		// forever.
+		this.load_departments().then(() => this.load()).catch(() => this.load());
 	}
 
 	render_shell() {
@@ -255,6 +260,60 @@ class TrainingAnalytics {
 			this.empSort = { key: sortKey, dir: this.empSort.key === sortKey && this.empSort.dir === "desc" ? "asc" : "desc" };
 			this.render_employee_table();
 		});
+		this.$content.find("#ta-emp-table-body .ta-emp-link").on("click", (e) => {
+			e.preventDefault();
+			const $el = $(e.currentTarget);
+			this.show_employee_trainings($el.data("employee"), $el.data("employee-name"));
+		});
+	}
+
+	show_employee_trainings(employee, employee_name) {
+		const dialog = new frappe.ui.Dialog({
+			title: __("Trainings — {0}", [employee_name]),
+			size: "large",
+			fields: [{ fieldname: "body", fieldtype: "HTML" }],
+		});
+		dialog.fields_dict.body.$wrapper.html(`<div class="ta-emp-dialog-loading">${__("Loading...")}</div>`);
+		dialog.show();
+
+		frappe.call({
+			method: "quality_dms.dms.api.get_my_training_dashboard",
+			args: { employee },
+			callback: (r) => {
+				const all = (r.message && r.message.all_trainings) || [];
+				const completed = all.filter((t) => t.status === "Completed");
+				const incomplete = all.filter((t) => t.status !== "Completed");
+
+				const row = (t) => `
+					<tr>
+						<td>${frappe.utils.escape_html(t.document || "")}</td>
+						<td><span class="indicator-pill ${t.status === "Completed" ? "green" : t.status === "Overdue" ? "red" : "orange"}">${frappe.utils.escape_html(t.status || "")}</span></td>
+						<td>${t.assessment_score !== null && t.assessment_score !== undefined ? t.assessment_score + "%" : "—"}</td>
+						<td>${frappe.utils.escape_html((t.status === "Completed" ? t.completion_date : t.due_date) || "—")}</td>
+					</tr>`;
+
+				const section = (title, rows, emptyMsg) => `
+					<h6 class="ta-emp-dialog-heading">${title} (${rows.length})</h6>
+					${
+						rows.length
+							? `<table class="table table-bordered ta-emp-dialog-table">
+								<thead><tr><th>${__("Document")}</th><th>${__("Status")}</th><th>${__("Score")}</th><th>${__("Date")}</th></tr></thead>
+								<tbody>${rows.map(row).join("")}</tbody>
+							</table>`
+							: `<div class="ta-empty-small">${emptyMsg}</div>`
+					}`;
+
+				dialog.fields_dict.body.$wrapper.html(`
+					${section(__("Completed"), completed, __("No completed trainings yet."))}
+					${section(__("Incomplete"), incomplete, __("Nothing outstanding — all caught up."))}
+				`);
+			},
+			error: () => {
+				dialog.fields_dict.body.$wrapper.html(
+					`<div class="ta-empty-small">${__("You do not have permission to view this employee's trainings.")}</div>`
+				);
+			},
+		});
 	}
 
 	render_pending_table() {
@@ -370,7 +429,7 @@ class TrainingAnalytics {
 				(r, i) => `
 				<tr class="ta-row-accent-${band(r.overall_score)}">
 					<td>${i + 1}</td>
-					<td>${frappe.utils.escape_html(r.employee_name || r.employee)}</td>
+					<td><a href="#" class="ta-emp-link" data-employee="${frappe.utils.escape_html(r.employee)}" data-employee-name="${frappe.utils.escape_html(r.employee_name || r.employee)}">${frappe.utils.escape_html(r.employee_name || r.employee)}</a></td>
 					<td>${frappe.utils.escape_html(r.department)}</td>
 					<td>${r.completed}/${r.total}</td>
 					<td>${r.completion_pct}%</td>
@@ -664,6 +723,12 @@ class TrainingAnalytics {
 			.ta-rate-badge.warn { background: rgba(250,178,25,0.18); color: #8a6100; }
 			.ta-rate-badge.neutral, .ta-rate-badge.none { background: rgba(31,78,121,0.1); color: #1f4e79; }
 			.ta-empty-small { color: var(--text-muted); font-size: 13px; padding: 8px 0; }
+			.ta-emp-link { color: #1f4e79; text-decoration: none; font-weight: 500; }
+			.ta-emp-link:hover { text-decoration: underline; }
+			.ta-emp-dialog-heading { margin: 16px 0 8px; font-weight: 700; }
+			.ta-emp-dialog-heading:first-child { margin-top: 0; }
+			.ta-emp-dialog-table { font-size: 13px; margin-bottom: 8px; }
+			.ta-emp-dialog-loading { color: var(--text-muted); font-size: 13px; padding: 20px 0; text-align: center; }
 		`;
 	}
 }
