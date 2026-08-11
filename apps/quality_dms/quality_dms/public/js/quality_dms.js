@@ -233,12 +233,85 @@
 
 	const title_observer = new MutationObserver(() => {
 		if (current_title_override) set_title_now(current_title_override);
+		dms_render_notification_badge(dms_last_notification_count);
 	});
+
+	// ── Unread-notification badge on the sidebar "Notification" item and the
+	// DMS app icon in the workspace grid (WhatsApp-style red count bubble).
+	// The stock desk only shows a seen/unseen dot, not a number, so this adds
+	// the count on top without touching core notification code.
+	// Applied idempotently (skip when the DOM already matches) since it also
+	// runs from the shared mutation observer below -- the workspace app-icon
+	// grid renders asynchronously after the page's initial ready fires, so a
+	// one-shot render on ready/route-change alone would miss it. A non-idempotent
+	// version would re-trigger that same observer on every call, looping forever.
+	function dms_apply_badge($el, label, badge_class) {
+		if (!$el.length) return;
+		const $existing = $el.find(".dms-notif-badge");
+		if (!label) {
+			$existing.remove();
+			return;
+		}
+		if ($existing.length && $existing.text() === label) return;
+		$existing.remove();
+		$el.append(`<span class="dms-notif-badge ${badge_class || ""}">${label}</span>`);
+	}
+
+	// The app-icon tile is wider than the icon box itself (icon is centered,
+	// caption sits below), and the icon box clips overflow at its own rounded
+	// corners -- so the badge is appended to the tile (overflow: visible) but
+	// positioned using the icon box's actual offset within it, not a fixed
+	// CSS corner, otherwise it floats away from the icon at different tile sizes.
+	function dms_apply_icon_badge($anchor, label) {
+		if (!$anchor.length) return;
+		const $existing = $anchor.find(".dms-notif-badge");
+		if (!label) {
+			$existing.remove();
+			return;
+		}
+		const $icon = $anchor.find(".icon-container").first();
+		if (!$icon.length) return;
+		if ($existing.length && $existing.text() === label) return;
+		$existing.remove();
+		const $badge = $(`<span class="dms-notif-badge dms-notif-badge-icon">${label}</span>`);
+		$anchor.append($badge);
+		const badge_size = $badge.outerWidth() || 18;
+		$badge.css({
+			top: $icon.position().top - badge_size / 2,
+			left: $icon.position().left + $icon.outerWidth() - badge_size / 2,
+		});
+	}
+
+	let dms_last_notification_count = 0;
+
+	function dms_render_notification_badge(count) {
+		dms_last_notification_count = count || 0;
+		const label = dms_last_notification_count > 0
+			? (dms_last_notification_count > 99 ? "99+" : String(dms_last_notification_count))
+			: null;
+
+		dms_apply_badge($('.sidebar-notification[data-id="Notification"] .sidebar-item-control'), label);
+		dms_apply_icon_badge($('a.desktop-icon[data-id="DMS"]'), label);
+	}
+
+	function dms_update_notification_badge() {
+		if (!frappe.session || !frappe.session.user || frappe.session.user === "Guest") return;
+		frappe.call({
+			method: "frappe.client.get_count",
+			args: {
+				doctype: "Notification Log",
+				filters: { for_user: frappe.session.user, read: 0 },
+			},
+		}).then((r) => {
+			dms_render_notification_badge((r && r.message) || 0);
+		});
+	}
 
 	$(document).ready(function () {
 		apply();
 		apply_locked_filter_ui();
 		apply_route_title_override();
+		dms_update_notification_badge();
 		// Deferred to ready (not top-level) since this script loads via
 		// app_include_js in <head> -- document.body may not exist yet at
 		// parse time, and an error here would abort this whole IIFE,
@@ -248,11 +321,27 @@
 			frappe.router.on("change", apply);
 			frappe.router.on("change", apply_locked_filter_ui);
 			frappe.router.on("change", apply_route_title_override);
+			frappe.router.on("change", dms_update_notification_badge);
 		} else {
 			$(window).on("hashchange", apply);
 			$(window).on("hashchange", apply_locked_filter_ui);
 			$(window).on("hashchange", apply_route_title_override);
+			$(window).on("hashchange", dms_update_notification_badge);
 		}
+		if (frappe.realtime && frappe.realtime.on) {
+			frappe.realtime.on("notification", dms_update_notification_badge);
+			frappe.realtime.on("indicator_hide", dms_update_notification_badge);
+		}
+		// Fallback poll in case the realtime socket connection is unavailable
+		// (e.g. blocked/misconfigured websocket infra) — keeps the count from
+		// going permanently stale for a logged-in session.
+		setInterval(dms_update_notification_badge, 30000);
+		// Marking read happens via clicks inside the notification dropdown
+		// (an individual item, or "mark all as read") — refresh shortly after
+		// so the badge drops immediately instead of waiting for the next poll.
+		$(document).on("click", ".notification-list-body, .mark-all-read", () => {
+			setTimeout(dms_update_notification_badge, 800);
+		});
 	});
 
 	// Key Metrics cards: each Number Card doctype record already has its own
