@@ -314,7 +314,13 @@ fixtures = [
 	# Report". The logo itself is a FILE in this app's public/images (not a DB record),
 	# so it travels with git; only the HTML that references it lives in the DB.
 	{"dt": "Print Format", "filters": [["name", "like", "Mercury%"]]},
-	# Stage 7 - milestone billing schedule (30/40/30).
+	# The five progress payments named in Mercury's schedule 103-1105VS10. These are
+	# LINK targets for the rows of the template below, so - like the Quality
+	# Inspection Parameters further down - they must import FIRST or the template
+	# import fails with LinkValidationError.
+	{"dt": "Payment Term", "filters": [["name", "like", "Progress Payment:%"]]},
+	# Stage 7 - milestone billing schedules: the original 30/40/30, and the
+	# 1105VS10 five-milestone schedule taken from the client's own document.
 	{"dt": "Payment Terms Template", "filters": [["name", "like", "Mercury%"]]},
 	# Stage 5/6e - incoming (raw material) + outgoing (finished pump + accessories)
 	# QC checklists. NOTE: a template row's "specification" is a LINK to Quality
