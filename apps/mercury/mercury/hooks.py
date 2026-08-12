@@ -298,7 +298,13 @@ fixtures = [
 	{"dt": "Workspace", "filters": [["name", "=", "Mercury"]]},
 	# The desk flyout menu is built from Workspace Sidebar records (one per top-level
 	# entry). This record backs the Mercury flyout entry.
-	{"dt": "Workspace Sidebar", "filters": [["name", "=", "Mercury"]]},
+	# "Projects" is included because we reorder it: Project Update is lifted out of
+	# the Setup section to sit directly under Project, so it is one click away
+	# instead of buried. It is an ERPNEXT-OWNED record, so exporting it here means
+	# mercury's copy wins on every environment - which is what makes the change
+	# reach QA, but also means later erpnext changes to that sidebar will not come
+	# through until we re-export.
+	{"dt": "Workspace Sidebar", "filters": [["name", "in", ["Mercury", "Projects"]]]},
 	# The Workspaces flyout is actually rendered from Desktop Icon records (each points
 	# to a Workspace Sidebar via link_to). This Desktop Icon puts "Mercury" in the
 	# ERPNext group (parent_icon="ERPNext").
