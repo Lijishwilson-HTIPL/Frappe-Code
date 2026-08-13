@@ -134,6 +134,16 @@ jinja = {
 # -----------
 # Permissions evaluated in scripted ways
 
+# Demo housekeeping: keep unrelated projects off the screen without deleting them.
+# The list of hidden projects lives in mercury/demo_hide.py - empty it and clear-cache
+# to bring everything back. Nothing is deleted; these only filter queries.
+permission_query_conditions = {
+	"Project": "mercury.demo_hide.project_query",
+	"Task": "mercury.demo_hide.task_query",
+	"Project Update": "mercury.demo_hide.project_update_query",
+	"Timesheet": "mercury.demo_hide.timesheet_query",
+}
+
 # permission_query_conditions = {
 # 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
