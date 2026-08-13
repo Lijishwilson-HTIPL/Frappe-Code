@@ -123,6 +123,17 @@
 		"Delayed Tasks Summary",
 	]);
 
+	// The Mercury manufacturing-journey workspace reuses the same navy/blue
+	// theme as DMS so its overview and doctype cards match.
+	const MERCURY_DOCTYPES = new Set([
+		"Sales Order",
+		"Purchase Order",
+		"Quality Inspection",
+		"Packing Slip",
+		"Delivery Note",
+		"Sales Invoice",
+	]);
+
 	function slug(txt) {
 		return (txt || "").toString().toLowerCase().replace(/[\s_]+/g, "-");
 	}
@@ -174,8 +185,22 @@
 		return false;
 	}
 
+	function is_mercury_route() {
+		const route = (frappe.get_route && frappe.get_route()) || [];
+		if (!route.length) return false;
+		const view = route[0];
+		const target = route[1] || "";
+		if (view === "Workspaces") return slug(target) === "mercury";
+		// any view of a Mercury-journey doctype: List, Form, Report, …
+		if (MERCURY_DOCTYPES.has(target)) return true;
+		return false;
+	}
+
 	function apply() {
-		document.body.classList.toggle("dms-theme", is_dms_route() || is_projects_route());
+		document.body.classList.toggle(
+			"dms-theme",
+			is_dms_route() || is_projects_route() || is_mercury_route()
+		);
 	}
 
 	// Curated Document Library entry points (Repository, ToDo, the
