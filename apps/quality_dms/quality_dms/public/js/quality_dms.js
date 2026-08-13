@@ -44,6 +44,22 @@
 		// cache bookkeeping must never break the rest of the page
 	}
 
+	// ── Default the desk to full width ──────────────────────────────────────
+	// "Toggle Full Width" (Display menu) is a plain localStorage flag core
+	// Frappe reads on its own during desk boot (see desk.js's
+	// set_fullwidth_if_enabled, called on startup) -- there's no per-user
+	// server-side default for it. Set it to on only the first time a browser
+	// has never expressed a preference (localStorage key entirely absent);
+	// once a user explicitly toggles it either way, that choice is respected
+	// and never overwritten here again.
+	try {
+		if (window.localStorage.getItem("container_fullwidth") === null) {
+			window.localStorage.setItem("container_fullwidth", "true");
+		}
+	} catch (e) {
+		// non-fatal -- worst case the desk just isn't full-width by default
+	}
+
 	const DMS_DOCTYPES = new Set([
 		"Document Library",
 		"Document Request",
