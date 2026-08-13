@@ -248,6 +248,17 @@
 	function dms_apply_badge($el, label, badge_class) {
 		if (!$el.length) return;
 		const $existing = $el.find(".dms-notif-badge");
+		// Some Frappe versions render their own native count badge in the
+		// sidebar item's suffix (span.sidebar-notification-count) -- this dev
+		// environment's version doesn't, so this went unnoticed until it
+		// showed up doubled on a site running a newer core. When the native
+		// one is present, it already does the job; adding ours on top would
+		// just show the same number twice.
+		const $nativeCount = $el.closest(".sidebar-notification").find(".sidebar-notification-count");
+		if ($nativeCount.length) {
+			$existing.remove();
+			return;
+		}
 		if (!label) {
 			$existing.remove();
 			return;
