@@ -84,9 +84,12 @@ frappe.ui.form.on("DMS Training Record", {
 	},
 
 	setup_my_certificate(frm) {
-		// Offer the logged-in employee their own personal certificate once the
-		// record is verified. Called by dt/dn so only read permission is needed.
-		if (frm.doc.__islocal || !["Verified", "Closed"].includes(frm.doc.status)) return;
+		// Offer the logged-in employee their own personal certificate. A manager
+		// can now verify (and certificate) one employee at a time via
+		// "Verify Employee", so this must not wait for the whole record to reach
+		// Verified/Closed -- get_my_certificate already returns null until this
+		// employee's own row actually has a certificate.
+		if (frm.doc.__islocal) return;
 		frappe.call({
 			method: "run_doc_method",
 			args: { method: "get_my_certificate", dt: frm.doctype, dn: frm.docname },
@@ -192,6 +195,43 @@ frappe.ui.form.on("DMS Training Record", {
 			if (suggested.length) {
 				frm.add_custom_button(__("Assign Suggested ({0})", [suggested.length]), () => {
 					frm.trigger("open_assign_suggested_dialog");
+				}, __("Actions"));
+			}
+		}
+
+		if (is_manager && !["Closed", "Cancelled"].includes(status)) {
+			const verifiable = (frm.doc.employees || []).filter(
+				(r) => r.acknowledged && !r.employee_verified_by
+			);
+			if (verifiable.length) {
+				frm.add_custom_button(__("Verify Employee ({0})", [verifiable.length]), () => {
+					frappe.prompt(
+						[
+							{
+								label: __("Employee"),
+								fieldname: "row_name",
+								fieldtype: "Select",
+								reqd: 1,
+								options: verifiable.map((r) => ({
+									label: `${r.employee_name || r.employee} (${r.assessment_score || 0})`,
+									value: r.name,
+								})),
+							},
+							{
+								label: __("Verification Notes"),
+								fieldname: "notes",
+								fieldtype: "Text",
+							},
+						],
+						(vals) => {
+							frm.call("verify_employee", { row_name: vals.row_name, notes: vals.notes || null }).then(() => {
+								frm.reload_doc();
+								frappe.show_alert({ message: __("Employee training verified."), indicator: "green" });
+							});
+						},
+						__("Verify Employee Training"),
+						__("Verify")
+					);
 				}, __("Actions"));
 			}
 		}
