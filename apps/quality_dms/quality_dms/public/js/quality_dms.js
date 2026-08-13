@@ -3,6 +3,63 @@
 // view, and the DMS reports), so the blue theme in quality_dms.css never
 // touches other apps' pages. UI-only: no workflow or data logic here.
 (function () {
+	// ── Auto-clear stale client-side cache on a new deploy ──────────────────
+	// Recurring pain point: Frappe caches full page snapshots and boot/desktop
+	// -icon state in localStorage (see frappe/public/js/frappe/views/pageview.js
+	// and the "desktop_icons"/"bootinfo" cache keys), and a normal hard refresh
+	// (Ctrl+Shift+R) does NOT clear localStorage -- only DevTools' "Clear site
+	// data" does. That gap caused several "changes not reflecting" reports.
+	// This compares the running quality_dms.js's own ?v= (already bumped on
+	// every asset change, see hooks.py) against what the browser last saw; on
+	// a mismatch it wipes just the known-stale keys and does one hard reload,
+	// so users never have to do that manual DevTools step themselves again.
+	// Does not affect the 10 vendor-SVG icon files without a query-string
+	// version (assets/<app>/icons/desktop_icons/...) -- those are outside any
+	// URL this app constructs, so no client-side cache key can target them;
+	// their staleness window is bounded by the server's own Cache-Control
+	// (12h) rather than by anything fixable here.
+	try {
+		const script = document.currentScript;
+		const src = (script && script.src) || "";
+		const match = src.match(/[?&]v=([\w.]+)/);
+		const current_version = match ? match[1] : null;
+		const STORAGE_KEY = "dms_app_version";
+
+		if (current_version) {
+			const last_version = window.localStorage.getItem(STORAGE_KEY);
+			if (last_version && last_version !== current_version) {
+				Object.keys(window.localStorage)
+					.filter((k) => k.startsWith("_page:") || k === "metadata_version" || k === "page_info")
+					.forEach((k) => window.localStorage.removeItem(k));
+				if (window.caches && window.caches.keys) {
+					window.caches.keys().then((names) => names.forEach((n) => window.caches.delete(n)));
+				}
+				window.localStorage.setItem(STORAGE_KEY, current_version);
+				window.location.reload();
+				return; // page is reloading -- don't run the rest against stale state
+			}
+			window.localStorage.setItem(STORAGE_KEY, current_version);
+		}
+	} catch (e) {
+		// cache bookkeeping must never break the rest of the page
+	}
+
+	// ── Default the desk to full width ──────────────────────────────────────
+	// "Toggle Full Width" (Display menu) is a plain localStorage flag core
+	// Frappe reads on its own during desk boot (see desk.js's
+	// set_fullwidth_if_enabled, called on startup) -- there's no per-user
+	// server-side default for it. Set it to on only the first time a browser
+	// has never expressed a preference (localStorage key entirely absent);
+	// once a user explicitly toggles it either way, that choice is respected
+	// and never overwritten here again.
+	try {
+		if (window.localStorage.getItem("container_fullwidth") === null) {
+			window.localStorage.setItem("container_fullwidth", "true");
+		}
+	} catch (e) {
+		// non-fatal -- worst case the desk just isn't full-width by default
+	}
+
 	const DMS_DOCTYPES = new Set([
 		"Document Library",
 		"Document Request",
@@ -66,6 +123,17 @@
 		"Delayed Tasks Summary",
 	]);
 
+	// The Mercury manufacturing-journey workspace reuses the same navy/blue
+	// theme as DMS so its overview and doctype cards match.
+	const MERCURY_DOCTYPES = new Set([
+		"Sales Order",
+		"Purchase Order",
+		"Quality Inspection",
+		"Packing Slip",
+		"Delivery Note",
+		"Sales Invoice",
+	]);
+
 	function slug(txt) {
 		return (txt || "").toString().toLowerCase().replace(/[\s_]+/g, "-");
 	}
@@ -117,8 +185,22 @@
 		return false;
 	}
 
+	function is_mercury_route() {
+		const route = (frappe.get_route && frappe.get_route()) || [];
+		if (!route.length) return false;
+		const view = route[0];
+		const target = route[1] || "";
+		if (view === "Workspaces") return slug(target) === "mercury";
+		// any view of a Mercury-journey doctype: List, Form, Report, …
+		if (MERCURY_DOCTYPES.has(target)) return true;
+		return false;
+	}
+
 	function apply() {
-		document.body.classList.toggle("dms-theme", is_dms_route() || is_projects_route());
+		document.body.classList.toggle(
+			"dms-theme",
+			is_dms_route() || is_projects_route() || is_mercury_route()
+		);
 	}
 
 	// Curated Document Library entry points (Repository, ToDo, the
@@ -248,6 +330,17 @@
 	function dms_apply_badge($el, label, badge_class) {
 		if (!$el.length) return;
 		const $existing = $el.find(".dms-notif-badge");
+		// Some Frappe versions render their own native count badge in the
+		// sidebar item's suffix (span.sidebar-notification-count) -- this dev
+		// environment's version doesn't, so this went unnoticed until it
+		// showed up doubled on a site running a newer core. When the native
+		// one is present, it already does the job; adding ours on top would
+		// just show the same number twice.
+		const $nativeCount = $el.closest(".sidebar-notification").find(".sidebar-notification-count");
+		if ($nativeCount.length) {
+			$existing.remove();
+			return;
+		}
 		if (!label) {
 			$existing.remove();
 			return;

@@ -18,10 +18,59 @@ _ALLOWED_TRANSITIONS = {
 
 _MANAGER_ROLES = frozenset({"System Manager"})
 
+# Roles that may see every employee's row on a training record (mirrors the
+# full-visibility role set already used by has_permission/get_permission_query_conditions).
+_FULL_VISIBILITY_ROLES = frozenset({"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"})
+
 
 class DMSTrainingRecord(Document):
 
+    def onload(self):
+        """Employees must only ever see their own row's status/score when they
+        open a training record — other employees' assessment scores are not
+        their business. This trims the in-memory `employees` child table sent
+        to the client; it is never saved back, so nothing in the database is
+        touched and managers/admins/approvers/reviewers keep full visibility."""
+        if frappe.session.user == "Administrator":
+            return
+        if self.owner == frappe.session.user:
+            return
+        if set(frappe.get_roles(frappe.session.user)) & _FULL_VISIBILITY_ROLES:
+            return
+
+        emp = frappe.db.get_value(
+            "Employee", {"user_id": frappe.session.user}, "name", order_by="creation asc"
+        )
+        self.employees = [row for row in self.employees if emp and row.employee == emp]
+
+    def _restore_stripped_employee_rows(self):
+        """Guard against data loss: a non-manager's browser only ever holds
+        their own row in `employees` (see onload above). Some whitelisted
+        methods (e.g. submit_quiz_and_sign) round-trip that client-side doc
+        back to the server and save() it — without this guard, that save
+        would silently delete every other employee's assigned row from the
+        database. Restore anything present in the DB but missing from the
+        in-memory doc whenever the saving user isn't a manager/owner."""
+        if self.is_new():
+            return
+        if frappe.session.user == "Administrator" or self.owner == frappe.session.user:
+            return
+        if set(frappe.get_roles(frappe.session.user)) & _FULL_VISIBILITY_ROLES:
+            return
+
+        existing_rows = frappe.get_all(
+            "Document Acknowledgement",
+            filters={"parent": self.name, "parenttype": "DMS Training Record"},
+            fields="*",
+            order_by="idx asc",
+        )
+        have = {row.employee for row in self.employees}
+        for row in existing_rows:
+            if row.employee not in have:
+                self.append("employees", row)
+
     def validate(self):
+        self._restore_stripped_employee_rows()
         self._prev_status = (
             frappe.db.get_value("DMS Training Record", self.name, "status") or "Draft"
             if not self.is_new() else "Draft"
@@ -643,6 +692,7 @@ class DMSTrainingRecord(Document):
             return
 
         self.status = "Verified"
+        self._mark_all_rows_verified()
         self.save(ignore_permissions=True)
         self._attach_certificate()
 
@@ -666,8 +716,53 @@ class DMSTrainingRecord(Document):
         if notes:
             self.secondary_verification_notes = notes
         self.status = "Verified"
+        self._mark_all_rows_verified()
         self.save(ignore_permissions=True)
         self._attach_certificate()
+
+    def _mark_all_rows_verified(self):
+        """Whole-record verification implicitly verifies every completed row —
+        stamp any row an individual verify_employee() call hasn't already
+        covered, so per-row verification data is always complete once the
+        record itself reaches Verified."""
+        for row in self.employees:
+            if row.acknowledged and not row.employee_verified_by:
+                row.employee_verified_by = frappe.session.user
+                row.employee_verified_date = today()
+
+    @frappe.whitelist()
+    def verify_employee(self, row_name, notes=None):
+        """Manager verifies a single employee's completed training row,
+        independently of the whole record. Lets a manager sign off employees
+        as they finish rather than waiting for every assignee to complete —
+        generates that employee's certificate immediately."""
+        if not (set(frappe.get_roles(frappe.session.user)) & _MANAGER_ROLES):
+            frappe.throw("Only System Managers can verify individual training rows.")
+        if self.status in {"Closed", "Cancelled"}:
+            frappe.throw(f"Cannot verify a row on a '{self.status}' training record.")
+
+        row = next((r for r in self.employees if str(r.name) == str(row_name)), None)
+        if not row:
+            frappe.throw("Training row not found on this record.")
+        if not row.acknowledged:
+            frappe.throw("This employee has not completed their training yet.")
+
+        # Segregation of duties: a verifier may not verify their own row.
+        own_emp = frappe.db.get_value(
+            "Employee", {"user_id": frappe.session.user}, "name", order_by="creation asc"
+        )
+        if own_emp and row.employee == own_emp:
+            frappe.throw("You cannot verify your own training row.")
+
+        if row.employee_verified_by:
+            frappe.throw(f"This row was already verified by {row.employee_verified_by}.")
+
+        row.employee_verified_by = frappe.session.user
+        row.employee_verified_date = today()
+        if notes:
+            row.employee_verification_notes = notes
+        self.save(ignore_permissions=True)
+        self._attach_employee_certificate(row)
 
     def _attach_certificate(self):
         """Generate one personal Training Certificate PDF per completed
