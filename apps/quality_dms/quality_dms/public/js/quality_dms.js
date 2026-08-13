@@ -3,6 +3,47 @@
 // view, and the DMS reports), so the blue theme in quality_dms.css never
 // touches other apps' pages. UI-only: no workflow or data logic here.
 (function () {
+	// ── Auto-clear stale client-side cache on a new deploy ──────────────────
+	// Recurring pain point: Frappe caches full page snapshots and boot/desktop
+	// -icon state in localStorage (see frappe/public/js/frappe/views/pageview.js
+	// and the "desktop_icons"/"bootinfo" cache keys), and a normal hard refresh
+	// (Ctrl+Shift+R) does NOT clear localStorage -- only DevTools' "Clear site
+	// data" does. That gap caused several "changes not reflecting" reports.
+	// This compares the running quality_dms.js's own ?v= (already bumped on
+	// every asset change, see hooks.py) against what the browser last saw; on
+	// a mismatch it wipes just the known-stale keys and does one hard reload,
+	// so users never have to do that manual DevTools step themselves again.
+	// Does not affect the 10 vendor-SVG icon files without a query-string
+	// version (assets/<app>/icons/desktop_icons/...) -- those are outside any
+	// URL this app constructs, so no client-side cache key can target them;
+	// their staleness window is bounded by the server's own Cache-Control
+	// (12h) rather than by anything fixable here.
+	try {
+		const script = document.currentScript;
+		const src = (script && script.src) || "";
+		const match = src.match(/[?&]v=([\w.]+)/);
+		const current_version = match ? match[1] : null;
+		const STORAGE_KEY = "dms_app_version";
+
+		if (current_version) {
+			const last_version = window.localStorage.getItem(STORAGE_KEY);
+			if (last_version && last_version !== current_version) {
+				Object.keys(window.localStorage)
+					.filter((k) => k.startsWith("_page:") || k === "metadata_version" || k === "page_info")
+					.forEach((k) => window.localStorage.removeItem(k));
+				if (window.caches && window.caches.keys) {
+					window.caches.keys().then((names) => names.forEach((n) => window.caches.delete(n)));
+				}
+				window.localStorage.setItem(STORAGE_KEY, current_version);
+				window.location.reload();
+				return; // page is reloading -- don't run the rest against stale state
+			}
+			window.localStorage.setItem(STORAGE_KEY, current_version);
+		}
+	} catch (e) {
+		// cache bookkeeping must never break the rest of the page
+	}
+
 	const DMS_DOCTYPES = new Set([
 		"Document Library",
 		"Document Request",
