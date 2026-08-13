@@ -51,23 +51,6 @@
   "payment_term_name": "Progress Payment: Receipt Major Materials"
  },
  {
-  "credit_days": 90,
-  "credit_months": 0,
-  "description": "Schedule 103-1105VS10 milestone: Delivery: Ex Works - 02/04/26",
-  "discount": 0.0,
-  "discount_type": "Percentage",
-  "discount_validity": 0,
-  "discount_validity_based_on": "Day(s) after invoice date",
-  "docstatus": 0,
-  "doctype": "Payment Term",
-  "due_date_based_on": "Day(s) after invoice date",
-  "invoice_portion": 20.0,
-  "mode_of_payment": null,
-  "modified": "2026-08-12 15:23:48.965765",
-  "name": "Progress Payment: Ex Works",
-  "payment_term_name": "Progress Payment: Ex Works"
- },
- {
   "credit_days": 120,
   "credit_months": 0,
   "description": "Schedule 103-1105VS10 milestone: Compile QC Dossier - 02/20/26",
@@ -83,5 +66,22 @@
   "modified": "2026-08-12 15:23:48.968298",
   "name": "Progress Payment: End Mfg. Report Subm",
   "payment_term_name": "Progress Payment: End Mfg. Report Subm"
+ },
+ {
+  "credit_days": 90,
+  "credit_months": 0,
+  "description": "Schedule 103-1105VS10 milestone: Delivery: Ex Works - 02/04/26",
+  "discount": 0.0,
+  "discount_type": "Percentage",
+  "discount_validity": 0,
+  "discount_validity_based_on": "Day(s) after invoice date",
+  "docstatus": 0,
+  "doctype": "Payment Term",
+  "due_date_based_on": "Day(s) after invoice date",
+  "invoice_portion": 20.0,
+  "mode_of_payment": null,
+  "modified": "2026-08-12 15:23:48.965765",
+  "name": "Progress Payment: Ex Works",
+  "payment_term_name": "Progress Payment: Ex Works"
  }
 ]
