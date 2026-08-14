@@ -21,7 +21,14 @@ can roll back cleanly if a future change goes wrong.
 **Latest push:** `1d1854a3f` — "sidebar user avatar: make the initial visible again"
 (2026-08-06). Everything below is pushed.
 
-**Deployed to QA:** yes — PR **#16** (`paul-update` → `staging-deployment`, merged as
+**Latest on `paul-update`:** `c28b9ee95` — the Alex / 1105VS10 round (2026-08-13).
+
+> ### ⚠️ NOT ON STAGING
+> Commits 31–46 are on **`paul-update` only**. Nothing from the Alex round has been merged to
+> `staging-deployment` or deployed to QA — deliberately, and **do not push there without asking**.
+> Last state actually on staging: `1fef86302`.
+
+**Previously deployed to QA:** PR **#16** (`paul-update` → `staging-deployment`, merged as
 `f1e3606`), then a **manual** Deploy to Staging run. Verified live on `qa.sbiqc.com`:
 Assign tab, real ToDo assignment, Assign To list column.
 
@@ -79,10 +86,90 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ---
 
+## `fdc852185` … `c28b9ee95` — Alex / job 1105VS10 (2026-08-11 → 13) · PUSHED to `paul-update` only
+
+**Not on `staging-deployment`.** Deliberate — nothing from this round has been promoted to QA.
+
+Mercury's own two client documents, regenerated from live data for Alex's demo. Configuration
+only: print formats, Property Setters, Custom Fields, fixtures. No custom doctypes — the QR
+acknowledgement app remains Phase 2. Front-end walkthrough is in
+`web docs/mercury_phase1_stepbystep_guide2` PART 2.
+
+**Documents built**
+
+| Print Format | On | Reproduces |
+|---|---|---|
+| `Mercury Project Schedule` | Project | document **103-1105VS10** — 10 phase groups, 81 tasks, Days, Status %, all 5 progress payments and both customer hold points, General Notes, job footer |
+| `Mercury Progress Report` | Project Update | **1105VS10-PR-250623-EVP** — navy band, Project/Customer/PO block, A–F narrative, signature, attachments |
+
+Both defaulted per DocType, so the print view opens straight into them.
+
+**Data** — Company `Mercury1`, Customer `Evapco Dry Cooling Inc.`, Item `MP-640CH`,
+Project `PROJ-0006` (91 tasks = 10 groups + 81), SO `SAL-ORD-2026-00004` (draft, PO 536POR22825),
+`Mercury 1105VS10 Progress Payments` (5 milestones named exactly as the schedule prints them),
+Activity Cost `Execution` 65/95, Fiscal Years 2024-25 and 2025-26.
+
+### The bugs found along the way — all pre-existing or engine-level
+
+- **Sales Orders could not be saved at all on this branch.** `sales_order.json` in our *committed*
+  tree had lost `is_subcontracted` while `sales_order.py` still reads it unsafely at lines 230,
+  295 and 654 → `AttributeError` on every save, in the UI too, and on QA. Stage 1 of the Mercury
+  flow *is* "create a Sales Order". Audited the whole controller: 7 fields are missing from the
+  JSON, only that one is read unsafely. Restored that field alone, hidden and read-only.
+- **`custom_format = 1` is what makes a Jinja print format render.** Without it frappe silently
+  falls back to the standard field-by-field layout and reports no error (`printview.py:200`).
+- **wkhtmltopdf drew no table borders** — every border width was sub-pixel (0.5/1.2/1.6px), which
+  that engine renders as nothing at print DPI while Chrome rounds up. All widths now whole pixels.
+- **wkhtmltopdf cannot render flexbox.** The report's navy band collapsed in the PDF while the
+  preview looked correct. Rebuilt with `display: table` / `table-cell`.
+- **Arial is not installed on this bench**, so wkhtmltopdf substitutes the wider DejaVu Sans.
+  Three rounds of column-width "fixes" were measured against the wrong typeface. Re-measured the
+  real strings in the substituted font; every column now clears by 2.5–7mm.
+- **`doc.date` is a string in print context** — `.strftime()` cannot work. Built from the ISO
+  string instead.
+- **Text Editor fields come back wrapped in Quill markup** (`.ql-editor`), which carries the
+  *editor's* font — so any field edited in the UI printed in a different typeface. Neutralised
+  inside the print container, for all future edits.
+
+**Standing lesson recorded:** the browser preview and the PDF use *different engines*, so
+anything verified only in the preview is not verified.
+
+### Demo data shaped for the walkthrough
+
+Statuses re-cut so the job reads as **in flight, not finished**: 67 Completed · 1 Working
+(System Wiring, 60%, ending next week) · 13 Open with future dates · **0 Overdue** · project
+**81.3%**. Timesheets re-logged at 8h per working day — hours fell from 23,064 to 5,976 and cost
+from 1.5M to 388,440, with every Actual date still matching plan. `Project Update` moved directly
+under `Project` in the Mercury sidebar.
+
+**Known placeholders, not derivable from the client documents:** the 20% payment split, the 65/95
+labour rates, and the Sales Order rate (left at 0, document kept in draft).
+
+Rollback-before-this: `1fef86302`
+
+---
+
 ## Push history (newest first)
 
 | # | Commit | Date | Pushed | Summary |
 |---|--------|------|--------|---------|
+| 46 | `c28b9ee95` | 2026-08-13 | `paul-update` | print formats: drop flexbox — wkhtmltopdf cannot render it |
+| 45 | `81af8aa03` | 2026-08-13 | `paul-update` | progress report: edited narrative inherits the letter typography |
+| 44 | `80a72065c` | 2026-08-13 | `paul-update` | Project Update: default print format |
+| 43 | `7295e38da` | 2026-08-13 | `paul-update` | Project: default print format |
+| 42 | `3537bf6f6` | 2026-08-13 | `paul-update` | Task: drop "(via Timesheet)" from the costing labels |
+| 41 | `a60c1cfa9` | 2026-08-12 | `paul-update` | Mercury sidebar: Project Update under Project; revert the Projects sidebar change |
+| 40 | `a16b19c74` | 2026-08-12 | `paul-update` | Projects sidebar attempt + progress report polish — *sidebar part reverted by 41* |
+| 39 | `a040708c2` | 2026-08-12 | `paul-update` | schedule: size columns to the font the PDF actually uses |
+| 38 | `7210933c3` | 2026-08-12 | `paul-update` | print formats: integer border widths so wkhtmltopdf draws the table |
+| 37 | `1fb513783` | 2026-08-12 | `paul-update` | schedule: date padding and logo/title alignment |
+| 36 | `a6c836bef` | 2026-08-12 | `paul-update` | schedule: title no longer overlaps the table; wider S.No |
+| 35 | `dbc3fa6fa` | 2026-08-12 | `paul-update` | print formats: logo placement; stop task text wrapping |
+| 34 | `51db39821` | 2026-08-12 | `paul-update` | print formats: real Mercury logo, footer mark, fix the date crash |
+| 33 | `d1ecf0b05` | 2026-08-12 | `paul-update` | **Alex/1105VS10: schedule + progress report regenerated from data** |
+| 32 | `4ec20100c` | 2026-08-10 | `paul-update` | docs: Adam's scope answers, `sbiqc_provisioning` audit |
+| 31 | `fdc852185` | 2026-08-10 | `paul-update` | tasks: fix the two known blockers from §17.11 |
+| 30 | `5b3d7e6ce` | 2026-08-10 | yes | docs: open the Adam stream, add a session-start prompt |
 | 29 | `1d1854a3f` | 2026-08-06 | yes | sidebar user avatar: initial was white-on-white, made visible |
 | 28 | `4a3ec8800` | 2026-08-06 | yes | remove the square outline around avatars |
 | 27 | `323e1b85a` | 2026-08-06 | yes | list view: **actually** bold the headers and freeze them (27a was a no-op) |
