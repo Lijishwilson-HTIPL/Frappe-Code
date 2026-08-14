@@ -1316,3 +1316,56 @@ against TASK-2026-00001.
 ================================================================================
 END — MERCURY WORK PROGRESS
 ================================================================================
+
+
+================================================================================
+[19] ALEX DEMO DELIVERED — 2026-08-13  ·  OUTCOME: WENT WELL
+================================================================================
+Paul demoed Stages 1-8 to Alex Sosa (VP Engineering, Mercury Vacuum Technologies)
+using job 1105VS10 / Evapco PO 536POR22825. Reported back: the demo went well.
+
+*** MANAGEMENT/CLIENT SUGGESTIONS FROM THE MEETING ARE NOT YET CAPTURED. ***
+Paul has them and will brief them before the next demo. Do NOT guess at them or
+start building against assumptions - ASK FOR THE LIST FIRST. Same discipline that
+was applied to the "project report" brief, which cost three sessions of guessing
+before it was finally handed over.
+
+WHAT WAS DEMOED, AND WITH WHICH RECORDS
+--------------------------------------------------------------------------------
+  Stage 1  PO Intake              SAL-ORD-2026-00002 (Connections tab = traceability)
+  Stage 2  RTM Approval           same SO + live transition on SAL-ORD-2026-00004
+  Stage 3  Procurement            MAT-MR-2026-00001 -> PUR-ORD-2026-00001 -> MAT-PRE-2026-00001
+  Stage 4  Fabrication progress   PROJ-0006 (10 groups + 81 tasks, live task add)
+  Stage 5  Inspection             MAT-QA-2026-00001 + -00003..00006
+  Stage 6  Packing + QR labels    MAT-PAC-2026-00002 -> MAT-DN-2026-00003, 7 serialised units
+  Stage 7  Milestone invoicing    ACC-SINV-2026-00067 + the 5-milestone template
+  Stage 8  Client documents       PROJ-0006 schedule + PROJ-UPD-2026-00001 progress report
+
+CUSTOMISATIONS BUILT FOR THIS DEMO (all config or apps/mercury, all in fixtures)
+--------------------------------------------------------------------------------
+  - Print Format "Mercury Project Schedule"   (Project)        = doc 103-1105VS10
+  - Print Format "Mercury Progress Report"    (Project Update) = doc 1105VS10-PR-...
+  - Both set as the DocType default print format, so the print view opens on them
+  - Task "Assign" tab: 12 Custom Fields, assignee mandatory, mirrored to a real ToDo
+  - Task "Delivered" status, gated per company by a server hook
+  - "(via Timesheet)" and every other "(via ...)" suffix stripped from Task and
+    Project labels (10 + 1 Property Setters)
+  - Sales Order RTM workflow shown as a stepper in the page head (Client Script)
+  - List view: bold + frozen column headers, % Progress header fix, avatar fixes
+  - Projects workspace "Light Aurora" cards
+  - Project Update lifted directly under Project in the Mercury sidebar
+  - demo_hide.py: hides PROJ-0002/0004/0005 from queries WITHOUT deleting them
+
+STILL OPEN / KNOWN PLACEHOLDERS - say these out loud, do not let them pass as real
+--------------------------------------------------------------------------------
+  [ ] Payment split is 20% x 5. The real percentages are in Alex's contract and are
+      in NONE of the four client documents.
+  [ ] Labour rates 65 costing / 95 billing are ours, not Mercury's.
+  [ ] SAL-ORD-2026-00004 sits at rate 0 and is DRAFT - the contract value is unknown.
+  [ ] Freight-box split not built: the packing slip packs everything as case 1
+      because 1105VS10-PL3 is "box 3 of 3" and we do not have the box breakdown.
+  [ ] Customer Inspection Notice (QCF 10.409) not built - Phase 2.
+  [ ] Customer does NOT approve in the system. The RTM workflow is Mercury staff
+      recording an email conversation. Portal/email approval is Phase 2.
+  [ ] Incoming QI has no counterpart in Alex's process - agreed to remap quality to
+      the ITP hold points, NOT yet done.
