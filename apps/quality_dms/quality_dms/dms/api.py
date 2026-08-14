@@ -158,10 +158,28 @@ def log_request_audit_event(doc, method):
 
 _INACTIVE_EMPLOYEE_STATUSES = frozenset({"Left", "Inactive", "Suspended"})
 
-# Roles with unrestricted access to the Document Library. Reviewers and
-# approvers must see every document — they cannot review/approve documents
-# the row-level Employee filter would hide from them.
-_DMS_UNRESTRICTED_ROLES = {"System Manager", "DMS Admin", "DMS Approver", "DMS Reviewer"}
+# Only System Manager (IT / central oversight) sees every department's
+# documents unconditionally. DMS Admin/Approver/Reviewer/Employee are all
+# department-scoped below — a document's own "Applies to All Departments"
+# checkbox is the only other way past that restriction.
+_DMS_UNRESTRICTED_ROLES = {"System Manager"}
+
+
+def _user_department_scope(user):
+    """Resolve the department names a user's own department-scoped access
+    should include: their own Employee.department plus any sub-departments
+    under it (mirrors the department+subdepartment scoping already used for
+    bulk training assignment). Returns None if the user has no linked
+    Employee/department, meaning they get no department-based access at all
+    (only documents explicitly marked "Applies to All Departments", or —
+    for the Employee role — documents they own or are directly assigned)."""
+    department = frappe.db.get_value(
+        "Employee", {"user_id": user}, "department", order_by="creation asc"
+    )
+    if not department:
+        return None
+    from frappe.utils.nestedset import get_descendants_of
+    return [department] + get_descendants_of("Department", department, ignore_permissions=True)
 
 
 def handle_employee_status_change(doc, method):
@@ -209,6 +227,9 @@ def notify_upcoming_reviews():
         )
 
 
+_DMS_ROLES = {"DMS Admin", "DMS Approver", "DMS Reviewer", "Employee"}
+
+
 def get_permission_query_conditions(user):
     if not user: user = frappe.session.user
     if user == "Administrator": return ""
@@ -217,13 +238,34 @@ def get_permission_query_conditions(user):
     if set(roles) & _DMS_UNRESTRICTED_ROLES:
         return ""
 
+    if not set(roles) & _DMS_ROLES:
+        # Authenticated user holds no DMS role — deny list access entirely.
+        # Returning "" (no filter) would grant full read access; "1=0" returns an empty list.
+        return "1=0"
+
     conditions = []
+
+    # Every DMS role (Admin/Approver/Reviewer/Employee) is scoped to their own
+    # department (+ sub-departments) unless the document applies to all
+    # departments — reviewers/approvers can no longer see other departments'
+    # documents just by holding the role.
+    departments = _user_department_scope(user)
+    if departments:
+        escaped_depts = ", ".join(frappe.db.escape(d) for d in departments)
+        conditions.append(
+            f"(`tabDocument Library`.applies_to_all_departments = 1 "
+            f"OR `tabDocument Library`.department IN ({escaped_depts}))"
+        )
+    else:
+        conditions.append("`tabDocument Library`.applies_to_all_departments = 1")
 
     if "Employee" in roles:
         escaped_user = frappe.db.escape(user)
-        # Employees see only documents assigned to them through a DMS Training
-        # Record, documents they created themselves, or documents created from
-        # a Document Request they raised or that was raised for them.
+        # On top of department scoping, an employee also always sees documents
+        # assigned to them through a DMS Training Record, documents they
+        # created themselves, or documents created from a Document Request
+        # they raised or that was raised for them — even outside their own
+        # department (e.g. cross-department training).
         assigned_via_training = (
             "EXISTS ("
             "SELECT 1 FROM `tabDMS Training Record` tr "
@@ -246,12 +288,7 @@ def get_permission_query_conditions(user):
             f"OR {via_request})"
         )
 
-    if conditions:
-        return "(" + " OR ".join(conditions) + ")"
-
-    # Authenticated user holds no DMS role — deny list access entirely.
-    # Returning "" (no filter) would grant full read access; "1=0" returns an empty list.
-    return "1=0"
+    return "(" + " OR ".join(conditions) + ")"
 
 
 def has_permission(doc, user=None, ptype="read"):
@@ -271,6 +308,16 @@ def has_permission(doc, user=None, ptype="read"):
     # Row-level restrictions below apply to reads only. Create/write/delete are
     # governed by DocPerm — defer to it rather than denying here.
     if ptype != "read":
+        return True
+
+    if not set(roles) & _DMS_ROLES:
+        return False
+
+    if doc.applies_to_all_departments:
+        return True
+
+    departments = _user_department_scope(user)
+    if departments and doc.department in departments:
         return True
 
     if "Employee" in roles:
@@ -322,18 +369,21 @@ def _is_assigned_via_training(document, user):
     )
 
 
-# Roles that may see the whole File list. Personal training certificates are
-# private to the employee they belong to.
-_FILE_UNRESTRICTED_ROLES = {"System Manager", "DMS Admin"}
-# Reviewers/approvers see every file except other employees' personal certificates.
-_FILE_REVIEW_ROLES = {"DMS Approver", "DMS Reviewer"}
+# Only System Manager sees the whole File list unconditionally. DMS Admin/
+# Approver/Reviewer are department-scoped like everywhere else in this app —
+# see _user_department_scope. Personal training certificates stay private to
+# the employee they belong to regardless of role.
+_FILE_UNRESTRICTED_ROLES = {"System Manager"}
+_FILE_REVIEW_ROLES = {"DMS Admin", "DMS Approver", "DMS Reviewer"}
 _CERT_SUFFIX = "-certificate.pdf"
 
 
 def file_permission_query_conditions(user):
     """Restrict the File list: employees see only their own uploads and files on
-    their assigned documents/training; approvers see everything except other
-    employees' personal certificates; admins see everything."""
+    their assigned documents/training; admins/approvers/reviewers see every
+    file on a document/training record in their own department (+ sub-
+    departments) or marked Applies to All Departments, except other
+    employees' personal certificates."""
     if not user:
         user = frappe.session.user
     if user == "Administrator":
@@ -346,13 +396,33 @@ def file_permission_query_conditions(user):
     escaped_user = frappe.db.escape(user)
 
     if roles & _FILE_REVIEW_ROLES:
-        # Everything except personal certificates that belong to someone else.
         is_cert = "RIGHT(`tabFile`.file_name, 16) = '-certificate.pdf'"
         emp_id = frappe.db.get_value("Employee", {"user_id": user}, "name")
         if emp_id:
             own_cert_frag = frappe.db.escape(f"-{emp_id}-certificate.pdf")
-            return f"(NOT {is_cert} OR INSTR(`tabFile`.file_name, {own_cert_frag}) > 0)"
-        return f"(NOT {is_cert})"
+            cert_scope = f"(NOT {is_cert} OR INSTR(`tabFile`.file_name, {own_cert_frag}) > 0)"
+        else:
+            cert_scope = f"(NOT {is_cert})"
+
+        departments = _user_department_scope(user)
+        dept_condition = (
+            "`dl`.applies_to_all_departments = 1"
+            + (f" OR `dl`.department IN ({', '.join(frappe.db.escape(d) for d in departments)})" if departments else "")
+        )
+        in_scope_doc_files = (
+            "(`tabFile`.attached_to_doctype = 'Document Library' AND EXISTS ("
+            "SELECT 1 FROM `tabDocument Library` dl "
+            f"WHERE dl.name = `tabFile`.attached_to_name AND ({dept_condition})"
+            "))"
+        )
+        in_scope_training_files = (
+            "(`tabFile`.attached_to_doctype = 'DMS Training Record' AND EXISTS ("
+            "SELECT 1 FROM `tabDMS Training Record` tr "
+            "INNER JOIN `tabDocument Library` dl ON dl.name = tr.document "
+            f"WHERE tr.name = `tabFile`.attached_to_name AND ({dept_condition})"
+            "))"
+        )
+        return f"(({in_scope_doc_files} OR {in_scope_training_files}) AND {cert_scope})"
 
     assigned_doc_files = (
         "(`tabFile`.attached_to_doctype = 'Document Library' AND EXISTS ("
@@ -409,9 +479,6 @@ def file_has_permission(doc, user=None, ptype="read"):
         return True
 
     is_certificate = (doc.file_name or "").endswith(_CERT_SUFFIX)
-
-    if roles & _FILE_REVIEW_ROLES and not is_certificate:
-        return True
 
     if is_certificate:
         # personal training certificate: only the employee it names may read it
