@@ -60,6 +60,43 @@
 		// non-fatal -- worst case the desk just isn't full-width by default
 	}
 
+	// ── Keep "Defect" (Issue) inside the Projects sidebar, not Support ───────
+	// Issue is relabeled "Defect" throughout the Projects/Mercury UI, but its
+	// real home in core ERPNext is the "Support" module/workspace (legacy
+	// ticketing, being deprecated in favor of the separate Helpdesk app this
+	// system actually uses). Frappe's own sidebar resolver (frappe.ui.Sidebar,
+	// see set_workspace_sidebar/get_workspace_sidebars in
+	// frappe/public/js/frappe/ui/sidebar/sidebar.js) decides which sidebar to
+	// show for a doctype route by checking which "Workspace Sidebar" record
+	// lists that doctype as an item -- a *different* doctype from "Workspace"
+	// (whose own Link/Shortcut rows only affect the workspace *page* content
+	// and breadcrumb text, not this). Support's Workspace Sidebar record still
+	// lists Issue, so any full navigation to Issue's list -- from anywhere:
+	// this stat card, "View All Defects", the awesomebar, browser back/
+	// forward -- flips the whole left sidebar to Support's branding.
+	//
+	// frappe.router's own "change" handler already calls
+	// frappe.app.sidebar.set_workspace_sidebar(router) on every route change
+	// (sidebar.js's setup_events); this listener is registered afterward, so
+	// it always runs after that one and corrects its result rather than
+	// racing it. set_workspace_sidebar's own re-run (e.g. via
+	// frappe.app.sidebar.refresh() on page/form refresh) is idempotent when
+	// the target hasn't changed, and our explicit .setup() call below is
+	// itself idempotent too (Sidebar.setup() is the same method Frappe calls
+	// internally), so this is safe to run on every route change without
+	// fighting a later correction.
+	try {
+		frappe.router.on("change", function () {
+			const route = frappe.get_route();
+			// Covers List, Form, Report, Kanban, etc. -- any view of Issue.
+			if (route[1] === "Issue" && frappe.app && frappe.app.sidebar) {
+				frappe.app.sidebar.setup("Projects");
+			}
+		});
+	} catch (e) {
+		// non-fatal -- worst case Defect's sidebar reverts to core's own resolution
+	}
+
 	const DMS_DOCTYPES = new Set([
 		"Document Library",
 		"Document Request",
