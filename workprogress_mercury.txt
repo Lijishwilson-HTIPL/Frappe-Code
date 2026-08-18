@@ -1369,3 +1369,108 @@ STILL OPEN / KNOWN PLACEHOLDERS - say these out loud, do not let them pass as re
       recording an email conversation. Portal/email approval is Phase 2.
   [ ] Incoming QI has no counterpart in Alex's process - agreed to remap quality to
       the ITP hold points, NOT yet done.
+
+
+================================================================================
+[20] POST-DEMO ROUND 1 — DELIVERY ACKNOWLEDGEMENT (design only, NOTHING BUILT)
+================================================================================
+GIT STATE AT THE TIME OF WRITING
+--------------------------------------------------------------------------------
+  PR #26 merged into staging-deployment on 2026-08-14 (merge commit 341535c95).
+  All demo work is ON STAGING. 0 commits waiting. Verified from the bench, not
+  just from the PR page.
+  NOTE: merging does NOT deploy. deploy-staging.yml is workflow_dispatch only,
+  so the staging SITE still runs the old build until someone runs it manually.
+
+  *** BEFORE ANY NEW WORK: pull. staging moved ahead by the merge commit. ***
+      git fetch hephzibah
+      git merge hephzibah/staging-deployment      (on paul-update)
+  Paul is doing this in a separate chat.
+
+FIRST SUGGESTIONS FROM THE ALEX MEETING (there are MORE - not yet given)
+--------------------------------------------------------------------------------
+Alex raised the gap after Stage 6: the system ends at Mercury's shipping dock
+and knows nothing about what happens at the customer site. He asked for:
+  1. A customer delivery-acknowledgement view - minimal, 2-3 clicks
+  2. That same acknowledgement to work at remote sites with NO connectivity
+
+PAUL'S ANSWERS TO THE SCOPING QUESTIONS (2026-08-14)
+--------------------------------------------------------------------------------
+  - Carrier: not confirmed, but Paul's bet (and mine) is THIRD-PARTY FREIGHT,
+    not Mercury's own truck. Paul is confirming with Alex.
+  - Remote sites: NO signal and NO wifi. Genuinely disconnected, not just no wifi.
+  - Granularity: PER-ITEM. Each unit scanned and ticked. Click count is NOT a
+    hard constraint after all - "in online all the individual items scanned and
+    verified, clicks dont matter".
+  - NO SIGNATURE. The scans are the evidence. Online and offline must feel like
+    the same flow.
+  - Notifications: ONLINE = notify at the moment. OFFLINE = updating the
+    Delivery Note when it syncs is enough.
+
+THE CONSTRAINT THAT BREAKS THE OBVIOUS DESIGN
+--------------------------------------------------------------------------------
+  A web page cannot be opened on a device that has NEVER loaded it. Local
+  storage keeps a page working AFTER first load; it cannot put the page on a
+  phone that has never seen it.
+
+  So the real requirement is NOT "internet at the delivery". It is:
+      INTERNET AT LEAST ONCE, EVER, ON THAT DEVICE.
+  That is a much softer requirement and probably satisfiable (town trip, site
+  office satellite, setup before travelling out).
+
+  Consequence: if it IS third-party freight, the app cannot live on the driver's
+  phone, so it must be the CUSTOMER's receiving clerk's phone. That is the open
+  question that decides the whole build.
+
+AGREED ARCHITECTURE (design only - approved by nobody yet)
+--------------------------------------------------------------------------------
+  The offline app does NOT pre-load deliveries. That design fails immediately:
+  a DN created today cannot reach a phone that has been offline a week.
+
+  Instead the QR labels from Stage 6 carry a self-contained SIGNED payload
+  (serial + DN + PO + item). The phone learns about the delivery FROM THE BOX,
+  not from our server.
+
+      phone = dumb capture device. Scans, timestamps, queues locally.
+      server = does ALL verification and reconciliation on sync.
+                7 of 7 -> acknowledged
+                6 of 7 -> flag the short
+                unknown serial -> flag it
+
+  The phone never has to be right about anything. That is what makes it robust.
+  Same flow online and offline; online just syncs instantly and fires the alert.
+
+THREE RISKS FLAGGED UP FRONT
+--------------------------------------------------------------------------------
+  1. iOS WIPES OFFLINE STORAGE after ~7 days of non-use (Safari's cap on
+     script-writable storage). A phone that captures a delivery then sits in a
+     drawer at a remote site CAN LOSE THE ACKNOWLEDGEMENT BEFORE IT SYNCS.
+     Home-screen install exempts it but has historically been buggy.
+     THIS IS THE MOST LIKELY WAY THIS DESIGN LOSES DATA.
+  2. Device clocks are unverifiable offline. Store acknowledged-at (device,
+     untrusted) and synced-at (server, trusted) SEPARATELY and flag implausible
+     gaps. Matters for an ISO shop.
+  3. Mercury is blind between delivery and sync. Proposed a "delivered, not yet
+     acknowledged" report - cheap, and the thing that actually protects Alex.
+
+  Also unresolved: storing this properly wants a DELIVERY ACKNOWLEDGEMENT
+  doctype (per-item condition, damage photos, dual timestamps, audit trail).
+  Paul's standing rule was no custom doctypes; this one probably earns it, but
+  it has NOT been agreed.
+
+QUESTIONS SENT TO ALEX
+--------------------------------------------------------------------------------
+  Written up in documents/alex_questions_delivery_ack.md - whose phone, can it
+  connect once, iOS or Android, is the paper fallback acceptable, does it match
+  an existing QCF form, does he want the not-yet-acknowledged list, and is
+  per-item really needed. Awaiting his reply.
+
+RECOMMENDED PACING
+--------------------------------------------------------------------------------
+  Build the ONLINE path first and demo it - most of the value, visible quickly,
+  reuses the Stage 6 QR labels. Offline follows once Alex says whose phone it
+  is, because that answer could still send us to the paper fallback and we do
+  not want to build the wrong thing.
+
+*** ALEX RAISED OTHER THINGS IN THAT MEETING. PAUL HAS THEM AND HAS NOT GIVEN
+*** THEM YET. ASK - DO NOT GUESS. They may change this design.
