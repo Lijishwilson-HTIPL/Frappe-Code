@@ -86,9 +86,61 @@ delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
 
 ---
 
-## `fdc852185` … `c28b9ee95` — Alex / job 1105VS10 (2026-08-11 → 13) · PUSHED to `paul-update` only
+## `a50434f20` — delivery-acknowledgement scoping + staging round-trip (2026-08-18) · PUSHED
 
-**Not on `staging-deployment`.** Deliberate — nothing from this round has been promoted to QA.
+**Design and documentation only. No application behaviour changed.**
+
+First batch of suggestions from the Alex demo: a minimal customer delivery-acknowledgement
+view, and one that works at remote sites with no connectivity. Scoped, not built.
+
+- `documents/alex_questions_delivery_ack.md` — seven questions written **for Alex**, ready
+  to send. The decisive one is *whose phone does the scanning* — if deliveries go by
+  third-party freight, it cannot be the driver's, so it falls to the customer's receiving
+  clerk, and that answer changes the entire build.
+- `workprogress_mercury.txt` §20 — the full record: Paul's answers (per-item scanning, no
+  signature, same flow online and offline, notify immediately when online), the proposed
+  architecture, and three risks flagged before anyone builds against them.
+
+**The constraint that breaks the obvious design**, recorded so nobody rediscovers it the
+hard way: *a web page cannot be opened on a device that has never loaded it.* Offline
+storage keeps a page working **after** first load; it cannot put the page on a phone that
+has never seen it. So the requirement is not "internet at the delivery" but **"internet at
+least once, ever, on that device"** — much softer, and probably satisfiable.
+
+Proposed architecture: the Stage 6 QR labels carry a **self-contained signed payload**, so
+the phone learns about the delivery *from the box* rather than from our server — a delivery
+created today can then be acknowledged by a phone that has been offline a week. The phone is
+a dumb capture device; the **server does all verification and reconciliation on sync**.
+
+Risks flagged: **iOS clears script-writable storage after ~7 days of non-use** (the most
+likely way this design loses data); device clocks are unverifiable offline, so
+`acknowledged_at` and `synced_at` must be stored separately; and Mercury is blind between
+delivery and sync, hence the proposed *"delivered, not yet acknowledged"* report.
+
+Merged `staging-deployment` (4 commits: PR #26 = our own work coming back, PR #27 DMS,
+`fb9610536` moving **Defect (Issue)** into the Projects sidebar, and a CI change that
+force-reimports the Projects/Support workspaces). **No conflicts.** Verified rather than
+assumed, because a forced workspace reimport is exactly how the aurora cards would silently
+revert: `bench migrate` clean, markers **28/28**, `mercury_desk.css` still **LAST** in
+`app_include_css` (8 of 8), Mercury sidebar still carries *Project Update*, **0** labels
+containing `(via …)`, Assign tab present with `custom_assign_to.mandatory_depends_on =
+eval:!doc.is_template`, Task `Delivered` present, both print formats still the DocType
+defaults, both Client Scripts enabled, `demo_hide` still wired.
+
+Rollback-before-this: `pre-staging-merge-7` (= `3f28f3cd3`)
+
+---
+
+## `fdc852185` … `c28b9ee95` — Alex / job 1105VS10 (2026-08-11 → 13) · **MERGED TO `staging-deployment`**
+
+**On staging since 2026-08-14** via PR #26 (merge commit `341535c95`). The earlier
+"not on staging" warning no longer applies.
+
+⚠️ **Merging did not deploy.** `deploy-staging.yml` is `workflow_dispatch` only — the
+staging *site* runs the old build until someone runs the workflow by hand.
+
+⚠️ **Assignee is now mandatory on Task.** Existing tasks on staging/QA have none and will
+fail validation the moment anyone edits one. Only the local bench was backfilled.
 
 Mercury's own two client documents, regenerated from live data for Alex's demo. Configuration
 only: print formats, Property Setters, Custom Fields, fixtures. No custom doctypes — the QR
