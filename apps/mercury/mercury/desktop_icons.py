@@ -66,6 +66,19 @@ LOGOS = {
 	# which the app does not ship (404). Harmless today because the svg lookup
 	# wins, but it is a landmine if that ever misses - point it at the real file.
 	"Helpdesk": "/assets/helpdesk/icons/desktop_icons/solid/helpdesk.svg",
+	# SBIQC star + wordmark composites
+	"SBIQ CRM": "/assets/mercury/images/desktop_icons/sbiq_crm.svg",
+}
+
+# set_header_icon() in sidebar_header.js looks the workspace up with
+# get_desktop_icon_by_label(), which filters on `hidden != 1`. A hidden record is
+# never found, so the header falls through to the generated first-letter tile -
+# that is why opening Home showed a grey "H" next to "Home / SBIQC".
+HIDDEN_OVERRIDES = {
+	"Home": 0,
+	# already visible on the grid via the layout snapshot; unhiding the live
+	# record is what lets its header show the logo rather than an "S"
+	"SBIQ CRM": 0,
 }
 
 # The stock "ERPNext" app tile, renamed for white-labelling. Renaming the label
@@ -117,6 +130,12 @@ def apply_desktop_icon_layout():
 			continue
 		if frappe.db.get_value("Desktop Icon", name, "app") != app:
 			frappe.db.set_value("Desktop Icon", name, "app", app, update_modified=False)
+			changed += 1
+
+	for label, hidden in HIDDEN_OVERRIDES.items():
+		name = frappe.db.get_value("Desktop Icon", {"label": label})
+		if name and frappe.db.get_value("Desktop Icon", name, "hidden") != hidden:
+			frappe.db.set_value("Desktop Icon", name, "hidden", hidden, update_modified=False)
 			changed += 1
 
 	for label, logo_url in LOGOS.items():
