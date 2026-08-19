@@ -41,6 +41,46 @@ Recommended pacing already agreed: build the **online** path first and demo it,
 because it is most of the value and it reuses the Stage 6 QR labels. Offline
 follows, since the answer above could still send us to the paper fallback.
 
+## FIRST TASK OF THE NEXT SESSION — sidebar icons
+
+Paul verified the whole post-merge checklist on 2026-08-18. **Everything passed
+except the icons**, and he wants to start here.
+
+What he is seeing on `/desk/projects` (screenshot evidence, not inference):
+
+- The **workspace switcher tile** at the top left (labelled *Projects / SBIQC*)
+  renders as a generic placeholder rather than a real icon.
+- **Most sidebar entries share one generic list glyph** — Activity Type,
+  Activity Cost, Project Template, Project Type, Project Update, Project
+  Summary, Daily Timesheet Summary, Timesheet Billing Summary, Project wise
+  Stock Tracking, Delayed Tasks Summary are all the same icon.
+- Only Home, Dashboard, Project, Task, Defect, Timesheet and Settings have
+  distinct icons.
+
+Alongside that, Paul wants an inventory: **everywhere `quality_dms` (SBIQC)
+overrides frappe or erpnext.** That is the wider question behind the icons — the
+DMS theme now reaches the Mercury and Projects routes via `is_dms_route()`,
+`is_projects_route()` and `is_mercury_route()` in
+`apps/quality_dms/quality_dms/public/js/quality_dms.js`, plus the rules in
+`quality_dms.css`. Build that map before changing anything, so a fix in one
+place is not silently undone in another.
+
+Relevant context already established, so it does not get rediscovered:
+
+- `mercury_desk.css` loads **LAST** (8 of 8) and several of its rules exist only
+  to beat `quality_dms.css` and `hrms/layout_global.css`. Load order is the
+  reason they work.
+- Some defects it works around originate in **our own apps**
+  (`hrms/public/css/layout_global.css:137`,
+  `quality_dms/public/css/quality_dms.css:862`). CLAUDE.md says fix those at
+  source and remove the matching override, rather than stacking another one.
+- Icons in v16 come from the **Workspace Sidebar Item / Desktop Icon** records,
+  not from CSS — so this is likely a data/fixture problem, not a styling one.
+  Check that before reaching for CSS.
+- Staging's CI **force-reimports the ERPNext Projects/Support workspaces**
+  (`2fba43da1`), so any icon fix stored on those workspace records can be
+  overwritten on deploy. Whatever the fix is, it has to survive that.
+
 ## Standing rules — these are not negotiable
 
 - **Paul Sahaya Doss is the SOLE author.** Never add a Claude/Anthropic
