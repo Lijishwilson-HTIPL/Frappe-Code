@@ -258,7 +258,7 @@ def apply_brand_settings():
 # children reference their parent by NAME, so relabelling a parent silently
 # orphans every child to the desk root. Syncing labels renamed Framework ->
 # SBIQC and Frappe HR -> SBIQC HR and dumped ~18 nested icons onto the grid.
-SYNCED_FIELDS = ("parent_icon", "app", "logo_url")
+SYNCED_FIELDS = ("parent_icon", "app", "logo_url", "icon_type")
 
 
 def sync_desktop_layouts():
@@ -288,6 +288,17 @@ def sync_desktop_layouts():
 			for field in SYNCED_FIELDS:
 				if entry.get(field) != live[field]:
 					entry[field] = live[field]
+					dirty = True
+
+		# Accounting is no longer a folder, so its former children must not appear
+		# as nine loose tiles on the grid. Deliberately NOT done by syncing the
+		# `hidden` field wholesale: SBIQC ERP is hidden=1 in the live table and
+		# doing so would delete it from the desktop.
+		if ACCOUNTING_FLATTEN and ACCOUNTING_CHILDREN_HIDE:
+			for entry in layout:
+				if entry.get("parent_icon") == "Accounting" and not entry.get("hidden"):
+					entry["hidden"] = 1
+					entry["parent_icon"] = ""
 					dirty = True
 
 		# Repair pass. A folder only collects its children if its LABEL equals the
@@ -352,6 +363,60 @@ def sync_desktop_layouts():
 
 	print(f"mercury: desktop layout snapshots synced ({changed_users} user(s))")
 	return changed_users
+
+
+# --- Accounting: folder -> flat tile ----------------------------------------
+
+# render_folder_thumbnail() (frappe/desk/page/desktop/desktop.js) clears
+# .icon-container and rebuilds it as a grid of the folder's children, so a
+# Folder can never show a logo_url - its icon IS that collage. Paul asked for a
+# real icon, which means it stops being a Folder.
+#
+# Its nine children (Invoicing, Payments, Taxes, ...) are all reachable from the
+# Accounts Setup sidebar and from search, so they are hidden rather than left to
+# spill onto the desk root as nine loose tiles.
+ACCOUNTING_FLATTEN = True
+ACCOUNTING_CHILDREN_HIDE = True
+
+
+def flatten_accounting_folder():
+	"""Turn the Accounting folder into a normal tile with its own icon."""
+	if not ACCOUNTING_FLATTEN:
+		return 0
+
+	name = frappe.db.get_value("Desktop Icon", {"label": "Accounting"})
+	if not name:
+		return 0
+
+	changed = 0
+	current = frappe.db.get_value(
+		"Desktop Icon", name, ["icon_type", "link_to", "link_type"], as_dict=True
+	)
+
+	if current.icon_type != "Link":
+		frappe.db.set_value("Desktop Icon", name, "icon_type", "Link", update_modified=False)
+		changed += 1
+
+	# no "Accounting" workspace exists; Accounts Setup is the accounting landing
+	# page, so the tile has somewhere real to go instead of being inert
+	if current.link_to != "Accounts Setup":
+		frappe.db.set_value("Desktop Icon", name, "link_to", "Accounts Setup", update_modified=False)
+		changed += 1
+
+	if ACCOUNTING_CHILDREN_HIDE:
+		for child in frappe.get_all(
+			"Desktop Icon", filters={"parent_icon": "Accounting"}, pluck="name", limit_page_length=0
+		):
+			if not frappe.db.get_value("Desktop Icon", child, "hidden"):
+				frappe.db.set_value("Desktop Icon", child, "hidden", 1, update_modified=False)
+				changed += 1
+
+	if changed:
+		frappe.cache.delete_key("desktop_icons")
+		frappe.clear_cache()
+
+	print(f"mercury: accounting folder flattened ({changed} change(s))")
+	return changed
 
 
 # --- Cleanup ----------------------------------------------------------------

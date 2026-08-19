@@ -98,6 +98,7 @@ jinja = {
 
 after_migrate = [
 	"mercury.desktop_icons.remove_stray_icons",
+	"mercury.desktop_icons.flatten_accounting_folder",
 	"mercury.desktop_icons.apply_desktop_icon_layout",
 	"mercury.desktop_icons.sync_desktop_layouts",
 	"mercury.desktop_icons.apply_navbar_branding",
