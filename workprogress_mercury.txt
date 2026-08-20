@@ -1474,3 +1474,105 @@ RECOMMENDED PACING
 
 *** ALEX RAISED OTHER THINGS IN THAT MEETING. PAUL HAS THEM AND HAS NOT GIVEN
 *** THEM YET. ASK - DO NOT GUESS. They may change this design.
+
+
+================================================================================
+[21] SBIQC WHITE-LABELLING + DESKTOP/SIDEBAR ICONS - 2026-08-18 -> 20  DONE
+================================================================================
+GIT STATE
+--------------------------------------------------------------------------------
+  PR #29 merged to staging-deployment (5db2d3cbd). PR #30 (ponnambalaraju,
+  fix/sbiqc-settings-desktop-icon) merged on TOP of it (a01626d2f), so that
+  image carries BOTH - verified with `git merge-base --is-ancestor`, not assumed.
+  Deploy to Staging #59 ran 2026-08-19 15:58 and succeeded. This work is LIVE
+  on qa.sbiqc.com.
+
+  4 commits on paul-update NOT yet merged (the About-dialog round):
+    7184eb288  white-label the About dialog + fix its app icons
+    9f5885c9b  About footer -> Hephzibah Technologies
+    86aaa49dd  stop leaking internal branch names ((paul-update)) in About
+    5ca629a0e  mercury + sbiqc_provisioning released as 1.0.0
+
+*** THE PROCESS FAILURE - READ THIS BEFORE THE NEXT DEPLOY ***
+--------------------------------------------------------------------------------
+  For most of 2026-08-18 all of this existed ONLY in the working tree and the
+  local DB. The desk looked finished locally while the repo had nothing. PR #28
+  was handed to the admin team in that state and deployed exactly what it
+  contained: nothing. The admin team did nothing wrong.
+
+  Paul reasonably assumed local == pushed. It was not.
+
+  RULE: before asking anyone to deploy, run `git status` and confirm the commits
+  are ON THE REMOTE. A working desk locally proves nothing. Commit as you go.
+
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+  - 10 Projects sidebar icons (frappe substitutes "list" when icon is blank)
+  - Desk grid flattened out of erpnext's single ERPNext tile - 24 real icons
+  - favicon / page loader / login logo / window title -> HTIPL mark + "SBIQC"
+    (all four were simply UNSET, which is why frappe defaults showed through)
+  - Help dropdown "Frappe Support" -> SBIQC Support -> docs.sbiqc.com
+  - About dialog white-labelled; app icons mapped; branch names suppressed
+  - Login page: both scrollbars gone
+  - Accounting: Folder -> Link (a Folder can never show an icon)
+  - Mercury2 deleted (pinned to LOCAL_SITES - it deletes a Workspace)
+  - mercury + sbiqc_provisioning: 0.0.1 -> 1.0.0
+
+WHERE IT LIVES
+--------------------------------------------------------------------------------
+  apps/mercury/mercury/desktop_icons.py     - 5 after_migrate hooks
+  apps/mercury/mercury/public/js/mercury_desk.js - About dialog override
+  apps/sbiqc_provisioning/.../sbiqc_login.css    - login scrollbar fix
+  Nothing in frappe/erpnext/hrms EXCEPT one agreed exception: mercury.svg added
+  to erpnext/public/icons/desktop_icons/{solid,subtle}/. Approved by Paul
+  2026-08-19 because the Workspaces flyout groups by frappe.current_app, so the
+  file MUST sit in erpnext. Additive - two new files, nothing modified.
+
+FIVE TRAPS - DO NOT REDISCOVER THESE
+--------------------------------------------------------------------------------
+  1. logo_url is a PLAIN URL and need not live in the record's own app.
+     Repointing a standard Desktop Icon's `app` gets it DELETED by migrate's
+     orphan sweep (model/sync.py:211,250 - filters standard=1, requires a
+     matching desktop_icon/<scrub>.json). This destroyed Accounting, DMS and
+     SBIQC Settings before they were restored from their apps' fixtures.
+
+  2. The /desk grid renders a PER-USER "Desktop Layout" JSON snapshot, NOT the
+     Desktop Icon table. The sidebar flyout reads the live records. Change one
+     and the two disagree - this is why the grid ignored every fix for hours.
+
+  3. NEVER sync `label` into that snapshot. Folders are keyed by LABEL but
+     children reference the parent by NAME, so relabelling a parent orphans
+     every child onto the root grid (~18 loose tiles appeared).
+
+  4. A Folder can never show an icon. render_folder_thumbnail()
+     (desktop.js:1057) clears .icon-container and rebuilds it from the
+     children - the collage IS the icon.
+
+  5. A record's `name` is not its `label`. "SBIQC Settings" is really the doc
+     "ERPNext Settings". Snapshot lookups must fall back to a label match.
+
+  Bonus: import_file SKIPS a standard record whose `modified` timestamp has not
+  moved, so editing a workspace JSON silently no-ops until you bump it.
+
+DEPLOY SEQUENCE (the part that actually matters)
+--------------------------------------------------------------------------------
+  merge -> WAIT for "Build & Push Images" -> then Deploy to Staging.
+  deploy-staging.yml does NO rebuild; it pulls an existing tag. Deploying before
+  the build finishes runs the hooks and writes new asset paths into the DB while
+  the image lacks the files = BROKEN favicon and blank tiles, which is worse
+  than unchanged. If two PRs merge close together, deploy by explicit commit SHA
+  rather than latest-staging - both builds race to write that same tag.
+
+OPEN / NOT DONE
+--------------------------------------------------------------------------------
+  - quality_dms still 0.0.1 and telephony still 0.0.1. quality_dms is the
+    Quality Team's (James) and telephony is Frappe Technologies' vendored app -
+    neither is ours to renumber. Ask before touching.
+  - SBIQC / SBIQC HR / SBIQC Provisioning still letter tiles in the FLYOUT only
+    (grid is fine). They are icon_type=App and their `app` field feeds
+    check_app_permission(), so repointing it would break permissions.
+  - home.png and htipl_logo.png are byte-identical (both the star). Fine, but
+    Home has no artwork of its own.
+  - Footer attribution now reads Hephzibah Technologies. LICENSE files and
+    source copyright headers in frappe/erpnext are untouched, which is where
+    GPLv3 s5 requires the notice. Worth a legal nod before customer release.
