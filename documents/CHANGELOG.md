@@ -18,15 +18,24 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest push:** `1d1854a3f` — "sidebar user avatar: make the initial visible again"
-(2026-08-06). Everything below is pushed.
+**Latest on `paul-update`:** `5ca629a0e` — the SBIQC white-labelling / desk-icon round
+(2026-08-18 → 20). Pushed.
 
-**Latest on `paul-update`:** `c28b9ee95` — the Alex / 1105VS10 round (2026-08-13).
+**On staging and live on QA:** PR **#29** (merged as `5db2d3cbd`), then PR **#30**
+(ponnambalaraju, merged as `a01626d2f`) on top of it. `a01626d2f` contains `5db2d3cbd`, so
+the image built from it carries both. **Deploy to Staging #59** ran 2026-08-19 15:58 and
+succeeded — the icon, white-labelling and SBIQC Support work is live on `qa.sbiqc.com`.
 
-> ### ⚠️ NOT ON STAGING
-> Commits 31–46 are on **`paul-update` only**. Nothing from the Alex round has been merged to
-> `staging-deployment` or deployed to QA — deliberately, and **do not push there without asking**.
-> Last state actually on staging: `1fef86302`.
+> ### ⚠️ NOT YET ON STAGING
+> Four commits are on **`paul-update` only** — the About-dialog round
+> (`7184eb288` → `5ca629a0e`). Not merged, not deployed.
+
+> ### The trap this round exposed: local ≠ repo
+> For most of 2026-08-18 the icon and branding work existed **only in the working tree and
+> the local database**, so the desk looked finished while the repo had nothing. PR #28 was
+> handed to the admin team in that state and deployed exactly what it contained: nothing.
+> Nobody did anything wrong. **Before asking for a deploy, run `git status` and confirm the
+> commits are on the remote** — a green desk locally proves nothing.
 
 **Previously deployed to QA:** PR **#16** (`paul-update` → `staging-deployment`, merged as
 `f1e3606`), then a **manual** Deploy to Staging run. Verified live on `qa.sbiqc.com`:
@@ -83,6 +92,52 @@ Assign tab, real ToDo assignment, Assign To list column.
 **Phase status:** Phase 1 = COMPLETE (all 8 stages, config-only; only custom code is the
 ~3-line QR jinja helper in `apps/mercury/mercury/utils.py`). Management feedback item #1
 delivered. Phase 2 (Shipment Acknowledgement DocType + QR portal) not started.
+
+---
+
+## `5ca629a0e` — SBIQC white-labelling + desktop/sidebar icons (2026-08-18 → 20) · PUSHED
+
+Started as "the ten Projects sidebar entries share one generic glyph" and turned into the
+full white-label pass. Delivered as `after_migrate` hooks in **mercury** plus a JS override,
+so erpnext is not patched — it re-asserts these records on **every** migrate (each run
+reports changes being re-applied, which is the proof the hooks are needed).
+
+**Shipped**
+
+- Ten Projects sidebar icons; `frappe` substitutes `list` when `icon` is blank
+  (`sidebar_item.js:93`). Names validated against the live lucide sprite.
+- Desk grid: erpnext nests its workspaces under one ERPNext tile via `parent_icon`, and
+  `get_desktop_icons()` drops anything with a parent — flattened, real image on all 24.
+- Favicon, page loader, login logo, window title — all were **unset**, so frappe/erpnext
+  defaults showed through. Now the HTIPL mark and "SBIQC".
+- Help dropdown "Frappe Support" → **SBIQC Support** → `https://docs.sbiqc.com`.
+- About dialog white-labelled, app icons mapped, internal branch names suppressed.
+- Login page lost both scrollbars; `mercury`/`sbiqc_provisioning` released as **1.0.0**.
+
+**Five traps, each of which cost real time — do not rediscover these**
+
+1. **`logo_url` is a plain URL and need not live in the record's own app.** Repointing a
+   standard Desktop Icon's `app` instead gets it **deleted** by migrate's orphan sweep
+   (`model/sync.py:211,250` — filters `standard=1`, requires a matching
+   `desktop_icon/<scrub>.json`). This destroyed Accounting, DMS and SBIQC Settings; they
+   were restored from their owning apps' fixtures.
+2. **The `/desk` grid renders a per-user `Desktop Layout` JSON snapshot, not the Desktop
+   Icon table.** The sidebar flyout reads the live records. Change one and the two
+   disagree — this is why the grid "ignored" every fix for hours.
+3. **Never sync `label` into that snapshot.** Folders are keyed by *label* but children
+   reference the parent by *name*, so relabelling a parent orphans every child onto the
+   root grid (~18 loose tiles).
+4. **A Folder can never show an icon.** `render_folder_thumbnail()` (`desktop.js:1057`)
+   clears `.icon-container` and rebuilds it from the children — the collage *is* the icon.
+   Accounting had to stop being a Folder.
+5. **A record's `name` is not its `label`.** "SBIQC Settings" is really the doc
+   `ERPNext Settings`. Any snapshot lookup must fall back to a label match.
+
+Also: `import_file` skips a standard record whose `modified` timestamp has not moved, so a
+workspace JSON edit silently no-ops until you bump it. Mercury2 removal is pinned to
+`LOCAL_SITES` — it deletes a Workspace and the hook runs on every site.
+
+**Rollback:** `3ef011dbc` is the last state before this round.
 
 ---
 
