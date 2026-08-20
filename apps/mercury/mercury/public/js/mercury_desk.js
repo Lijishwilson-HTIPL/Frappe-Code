@@ -116,6 +116,10 @@ mercury.breadcrumbs.retarget = function () {
  * neither add_to_apps_screen[0].logo nor app_logo_url on the app. Rather than
  * add a hook to each of erpnext/hrms/helpdesk - core apps we do not patch - the
  * logos are mapped here.
+ *
+ * Footer attribution reads Hephzibah Technologies, per Paul on 2026-08-20.
+ * The LICENSE files and source copyright headers in apps/frappe and
+ * apps/erpnext are untouched - that is where GPLv3 requires the notice.
  * --------------------------------------------------------------------- */
 
 frappe.provide("mercury.about");
@@ -186,7 +190,7 @@ mercury.about.APP_LOGOS = {
 						mercury.about.BRAND,
 					])}
 					<div style="opacity:.55;font-size:11px;margin-top:2px;">
-						${__("Built on Frappe/ERPNext. &copy; Frappe Technologies Pvt. Ltd.")}
+						${__("&copy; Hephzibah Technologies Pvt. Ltd.")}
 					</div>
 				</div>`
 			);
