@@ -1487,11 +1487,23 @@ GIT STATE
   Deploy to Staging #59 ran 2026-08-19 15:58 and succeeded. This work is LIVE
   on qa.sbiqc.com.
 
-  4 commits on paul-update NOT yet merged (the About-dialog round):
+  The About-dialog round then went out as PR #31 (merge commit 5e806ed82):
     7184eb288  white-label the About dialog + fix its app icons
     9f5885c9b  About footer -> Hephzibah Technologies
     86aaa49dd  stop leaking internal branch names ((paul-update)) in About
     5ca629a0e  mercury + sbiqc_provisioning released as 1.0.0
+    a8f76d93c  docs: this section + CHANGELOG entry
+
+  DEPLOYED AND VERIFIED BY PAUL ON QA, 2026-08-20. Round is CLOSED.
+  Checked after the merge: #30's quality_dms patch
+  (v1_9_fix_sbiqc_settings_desktop_icon.py) is still PRESENT on staging and our
+  About override is there too - both sets of work coexist. Worth knowing why the
+  check was needed: `git diff staging..paul-update` listed #30's patch as a
+  DELETION, which looks like a revert but is only an artifact of diffing two
+  branch tips. The merge used 5db2d3cbd as its base and kept both sides.
+  Do not panic at that diff next time - verify against the merged tip instead.
+
+  paul-update == staging-deployment as of 2026-08-20. Nothing pending.
 
 *** THE PROCESS FAILURE - READ THIS BEFORE THE NEXT DEPLOY ***
 --------------------------------------------------------------------------------

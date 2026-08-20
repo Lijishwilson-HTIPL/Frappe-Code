@@ -18,17 +18,18 @@ can roll back cleanly if a future change goes wrong.
 
 ## Current state
 
-**Latest on `paul-update`:** `5ca629a0e` — the SBIQC white-labelling / desk-icon round
-(2026-08-18 → 20). Pushed.
+**Latest on `paul-update`:** `a8f76d93c` — the SBIQC white-labelling / desk-icon round
+(2026-08-18 → 20). Pushed, merged (PR #31 = `5e806ed82`) and live on QA.
 
 **On staging and live on QA:** PR **#29** (merged as `5db2d3cbd`), then PR **#30**
 (ponnambalaraju, merged as `a01626d2f`) on top of it. `a01626d2f` contains `5db2d3cbd`, so
 the image built from it carries both. **Deploy to Staging #59** ran 2026-08-19 15:58 and
 succeeded — the icon, white-labelling and SBIQC Support work is live on `qa.sbiqc.com`.
 
-> ### ⚠️ NOT YET ON STAGING
-> Four commits are on **`paul-update` only** — the About-dialog round
-> (`7184eb288` → `5ca629a0e`). Not merged, not deployed.
+> ### ✅ ALL PUSHED, MERGED AND LIVE
+> The About-dialog round went out as PR **#31** (merge commit `5e806ed82`),
+> deployed and **verified by Paul on QA, 2026-08-20**. `paul-update` and
+> `staging-deployment` are level — nothing pending.
 
 > ### The trap this round exposed: local ≠ repo
 > For most of 2026-08-18 the icon and branding work existed **only in the working tree and
