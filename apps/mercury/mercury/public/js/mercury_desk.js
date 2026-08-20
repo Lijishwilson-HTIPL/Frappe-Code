@@ -141,9 +141,16 @@ mercury.about.APP_LOGOS = {
 (function () {
 	if (!frappe.ui || !frappe.ui.misc || frappe.ui.misc.__mercury_about) return;
 
+	// Core appends the checkout's git branch to every version, which leaks our
+	// internal branch names to customers - "(paul-update)" locally and
+	// "(staging-deployment)" on QA. Only a release line like "version-16" is
+	// meaningful to show, so everything else is dropped.
+	const RELEASE_BRANCH = /^version-\d+$/i;
+
 	const version_text = function (app) {
-		const is_pr_branch = app.branch && /^pr-\d+/i.test(app.branch);
-		return app.branch && !is_pr_branch ? `${app.version} (${app.branch})` : app.version;
+		return app.branch && RELEASE_BRANCH.test(app.branch)
+			? `${app.version} (${app.branch})`
+			: app.version;
 	};
 
 	const app_icon = function (app_name, app) {
